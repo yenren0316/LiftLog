@@ -1,6 +1,9 @@
 import SwiftUI
+import SwiftData
 
 struct RootView: View {
+    @Environment(\.modelContext) private var context
+
     var body: some View {
         TabView {
             Tab("該練什麼", systemImage: "dumbbell.fill") {
@@ -16,6 +19,7 @@ struct RootView: View {
                 PlaceholderScreen(title: "設定")
             }
         }
+        .task { SeedImporter.importIfNeeded(into: context) }
     }
 }
 
