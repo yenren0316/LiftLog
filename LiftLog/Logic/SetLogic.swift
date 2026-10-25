@@ -156,7 +156,14 @@ nonisolated enum SetFormat {
 
     /// 「上一次」欄的短格式：60 × 5、輔助 12 × 5
     static func short(_ s: SetValues, logType: LogType) -> String {
-        if logType == .cardio { return cardio(s) }
+        if logType == .cardio {
+            // 欄位窄，只放數字：12%·4.0·30′
+            var parts: [String] = []
+            if let incline = s.incline { parts.append("\(Units.number(incline))%") }
+            if let speed = s.speed { parts.append(speed.formatted(.number.precision(.fractionLength(1)))) }
+            if let minutes = s.minutes { parts.append("\(Units.number(minutes))′") }
+            return parts.isEmpty ? "—" : parts.joined(separator: "·")
+        }
         let w = s.weightKg.map(Units.number)
         let r = s.reps.map(String.init)
         switch (w, r) {
