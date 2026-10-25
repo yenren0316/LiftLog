@@ -13,7 +13,7 @@ struct RootView: View {
                 TodayView()
             }
             Tab("動作庫", systemImage: "list.bullet.rectangle") {
-                PlaceholderScreen(title: "動作庫")
+                LibraryView()
             }
             Tab("設定", systemImage: "gearshape.fill") {
                 PlaceholderScreen(title: "設定")
