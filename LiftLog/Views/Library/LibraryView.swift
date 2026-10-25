@@ -70,7 +70,7 @@ struct LibraryView: View {
                 titleVisibility: .visible
             ) {
                 Button("刪除", role: .destructive) {
-                    if let exercise = deleteCandidate, exercise.entries.isEmpty {
+                    if let exercise = deleteCandidate, exercise.sessionItems.isEmpty {
                         context.delete(exercise)
                         try? context.save()
                     }
@@ -96,7 +96,7 @@ struct LibraryView: View {
                         .lineLimit(1)
                 }
                 Spacer()
-                Text("\(exercise.entries.count) 筆")
+                Text("\(exercise.completedItems.count) 次")
                     .font(.footnote.monospacedDigit())
                     .foregroundStyle(.secondary)
             }
@@ -116,7 +116,7 @@ struct LibraryView: View {
                 exercise.isArchived.toggle()
                 try? context.save()
             }
-            if exercise.entries.isEmpty {
+            if exercise.sessionItems.isEmpty {
                 Button("刪除", systemImage: "trash", role: .destructive) { deleteCandidate = exercise }
             }
         }

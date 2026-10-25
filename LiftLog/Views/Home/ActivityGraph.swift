@@ -2,7 +2,8 @@ import SwiftUI
 
 /// 訓練日曆：每天一格，有練的日子亮起來，做越多動作越亮（類似 GitHub contribution graph）
 struct ActivityGraph: View {
-    var entryDates: [Date]
+    /// 每天（startOfDay）做了幾個動作
+    var days: [Date: Int]
     var weekCount = 53
 
     private let cell: CGFloat = 13
@@ -10,7 +11,7 @@ struct ActivityGraph: View {
 
     var body: some View {
         let calendar = Calendar.current
-        let counts = ActivityCalendar.dailyCounts(entryDates)
+        let counts = days
         let weeks = ActivityCalendar.weeks(endingAt: .now, count: weekCount)
         let yearStart = calendar.date(from: calendar.dateComponents([.year], from: .now)) ?? .now
         let daysThisYear = counts.keys.filter { $0 >= yearStart }.count

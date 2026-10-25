@@ -91,3 +91,36 @@ nonisolated enum LogType: String, Codable, CaseIterable, Identifiable {
         }
     }
 }
+
+nonisolated enum SetKind: String, Codable, CaseIterable, Identifiable {
+    case normal, warmup, max
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .normal: "正式"
+        case .warmup: "熱身"
+        case .max: "MAX"
+        }
+    }
+
+    /// 組號欄的顯示：正式組顯示序號，熱身 W，MAX M
+    func badge(number: Int) -> String {
+        switch self {
+        case .normal: String(number)
+        case .warmup: "W"
+        case .max: "M"
+        }
+    }
+}
+
+nonisolated enum RestDefaults {
+    /// 上下肢推拉六類 180 秒，其他 90 秒
+    static func seconds(for category: ExerciseCategory) -> Int {
+        switch category {
+        case .kneeDominant, .hipDominant, .horizontalPush, .horizontalPull, .verticalPush, .verticalPull: 180
+        default: 90
+        }
+    }
+}

@@ -8,22 +8,12 @@ struct ExerciseDetailView: View {
     @State private var showingEdit = false
 
     var body: some View {
-        let entries = exercise.sortedEntries
+        let items = exercise.completedItems
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 InfoCard(exercise: exercise)
-                NavigationLink {
-                    LogEntryView(exercise: exercise)
-                } label: {
-                    Label("記錄這個動作", systemImage: "plus")
-                        .font(.title3.bold())
-                        .foregroundStyle(.black)
-                        .frame(maxWidth: .infinity, minHeight: 56)
-                        .background(Theme.green, in: .capsule)
-                }
-                .buttonStyle(.plain)
-                TrendCard(exercise: exercise, entries: entries)
-                HistoryCard(exercise: exercise, entries: entries)
+                TrendCard(exercise: exercise, items: items)
+                HistoryCard(exercise: exercise, items: items)
             }
             .padding(16)
         }
@@ -82,7 +72,7 @@ private struct InfoCard: View {
 
 private struct TrendCard: View {
     var exercise: Exercise
-    var entries: [WorkoutEntry]
+    var items: [SessionExercise]
 
     private struct Point: Identifiable {
         var id: PersistentIdentifier
@@ -93,11 +83,18 @@ private struct TrendCard: View {
 
     private var isCardio: Bool { exercise.logType == .cardio }
 
+    /// 每次訓練一個點：當次最佳的正式組或 MAX 組（不含熱身）；跑步機取坡度
     private var points: [Point] {
-        entries.compactMap { e in
-            let value = isCardio ? e.incline : e.weightKg
-            guard let value else { return nil }
-            return Point(id: e.persistentModelID, date: e.date, value: value, isMax: e.isMax)
+        items.compactMap { item in
+            guard let date = item.session?.startedAt else { return nil }
+            let sets = item.completedSets.map(\.values)
+            if isCardio {
+                guard let incline = sets.compactMap(\.incline).max() else { return nil }
+                return Point(id: item.persistentModelID, date: date, value: incline, isMax: false)
+            }
+            guard let best = SetLogic.best(sets, logType: exercise.logType) else { return nil }
+            let isMax = sets.contains { $0.kind == .max && $0.weightKg == best }
+            return Point(id: item.persistentModelID, date: date, value: best, isMax: isMax)
         }
     }
 
@@ -114,7 +111,7 @@ private struct TrendCard: View {
                 }
             }
             if points.count < 2 {
-                Text("至少要兩筆紀錄才能畫圖")
+                Text("至少要兩次紀錄才能畫圖")
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, minHeight: 120)
             } else {
@@ -140,24 +137,54 @@ private struct TrendCard: View {
 
 private struct HistoryCard: View {
     var exercise: Exercise
-    var entries: [WorkoutEntry]
+    var items: [SessionExercise]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("全部紀錄（\(entries.count)）").font(.headline).foregroundStyle(.secondary)
-            if entries.isEmpty {
+            Text("全部紀錄（\(items.count) 次）").font(.headline).foregroundStyle(.secondary)
+            if items.isEmpty {
                 Text("還沒有紀錄").foregroundStyle(.secondary)
             }
-            ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
+            ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                 if index > 0 { Divider().overlay(Theme.cardBorder) }
-                NavigationLink {
-                    LogEntryView(exercise: exercise, editing: entry)
-                } label: {
-                    EntryLine(entry: entry).contentShape(.rect)
+                if let session = item.session {
+                    NavigationLink {
+                        SessionDetailView(session: session)
+                    } label: {
+                        HistoryLine(item: item, date: session.startedAt).contentShape(.rect)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
         }
         .card()
+    }
+}
+
+/// 一次訓練一行：日期 · 精簡的組數字；有備註時顯示在下面
+private struct HistoryLine: View {
+    var item: SessionExercise
+    var date: Date
+
+    var body: some View {
+        let hasMax = item.completedSets.contains { $0.kind == .max }
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(date.shortDate)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+                Spacer(minLength: 12)
+                Text(item.summary)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(hasMax ? Theme.orange : .primary)
+                    .multilineTextAlignment(.trailing)
+            }
+            if !item.note.isEmpty {
+                Text(item.note)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+        }
     }
 }

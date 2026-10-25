@@ -6,8 +6,8 @@ struct HealthImportSheet: View {
     var onPick: (TreadmillWorkout) -> Void
 
     @Environment(\.dismiss) private var dismiss
-    @Query(filter: #Predicate<WorkoutEntry> { $0.healthWorkoutID != nil })
-    private var importedEntries: [WorkoutEntry]
+    @Query(filter: #Predicate<SetRecord> { $0.healthWorkoutID != nil })
+    private var importedSets: [SetRecord]
 
     @State private var workouts: [TreadmillWorkout] = []
     @State private var loading = true
@@ -16,7 +16,7 @@ struct HealthImportSheet: View {
     var body: some View {
         NavigationStack {
             List {
-                let imported = Set(importedEntries.compactMap(\.healthWorkoutID))
+                let imported = Set(importedSets.compactMap(\.healthWorkoutID))
                 let available = workouts.filter { !imported.contains($0.id) }
 
                 if loading {

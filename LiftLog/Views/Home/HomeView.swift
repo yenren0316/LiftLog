@@ -4,7 +4,7 @@ import SwiftData
 struct HomeView: View {
     @Query(filter: #Predicate<Exercise> { !$0.isArchived }, sort: \Exercise.name)
     private var exercises: [Exercise]
-    @Query private var allEntries: [WorkoutEntry]
+    @Query private var allSets: [SetRecord]
 
     @State private var path = NavigationPath()
     @State private var filter: TagFilter = .all
@@ -15,7 +15,7 @@ struct HomeView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
                         ScreenHeader(title: "該練什麼")
-                        ActivityGraph(entryDates: allEntries.map(\.date))
+                        ActivityGraph(days: trainingDays)
                         CategoryBarsCard(exercises: exercises) { category in
                             withAnimation { proxy.scrollTo(category, anchor: .top) }
                         }
@@ -23,7 +23,7 @@ struct HomeView: View {
 
                         let visible = exercises.filter { $0.matches(filter) }
                         let sections = Recency.sections(
-                            visible, category: \.category, lastDate: { $0.lastEntry?.date }, name: \.name
+                            visible, category: \.category, lastDate: \.lastCompletedDate, name: \.name
                         )
                         if sections.isEmpty {
                             Text("沒有符合的動作").foregroundStyle(.secondary).card()
@@ -40,7 +40,7 @@ struct HomeView: View {
             .screenBackground()
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: Exercise.self) { exercise in
-                LogEntryView(exercise: exercise)
+                ExerciseDetailView(exercise: exercise)
             }
             #if DEBUG
             .navigationDestination(for: DebugDetailRoute.self) { ExerciseDetailView(exercise: $0.exercise) }
@@ -63,20 +63,34 @@ struct HomeView: View {
     }
 }
 
-/// 最近 30 天各分類訓練天數，點一下跳到該分類；下方是單邊、爆發的天數
+extension HomeView {
+    /// 訓練日曆用：每天做了幾個動作（只算已完成的組）
+    private var trainingDays: [Date: Int] {
+        var exercisesByDay: [Date: Set<PersistentIdentifier>] = [:]
+        for set in allSets where set.isCompleted {
+            guard let date = set.completedAt, let item = set.sessionExercise else { continue }
+            exercisesByDay[Calendar.current.startOfDay(for: date), default: []].insert(item.persistentModelID)
+        }
+        return exercisesByDay.mapValues(\.count)
+    }
+}
+
+/// 最近 30 天各分類訓練天數，點一下跳到該分類；有氧另外顯示在最下方，不參與長條比例；下方是單邊、爆發的天數
 private struct CategoryBarsCard: View {
     var exercises: [Exercise]
     var onSelect: (ExerciseCategory) -> Void
 
     var body: some View {
-        let entries = exercises.flatMap { ex in ex.entries.map { (entry: $0, exercise: ex) } }
-        let counts = Recency.trainingDays(entries.map { (date: $0.entry.date, key: $0.exercise.category) })
-        let tagCounts = Recency.trainingDays(entries.flatMap { pair in
-            pair.exercise.tags.map { (date: pair.entry.date, key: $0) }
+        let done = exercises.flatMap { ex in
+            ex.sessionItems.flatMap { $0.completedSets.compactMap(\.completedAt) }.map { (date: $0, exercise: ex) }
+        }
+        let counts = Recency.trainingDays(done.map { (date: $0.date, key: $0.exercise.category) })
+        let tagCounts = Recency.trainingDays(done.flatMap { pair in
+            pair.exercise.tags.map { (date: pair.date, key: $0) }
         })
-        // 沒有動作的分類（例如違常姿勢）不顯示
-        let categories = ExerciseCategory.allCases.filter { c in exercises.contains { $0.category == c } }
-        let maxCount = max(counts.values.max() ?? 0, 1)
+        // 沒有動作的分類（例如違常姿勢）不顯示；有氧另外放
+        let categories = ExerciseCategory.allCases.filter { c in c != .cardio && exercises.contains { $0.category == c } }
+        let maxCount = max(categories.compactMap { counts[$0] }.max() ?? 0, 1)
 
         VStack(alignment: .leading, spacing: 12) {
             Text("最近 30 天")
@@ -101,6 +115,19 @@ private struct CategoryBarsCard: View {
             }
             Divider().overlay(Theme.cardBorder)
             HStack(spacing: 24) {
+                if exercises.contains(where: { $0.category == .cardio }) {
+                    let cardio = counts[.cardio] ?? 0
+                    Button { onSelect(.cardio) } label: {
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            Text("有氧").font(.body.weight(.semibold))
+                            Text(String(cardio))
+                                .font(.title3.bold().monospacedDigit())
+                                .foregroundStyle(color(for: cardio))
+                            Text("天").font(.subheadline).foregroundStyle(.secondary)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
                 ForEach(ExerciseTag.allCases) { tag in
                     let count = tagCounts[tag] ?? 0
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
@@ -156,8 +183,8 @@ struct ExerciseRow: View {
     var exercise: Exercise
 
     var body: some View {
-        let last = exercise.lastEntry
-        let days = Recency.daysSince(last?.date)
+        let last = exercise.lastSummary
+        let days = Recency.daysSince(exercise.lastCompletedDate)
         let staleness = Recency.staleness(days: days)
 
         HStack(spacing: 12) {
@@ -169,7 +196,7 @@ struct ExerciseRow: View {
                     ForEach(exercise.tags) { Chip(text: $0.title) }
                 }
                 if let last {
-                    Text("\(last.date.shortDate) · \(last.summary)")
+                    Text("\(last.date.shortDate) · \(last.text)")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)

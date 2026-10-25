@@ -9,8 +9,8 @@ struct RootView: View {
             Tab("該練什麼", systemImage: "dumbbell.fill") {
                 HomeView()
             }
-            Tab("今日", systemImage: "calendar") {
-                TodayView()
+            Tab("訓練", systemImage: "figure.strengthtraining.traditional") {
+                SessionsView()
             }
             Tab("動作庫", systemImage: "list.bullet.rectangle") {
                 LibraryView()

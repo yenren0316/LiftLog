@@ -14,9 +14,11 @@ final class Exercise {
     var logTypeRaw: String
     var note: String
     var isArchived: Bool
+    /// 自訂休息秒數；nil 代表依分類的預設值
+    var restSeconds: Int?
 
-    @Relationship(deleteRule: .cascade, inverse: \WorkoutEntry.exercise)
-    var entries: [WorkoutEntry] = []
+    @Relationship(deleteRule: .cascade, inverse: \SessionExercise.exercise)
+    var sessionItems: [SessionExercise] = []
 
     init(
         id: UUID = UUID(),
@@ -28,7 +30,8 @@ final class Exercise {
         equipment: Equipment,
         logType: LogType = .weight,
         note: String = "",
-        isArchived: Bool = false
+        isArchived: Bool = false,
+        restSeconds: Int? = nil
     ) {
         self.id = id
         self.name = name
@@ -40,6 +43,7 @@ final class Exercise {
         self.logTypeRaw = logType.rawValue
         self.note = note
         self.isArchived = isArchived
+        self.restSeconds = restSeconds
     }
 
     var category: ExerciseCategory {
@@ -62,55 +66,122 @@ final class Exercise {
         set { logTypeRaw = newValue.rawValue }
     }
 
-    /// 依日期由新到舊
-    var sortedEntries: [WorkoutEntry] {
-        entries.sorted { $0.date > $1.date }
-    }
-
-    var lastEntry: WorkoutEntry? {
-        entries.max { $0.date < $1.date }
+    var effectiveRestSeconds: Int {
+        restSeconds ?? RestDefaults.seconds(for: category)
     }
 }
 
 @Model
-final class WorkoutEntry {
-    var date: Date
+final class WorkoutSession {
+    @Attribute(.unique) var id: UUID
+    var startedAt: Date
+    /// 進行中為 nil
+    var endedAt: Date?
+    var title: String
+    var note: String
+    /// 從舊紀錄匯入的訓練沒有時間資訊，不顯示時長
+    var hasTime: Bool
+
+    @Relationship(deleteRule: .cascade, inverse: \SessionExercise.session)
+    var items: [SessionExercise] = []
+
+    init(id: UUID = UUID(), startedAt: Date, endedAt: Date? = nil, title: String = "", note: String = "", hasTime: Bool = true) {
+        self.id = id
+        self.startedAt = startedAt
+        self.endedAt = endedAt
+        self.title = title
+        self.note = note
+        self.hasTime = hasTime
+    }
+
+    var isActive: Bool { endedAt == nil }
+
+    var orderedItems: [SessionExercise] {
+        items.sorted { $0.order < $1.order }
+    }
+}
+
+@Model
+final class SessionExercise {
+    @Attribute(.unique) var id: UUID
+    var session: WorkoutSession?
     var exercise: Exercise?
+    var order: Int
+    var note: String
+
+    @Relationship(deleteRule: .cascade, inverse: \SetRecord.sessionExercise)
+    var sets: [SetRecord] = []
+
+    init(id: UUID = UUID(), session: WorkoutSession?, exercise: Exercise?, order: Int, note: String = "") {
+        self.id = id
+        self.session = session
+        self.exercise = exercise
+        self.order = order
+        self.note = note
+    }
+
+    var orderedSets: [SetRecord] {
+        sets.sorted { $0.order < $1.order }
+    }
+
+    var completedSets: [SetRecord] {
+        orderedSets.filter(\.isCompleted)
+    }
+}
+
+@Model
+final class SetRecord {
+    @Attribute(.unique) var id: UUID
+    var sessionExercise: SessionExercise?
+    var order: Int
+    var kindRaw: String
+    /// weight 型存負重，assisted 型存輔助重量
     var weightKg: Double?
-    var sets: Int?
     var reps: Int?
-    var isMax: Bool
     var incline: Double?
     var speed: Double?
     var minutes: Double?
-    var note: String
-    /// 從「健康」帶入時記下的 HKWorkout uuid，避免同一次運動重複帶入
+    var isCompleted: Bool
+    var completedAt: Date?
+    /// 從 Apple Watch 帶入時記下的 HKWorkout uuid，避免重複帶入
     var healthWorkoutID: UUID?
 
     init(
-        date: Date,
-        exercise: Exercise?,
+        id: UUID = UUID(),
+        sessionExercise: SessionExercise?,
+        order: Int,
+        kind: SetKind = .normal,
         weightKg: Double? = nil,
-        sets: Int? = nil,
         reps: Int? = nil,
-        isMax: Bool = false,
         incline: Double? = nil,
         speed: Double? = nil,
         minutes: Double? = nil,
-        note: String = "",
+        isCompleted: Bool = false,
+        completedAt: Date? = nil,
         healthWorkoutID: UUID? = nil
     ) {
-        self.date = date
-        self.exercise = exercise
+        self.id = id
+        self.sessionExercise = sessionExercise
+        self.order = order
+        self.kindRaw = kind.rawValue
         self.weightKg = weightKg
-        self.sets = sets
         self.reps = reps
-        self.isMax = isMax
         self.incline = incline
         self.speed = speed
         self.minutes = minutes
-        self.note = note
+        self.isCompleted = isCompleted
+        self.completedAt = completedAt
         self.healthWorkoutID = healthWorkoutID
+    }
+
+    var kind: SetKind {
+        get { SetKind(rawValue: kindRaw) ?? .normal }
+        set { kindRaw = newValue.rawValue }
+    }
+
+    var values: SetValues {
+        SetValues(kind: kind, weightKg: weightKg, reps: reps, incline: incline, speed: speed, minutes: minutes,
+                  isCompleted: isCompleted, completedAt: completedAt)
     }
 }
 
@@ -126,12 +197,12 @@ final class BodyWeight {
 }
 
 enum LiftLogStore {
-    static let schema = Schema([Exercise.self, WorkoutEntry.self, BodyWeight.self])
+    static let schema = Schema([Exercise.self, WorkoutSession.self, SessionExercise.self, SetRecord.self, BodyWeight.self])
 
-    /// 第二版改用新的檔名，第一版的資料庫直接忽略，不做遷移
+    /// CHANGE_02 改用新的檔名（手機上還沒有資料），舊的資料庫直接忽略
     static func makeContainer() -> ModelContainer {
         do {
-            return try ModelContainer(for: schema, configurations: ModelConfiguration("LiftLog2", schema: schema))
+            return try ModelContainer(for: schema, configurations: ModelConfiguration("LiftLog3", schema: schema))
         } catch {
             fatalError("無法開啟資料庫：\(error)")
         }

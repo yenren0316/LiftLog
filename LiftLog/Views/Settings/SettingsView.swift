@@ -6,7 +6,7 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var context
 
     @State private var exportURL: URL?
-    @State private var counts = (exercises: 0, entries: 0, bodyWeights: 0)
+    @State private var counts = (exercises: 0, sessions: 0, bodyWeights: 0)
     @State private var showingImporter = false
     @State private var pendingImport: BackupFile?
     @State private var message: String?
@@ -25,7 +25,7 @@ struct SettingsView: View {
 
                     HStack(spacing: 0) {
                         stat(counts.exercises, "動作")
-                        stat(counts.entries, "紀錄")
+                        stat(counts.sessions, "次訓練")
                         stat(counts.bodyWeights, "體重")
                     }
                     .padding(.vertical, 8)
@@ -65,7 +65,7 @@ struct SettingsView: View {
             Button("匯入並取代", role: .destructive) { restore(file) }
             Button("取消", role: .cancel) {}
         } message: { file in
-            Text("備份內容：\(file.exercises.count) 個動作、\(file.entries.count) 筆紀錄、\(file.bodyWeights.count) 筆體重。\n目前 App 裡的資料會被刪除。建議先匯出一份目前的資料。")
+            Text("備份內容：\(file.exercises.count) 個動作、\(file.sessions.count) 次訓練、\(file.bodyWeights.count) 筆體重。\n目前 App 裡的資料會被刪除。建議先匯出一份目前的資料。")
         }
         .alert(message ?? "", isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } })) {
             Button("好") {}
@@ -94,7 +94,7 @@ struct SettingsView: View {
     private func refresh() {
         do {
             let file = try BackupService.makeBackup(from: context)
-            counts = (file.exercises.count, file.entries.count, file.bodyWeights.count)
+            counts = (file.exercises.count, file.sessions.count, file.bodyWeights.count)
             let day = Date.now.formatted(.iso8601.year().month().day())
             let url = FileManager.default.temporaryDirectory.appendingPathComponent("LiftLog-備份-\(day).json")
             try file.encode().write(to: url, options: .atomic)

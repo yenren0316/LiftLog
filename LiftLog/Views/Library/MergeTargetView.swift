@@ -17,7 +17,7 @@ struct MergeTargetView: View {
         NavigationStack {
             List {
                 Section {
-                    Text("「\(source.name)」的 \(source.entries.count) 筆紀錄會移到你選的動作，名稱和別名會變成目標的別名，然後刪除「\(source.name)」。")
+                    Text("「\(source.name)」的 \(source.completedItems.count) 次紀錄會移到你選的動作，名稱和別名會變成目標的別名，然後刪除「\(source.name)」。")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .listRowBackground(Color.clear)
@@ -35,7 +35,7 @@ struct MergeTargetView: View {
                                     HStack {
                                         Text(exercise.name).foregroundStyle(.primary)
                                         Spacer()
-                                        Text("\(exercise.entries.count) 筆").foregroundStyle(.secondary)
+                                        Text("\(exercise.completedItems.count) 次").foregroundStyle(.secondary)
                                     }
                                 }
                                 .listRowBackground(Theme.card)
