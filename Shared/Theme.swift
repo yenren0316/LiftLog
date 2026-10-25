@@ -147,7 +147,9 @@ enum Theme {
 
     static let cardRadius: CGFloat = 28
 
-    private static func token(_ value: @escaping @Sendable (Palette) -> UInt32) -> Color {
+    /// SwiftUI 在 iPhone 上可能從背景的繪製執行緒取色（例如動畫中），所以取色的 closure 不能綁在主執行緒：
+    /// App target 預設是 MainActor，Swift 6 會在執行時檢查，不在主執行緒就閃退
+    nonisolated private static func token(_ value: @escaping @Sendable (Palette) -> UInt32) -> Color {
         Color(uiColor: UIColor { traits in
             let theme = ThemeSettings.load().active(systemIsDark: traits.userInterfaceStyle == .dark)
             return UIColor(hex: value(theme.palette))
@@ -155,14 +157,14 @@ enum Theme {
     }
 }
 
-extension Color {
+nonisolated extension Color {
     /// 0xRRGGBB
     init(hex: UInt32) {
         self.init(uiColor: UIColor(hex: hex))
     }
 }
 
-extension UIColor {
+nonisolated extension UIColor {
     convenience init(hex: UInt32) {
         self.init(red: CGFloat((hex >> 16) & 0xFF) / 255, green: CGFloat((hex >> 8) & 0xFF) / 255,
                   blue: CGFloat(hex & 0xFF) / 255, alpha: 1)

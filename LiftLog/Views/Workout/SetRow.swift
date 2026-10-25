@@ -120,8 +120,8 @@ struct SetRow: View {
     }
 }
 
-/// 欄位不齊全時左右晃動
-struct Shake: GeometryEffect {
+/// 欄位不齊全時左右晃動。SwiftUI 可能在背景的繪製執行緒計算動畫，所以不綁在主執行緒
+nonisolated struct Shake: GeometryEffect {
     var animatableData: CGFloat
 
     func effectValue(size: CGSize) -> ProjectionTransform {

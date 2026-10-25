@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import UIKit
 import Testing
 @testable import LiftLog
 
@@ -43,5 +44,24 @@ struct ThemeTests {
         #expect(settings.colorScheme == nil)
         #expect(settings.active(systemIsDark: true) == .midnightBlue)
         #expect(settings.active(systemIsDark: false) == .coolGray)
+    }
+}
+
+/// iPhone 上 SwiftUI 會在背景的繪製執行緒取色、計算動畫；這些程式碼不能要求在主執行緒（曾因此閃退）
+@MainActor
+struct OffMainThreadRenderingTests {
+    @Test func themeColorsResolveOffTheMainThread() async {
+        let colors = [Theme.background, Theme.card, Theme.accent, Theme.done, Theme.textPrimary]
+        let resolved = await Task.detached {
+            colors.map { UIColor($0).resolvedColor(with: UITraitCollection(userInterfaceStyle: .dark)) }
+        }.value
+        #expect(resolved.count == colors.count)
+    }
+
+    @Test func shakeEffectComputesOffTheMainThread() async {
+        let transform = await Task.detached {
+            Shake(animatableData: 0.125).effectValue(size: CGSize(width: 100, height: 40)).m31
+        }.value
+        #expect(abs(transform - 8) < 0.001)
     }
 }
