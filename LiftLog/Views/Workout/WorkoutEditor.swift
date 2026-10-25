@@ -228,15 +228,11 @@ struct WorkoutEditor<Header: View>: View {
 
     /// 每一組的組號、上一次、預填值
     private func rowInfos(_ item: SessionExercise) -> [SetRowInfo] {
-        let last = item.exercise?.lastSets(excluding: session) ?? []
-        var prior: SetValues?
         var normalCount = 0
-        return item.orderedSets.enumerated().map { index, set in
-            if set.kind == .normal { normalCount += 1 }
-            let previous = SetLogic.previous(at: index, lastSets: last)
-            let placeholder = SetLogic.placeholder(previous: previous, priorInSession: prior)
-            prior = SetLogic.resolved(entered: set.values, placeholder: placeholder)
-            return SetRowInfo(set: set, number: set.kind.badge(number: normalCount), previous: previous, placeholder: placeholder)
+        return item.setHints().map { hint in
+            if hint.set.kind == .normal { normalCount += 1 }
+            return SetRowInfo(set: hint.set, number: hint.set.kind.badge(number: normalCount),
+                              previous: hint.previous, placeholder: hint.placeholder)
         }
     }
 
@@ -250,18 +246,8 @@ struct WorkoutEditor<Header: View>: View {
             WorkoutActions.save(context)
             return true
         }
-        let values = SetLogic.resolved(entered: set.values, placeholder: row.placeholder)
-        guard SetLogic.canComplete(values, logType: exercise.logType, equipment: exercise.equipment) else { return false }
-        set.weightKg = values.weightKg
-        set.reps = values.reps
-        set.incline = values.incline
-        set.speed = values.speed
-        set.minutes = values.minutes
-        set.seconds = values.seconds
-        set.isCompleted = true
-        set.completedAt = .now
+        guard WorkoutActions.complete(set, placeholder: row.placeholder, in: context) else { return false }
         clearDrafts(set)
-        WorkoutActions.save(context)
         if focus?.set == set.id { focus = nil }
         onSetCompleted(item)
         return true

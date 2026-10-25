@@ -8,7 +8,6 @@ struct WorkoutView: View {
     @Environment(\.modelContext) private var context
     @Environment(WorkoutCoordinator.self) private var coordinator
     @Environment(RestTimer.self) private var restTimer
-    @AppStorage("autoRestTimer") private var autoRestTimer = true
     @AppStorage(WeightUnit.storageKey) private var unit: WeightUnit = .kg
 
     @State private var confirmingDiscard = false
@@ -97,10 +96,9 @@ struct WorkoutView: View {
         }
     }
 
-    /// 打勾後自動開始休息倒數（設定頁可關閉）
+    /// 打勾後自動開始休息倒數（設定頁可關閉）；和即時動態的「完成這組」同一套邏輯
     private func setCompleted(_ item: SessionExercise) {
-        guard autoRestTimer else { return }
-        restTimer.start(seconds: item.restSeconds)
+        WorkoutService.shared.startRest(after: item)
     }
 
     private func finish(_ choice: SetLogic.IncompleteChoice) {

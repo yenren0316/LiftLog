@@ -4,12 +4,13 @@ import SwiftData
 struct RootView: View {
     @Environment(\.modelContext) private var context
     @State private var coordinator = WorkoutCoordinator()
-    @State private var restTimer = RestTimer()
+    @State private var restTimer = RestTimer.shared
     @State private var tab = 0
     @AppStorage(AppTheme.storageKey) private var theme: AppTheme = .graphiteOrange
     @AppStorage(AppTheme.followSystemKey) private var followSystem = false
     @AppStorage(AppTheme.darkKey) private var darkTheme: AppTheme = .midnightBlue
     @AppStorage(AppTheme.lightKey) private var lightTheme: AppTheme = .coolGray
+    @AppStorage(WeightUnit.storageKey) private var unit: WeightUnit = .kg
     @Query(filter: #Predicate<WorkoutSession> { $0.endedAt == nil }) private var active: [WorkoutSession]
     private let router = DeepLinkRouter.shared
 
@@ -36,7 +37,12 @@ struct RootView: View {
             .id(themeSettings.key)
             .tint(Theme.accent)
             .preferredColorScheme(themeSettings.colorScheme)
-            .onChange(of: themeSettings.key) { SnapshotWriter.shared.update() }
+            .onChange(of: themeSettings.key) {
+                SnapshotWriter.shared.update()
+                LiveActivityController.shared.scheduleSync()
+            }
+            // 即時動態的目標重量依單位顯示
+            .onChange(of: unit) { LiveActivityController.shared.scheduleSync() }
             .onOpenURL { router.open($0) }
             .onChange(of: router.pending, initial: true) { _, link in
                 if let link { handle(link) }
@@ -123,6 +129,7 @@ struct RootView: View {
             GuideImporter.importIfNeeded(into: context)
             LibraryAdditions.applyIfNeeded(into: context)
             SnapshotWriter.shared.start(context: context)
+            LiveActivityController.shared.start()
             #if DEBUG
             // 開發用：啟動參數 -startTab 1 直接切到該分頁
             tab = UserDefaults.standard.integer(forKey: "startTab")

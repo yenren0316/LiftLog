@@ -217,6 +217,9 @@ final class BodyWeight {
 enum LiftLogStore {
     static let schema = Schema([Exercise.self, WorkoutSession.self, SessionExercise.self, SetRecord.self, BodyWeight.self])
 
+    /// App 只開一個資料庫；畫面和即時動態的按鈕（在 App 的程序裡執行）共用同一個 mainContext
+    static let container = makeContainer()
+
     /// CHANGE_04 動作庫重整，改用新的檔名重新匯入（手機上還沒有資料），舊的資料庫直接忽略。
     /// groupContainer 固定為 .none：App 有 App Group 權限後，預設（.automatic）會改用群組容器裡的新資料庫，
     /// 資料庫要留在 App 自己的位置（小工具只讀 App Group 裡的快照）

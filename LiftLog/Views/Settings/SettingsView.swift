@@ -6,6 +6,7 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var context
 
     @AppStorage("autoRestTimer") private var autoRestTimer = true
+    @AppStorage(LiveActivityController.enabledKey) private var liveActivityEnabled = true
     @AppStorage(WeightUnit.storageKey) private var unit: WeightUnit = .kg
     @AppStorage(RoundingSteps.barbellKgKey) private var barbellKg = RoundingSteps.barbellKgDefault
     @AppStorage(RoundingSteps.barbellLbsKey) private var barbellLbs = RoundingSteps.barbellLbsDefault
@@ -58,6 +59,17 @@ struct SettingsView: View {
                         .foregroundStyle(Theme.textSecondary)
                 }
                 .card()
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Toggle(isOn: $liveActivityEnabled) {
+                        Label("訓練中顯示即時動態", systemImage: "lock.iphone").font(.headline)
+                    }
+                    Text("在鎖定畫面和動態島顯示目前的組和休息倒數，不用打開 App 就能按「完成這組」。")
+                        .font(.footnote)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+                .card()
+                .onChange(of: liveActivityEnabled) { LiveActivityController.shared.scheduleSync() }
 
                 VStack(alignment: .leading, spacing: 16) {
                     Label("備份", systemImage: "externaldrive.fill")

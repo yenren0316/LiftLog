@@ -32,6 +32,20 @@ nonisolated enum Role: String, Codable, CaseIterable, Identifiable {
         }
     }
 
+    /// 動態島左側的圖示（SF Symbols）
+    var symbol: String {
+        switch self {
+        case .explosive: "bolt.fill"
+        case .main: "dumbbell.fill"
+        case .unilateral: "figure.strengthtraining.functional"
+        case .push: "arrow.up.circle.fill"
+        case .pull: "arrow.down.circle.fill"
+        case .core: "figure.core.training"
+        case .accessory: "plus.circle.fill"
+        case .cardio: "figure.run"
+        }
+    }
+
     var shortGuide: String {
         guard let end = guide.firstIndex(of: "。") else { return guide }
         return String(guide[...end])

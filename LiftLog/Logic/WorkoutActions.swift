@@ -49,6 +49,25 @@ enum WorkoutActions {
         SetLogic.previous(at: index, lastSets: exercise.lastSets(excluding: session))?.kind ?? .normal
     }
 
+    /// 打勾：沒輸入的欄位用預填值；必要欄位不齊時不完成，回傳 false。
+    /// 訓練中畫面的 ✓ 和即時動態的「完成這組」都走這裡
+    @discardableResult
+    static func complete(_ set: SetRecord, placeholder: SetValues?, in context: ModelContext) -> Bool {
+        guard let exercise = set.sessionExercise?.exercise else { return false }
+        let values = SetLogic.resolved(entered: set.values, placeholder: placeholder)
+        guard SetLogic.canComplete(values, logType: exercise.logType, equipment: exercise.equipment) else { return false }
+        set.weightKg = values.weightKg
+        set.reps = values.reps
+        set.incline = values.incline
+        set.speed = values.speed
+        set.minutes = values.minutes
+        set.seconds = values.seconds
+        set.isCompleted = true
+        set.completedAt = .now
+        save(context)
+        return true
+    }
+
     static func addSet(to item: SessionExercise, in context: ModelContext) {
         let order = (item.sets.map(\.order).max() ?? -1) + 1
         context.insert(SetRecord(sessionExercise: item, order: order))

@@ -6,6 +6,6 @@ struct LiftLogWidgetsBundle: WidgetBundle {
     var body: some Widget {
         LastWorkoutWidget()
         LiftLogWidgetsControl()
-        LiftLogWidgetsLiveActivity()
+        WorkoutLiveActivity()
     }
 }

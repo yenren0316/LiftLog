@@ -381,6 +381,26 @@ CHANGE_04 刪除了 15 個從沒練過的動作（前抱式深蹲、分腿蹲、
 - accessoryInline：「上次訓練 2 天前・今天下半身」；今天練過「今天練過・下次下半身」；訓練中「訓練中 32:20」；沒有紀錄「還沒有訓練紀錄」。
 - 點一下開啟 `liftlog://new`；訓練中開啟 `liftlog://workout`。預覽頁：`-widgetGallery lock`。
 
+#### 11-5. 即時動態（鎖定畫面與動態島）
+- 資料由 App 用 ActivityKit 直接更新，不經過 App Group（`Shared/WorkoutActivityAttributes.swift`）。
+- 開始與結束（`LiveActivityController`）：依「現在有沒有進行中的訓練」同步。開始訓練時建立，完成或捨棄時結束；App 重新開啟時有進行中的訓練但即時動態不見了，就重新建立。資料庫存檔、休息計時器改變、換主題、換單位時同步，內容沒變不更新。
+- 設定頁「訓練中顯示即時動態」，預設開啟（`liveActivity.enabled`）。
+- ContentState：標題、startedAt；目前的組（依動作順序第一個沒打勾的組）的動作名稱、角色與圖示、「第 2／5 組」、目標（這組的預填值，例如「60 kg × 5」，單位依全域設定）、能不能直接完成；進度（已完成組數／總組數）；休息的開始與結束時間（沒在休息為 nil，開始時間給進度條用）。
+- attributes：這次訓練的 id，以及開始時主題的 accent 和 done 顏色；換訓練或換主題就重建。
+- 休息結束時不需要喚醒 App：更新時把 staleDate 設成休息結束時間，內容過期後畫面自動切回「完成這組」。
+- 鎖定畫面：第一行標題和經過時間；中間是目前的動作（角色、名稱、已完成組數）、第幾組和目標；休息中大字倒數（`Text(timerInterval:countsDown:)`）加進度條和「下一組」。按鈕：不在休息時「完成這組」，休息中「跳過休息」「+15 秒」。預填值不夠完成時（例如第一次做的動作）改成「打開 App 輸入這組」；全部打勾後顯示「打開 App 完成訓練」。
+- 動態島：
+  - compact leading：角色的圖示；compact trailing：休息中倒數，否則「2/5」。
+  - minimal：休息中倒數，否則啞鈴圖示。
+  - expanded：主要內容和按鈕和鎖定畫面相同；展開的高度有限，上方只放角色圖示和經過時間，標題留在鎖定畫面。
+- 按鈕的 LiveActivityIntent（`CompleteSetIntent`、`SkipRestIntent`、`ExtendRestIntent`）宣告在 Shared，由系統在 App 的程序裡執行；實際動作在 App 的 `Intents/WorkoutIntents+App.swift`，小工具 target 只有空的實作。
+  - 完成這組：目前的組採用預填值打勾（`WorkoutActions.complete`，和在 App 裡沒輸入數字直接按 ✓ 同一段程式），再依角色開始休息（`WorkoutService.startRest`，設定關閉自動休息時不開始）。
+  - 跳過休息：清掉倒數並取消休息結束的本機通知。
+  - +15 秒：休息結束時間延後 15 秒並重新排程通知。
+  - App 畫面和按鈕共用同一個資料庫 mainContext（`LiftLogStore.container`）和休息計時器（`RestTimer.shared`），App 開著時會即時反映。
+- 預覽頁：`-widgetGallery live`（鎖定畫面）、`-widgetGallery island`（動態島，黑色底和形狀是模擬的）。
+- 開發注意：以 App 當 host 跑單元測試時不建立即時動態。模擬器上如果還留著即時動態，測試會在啟動時卡住，先把 App 從模擬器移除再跑。
+
 ## 初始資料
 - `tools/parse_log.py` 解析 `tools/workout_log.txt`，產生 `LiftLog/Data/seed.json`、`tools/unmatched.txt` 與 `tools/unit_review.txt`。
 - App 第一次啟動且資料庫為空時自動匯入 seed.json（v2，匯入時轉成訓練）。

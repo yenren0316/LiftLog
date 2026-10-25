@@ -3,7 +3,7 @@ import SwiftData
 
 @main
 struct LiftLogApp: App {
-    private let container = LiftLogStore.makeContainer()
+    private let container = LiftLogStore.container
 
     var body: some Scene {
         WindowGroup {

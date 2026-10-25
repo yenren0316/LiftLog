@@ -73,3 +73,34 @@ extension Exercise {
         return completedItems.filter { ($0.session?.startedAt ?? .distantPast) >= cutoff }.count
     }
 }
+
+/// 一組的「上一次」和灰字預填值
+nonisolated struct SetHint {
+    var set: SetRecord
+    var previous: SetValues?
+    var placeholder: SetValues?
+}
+
+extension SessionExercise {
+    /// 依組的順序算出每一組的「上一次」和預填值（訓練中畫面和即時動態共用）
+    func setHints() -> [SetHint] {
+        let last = exercise?.lastSets(excluding: session) ?? []
+        var prior: SetValues?
+        return orderedSets.enumerated().map { index, set in
+            let previous = SetLogic.previous(at: index, lastSets: last)
+            let placeholder = SetLogic.placeholder(previous: previous, priorInSession: prior)
+            prior = SetLogic.resolved(entered: set.values, placeholder: placeholder)
+            return SetHint(set: set, previous: previous, placeholder: placeholder)
+        }
+    }
+}
+
+extension WorkoutSession {
+    /// 目前的組：依動作順序，第一個還沒打勾的組；全部打勾時為 nil
+    var currentSet: (item: SessionExercise, set: SetRecord, index: Int)? {
+        let items = orderedItems.filter { $0.exercise != nil }
+        guard let position = SetLogic.currentSet(items.map { $0.orderedSets.map(\.isCompleted) }) else { return nil }
+        let item = items[position.item]
+        return (item, item.orderedSets[position.set], position.set)
+    }
+}

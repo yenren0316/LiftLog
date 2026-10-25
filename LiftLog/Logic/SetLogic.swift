@@ -26,6 +26,14 @@ nonisolated enum SetLogic {
         previous ?? priorInSession
     }
 
+    /// 目前的組：依動作順序，第一個還沒打勾的組（第幾個動作、第幾組）；全部打勾時為 nil
+    static func currentSet(_ completed: [[Bool]]) -> (item: Int, set: Int)? {
+        for (item, sets) in completed.enumerated() {
+            if let set = sets.firstIndex(of: false) { return (item, set) }
+        }
+        return nil
+    }
+
     /// 打勾時採用的值：有輸入用輸入，沒輸入用預填
     static func resolved(entered: SetValues, placeholder: SetValues?) -> SetValues {
         var v = entered

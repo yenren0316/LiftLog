@@ -34,6 +34,12 @@ nonisolated struct Palette: Equatable, Sendable {
         (accent, onAccent, done, warning, danger) = (hex[6], hex[7], hex[8], hex[9], hex[10])
     }
 
+    /// 亮色的底（例如即時動態按鈕的顏色）配黑字，暗色配白字
+    static func isLight(_ hex: UInt32) -> Bool {
+        let r = Double((hex >> 16) & 0xFF), g = Double((hex >> 8) & 0xFF), b = Double(hex & 0xFF)
+        return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6
+    }
+
     var tokens: [(name: String, hex: UInt32)] {
         [("background", background), ("card", card), ("field", field), ("separator", separator),
          ("textPrimary", textPrimary), ("textSecondary", textSecondary), ("accent", accent), ("onAccent", onAccent),
