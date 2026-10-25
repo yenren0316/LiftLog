@@ -7,7 +7,7 @@ struct RootView: View {
     var body: some View {
         TabView {
             Tab("該練什麼", systemImage: "dumbbell.fill") {
-                PlaceholderScreen(title: "該練什麼")
+                HomeView()
             }
             Tab("今日", systemImage: "calendar") {
                 PlaceholderScreen(title: "今日")

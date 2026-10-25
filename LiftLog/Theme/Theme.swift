@@ -95,3 +95,21 @@ extension ScreenHeader where Trailing == EmptyView {
         self.init(title: title) { EmptyView() }
     }
 }
+
+extension Staleness {
+    var color: Color {
+        switch self {
+        case .never: Theme.red
+        case .fresh: Theme.green
+        case .stale: Theme.yellow
+        case .cold: Theme.red
+        }
+    }
+}
+
+extension Date {
+    /// 2026/10/20
+    var shortDate: String {
+        formatted(.dateTime.year().month(.twoDigits).day(.twoDigits))
+    }
+}
