@@ -22,6 +22,7 @@ struct RootView: View {
             .id(themeSettings.key)
             .tint(Theme.accent)
             .preferredColorScheme(themeSettings.colorScheme)
+            .onChange(of: themeSettings.key) { SnapshotWriter.shared.update() }
     }
 
     private var tabs: some View {
@@ -72,6 +73,7 @@ struct RootView: View {
             SeedImporter.importIfNeeded(into: context)
             GuideImporter.importIfNeeded(into: context)
             LibraryAdditions.applyIfNeeded(into: context)
+            SnapshotWriter.shared.start(context: context)
             #if DEBUG
             // 開發用：啟動參數 -startTab 1 直接切到該分頁
             tab = UserDefaults.standard.integer(forKey: "startTab")

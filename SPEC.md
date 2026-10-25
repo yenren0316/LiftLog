@@ -3,6 +3,8 @@
 > - CHANGE_01：改用怪獸訓練（何立安博士）的分類與名稱。
 > - CHANGE_02：改成「一次訓練 → 動作 → 組」的紀錄方式（參考 Hevy）。
 > - CHANGE_03：動作庫整理（封存機台、新動作、bodyweight／timed）、全域 kg／lbs、動作庫列表、動作詳情頁。
+> - CHANGE_04：動作庫重整（9 類）、角色系統、建立菜單、主題配色、App icon。
+> - CHANGE_05：小工具、即時動態、控制中心與動作按鈕、App Shortcut。
 >
 > 以本文件為準。
 
@@ -19,11 +21,14 @@ App 只給自己用、不上架，用免費 Apple ID（Personal Team）安裝。
 
 ## 技術限制
 - SwiftUI + SwiftData，圖表用 Swift Charts，不使用第三方套件。
-- 資料完全存在本機。不用 iCloud/CloudKit、推播、App Groups 等需要付費開發者帳號的功能。
+- 資料完全存在本機。不用 iCloud/CloudKit、推播等需要付費開發者帳號的功能。
+- App Groups（CHANGE_05）：先用 `xcodebuild -allowProvisioningUpdates` 對實機建置，確認免費帳號（Personal Team）也能簽署，才開始使用。群組 `group.com.aaronhou.LiftLog` 只用來讓 App 把小工具快照交給小工具；資料庫不放在群組裡。
 - 介面全部繁體中文。重量單位由設定頁的全域 kg／lbs 決定，資料一律存 kg（1 lb = 0.45359237 kg）。版面簡潔、字大，適合在健身房單手操作。
 - UI 風格參考 Habits First：大圓角卡片、細進度條、懸浮膠囊分頁列。顏色由主題決定（見「主題配色」），預設石墨橙。
 - 資料夾自動同步：新的 .swift 檔直接放進 App 資料夾即可。非必要不改 project.pbxproj，不動 Signing 設定。
   - 例外（已同意）：為了讀取 Apple Watch 運動，加了 HealthKit entitlement（`LiftLog.entitlements`）與健康資料讀取說明。
+  - CHANGE_05 在 Xcode 介面加了小工具 target `LiftLogWidgetsExtension`（資料夾 `LiftLogWidgets/`）、Supports Live Activities、URL scheme `liftlog`（`LiftLog/Info.plist`）、兩個 target 的 App Groups。
+  - `Shared/` 資料夾同時屬於 App 和小工具兩個 target，兩邊共用的程式碼放這裡（主題 token、部位、快照、深層連結、即時動態的資料、intent 宣告）。這個資料夾的 target 設定是經同意後直接寫進 project.pbxproj 的。
 
 ## 資料模型
 
@@ -338,6 +343,21 @@ CHANGE_04 刪除了 15 個從沒練過的動作（前抱式深蹲、分腿蹲、
   - 跑步機：一組，存坡度、速度、分鐘。
   - 匯入的組一律已完成，kind 為正式（原本 MAX 的為 MAX）。
 
+### 11. 小工具與即時動態（CHANGE_05）
+
+#### 11-1. 共用快照
+- 小工具不讀 SwiftData 資料庫。App 把小工具需要的資料算成一份快照（`Shared/WidgetSnapshot.swift`），以 JSON 存在 App Group 的 UserDefaults（key `widgetSnapshot.v1`）。
+- 內容：
+  - lastSessionDate、lastRegion：最後一次已完成的訓練。
+  - 今天的建議：suggestedRegion、suggestedCount、suggestsTreadmill，和建立菜單的預設答案相同（`PlanDefaults.answers`）。
+  - 進行中的訓練：isInProgress、startedAt。
+  - 主題：themeID；跟隨系統外觀時 themeID 為空，改存 darkThemeID 和 lightThemeID。
+- 更新時機（`SnapshotWriter`）：
+  - App 啟動。
+  - 資料庫存檔（`ModelContext.didSave`）。開始、完成、捨棄訓練，以及編輯或刪除歷史訓練都會存檔；連續編輯時合併成一次（0.3 秒）。
+  - 切換主題。
+- 快照內容有變才寫入，並呼叫 `WidgetCenter.shared.reloadAllTimelines()`。
+
 ## 初始資料
 - `tools/parse_log.py` 解析 `tools/workout_log.txt`，產生 `LiftLog/Data/seed.json`、`tools/unmatched.txt` 與 `tools/unit_review.txt`。
 - App 第一次啟動且資料庫為空時自動匯入 seed.json（v2，匯入時轉成訓練）。
@@ -359,6 +379,7 @@ CHANGE_04 刪除了 15 個從沒練過的動作（前抱式深蹲、分腿蹲、
 - CHANGE_01 改用 `LiftLog2.store`，CHANGE_02 改用 `LiftLog3.store`。兩次都是在手機尚未安裝時改的，所以不做 SwiftData 遷移，舊資料不保留。
 - CHANGE_03 只新增欄位（有預設值），沿用 `LiftLog3.store`；手機仍未安裝，seed 已重新產生。
 - CHANGE_04 改用 `LiftLog4.store`（手機上還沒有實際使用），seed 重新產生；說明的匯入旗標改成 `guidesImported.v2`，讓新資料庫重新填入說明。
+- CHANGE_05 加了 App Groups。`ModelConfiguration` 的 groupContainer 預設（.automatic）在有 App Group 權限時會改用群組容器裡的新資料庫，所以固定為 `.none`，資料庫留在原本的位置。
 - 之後的變更若手機上已有資料，必須提供遷移（或先匯出 JSON、再以新版匯入）。
 
 ## 已移除

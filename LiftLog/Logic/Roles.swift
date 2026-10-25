@@ -71,21 +71,7 @@ nonisolated enum Role: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-/// 一次訓練練的部位
-nonisolated enum Region: String, Codable, CaseIterable, Identifiable {
-    case upper, lower, full, unspecified
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .upper: "上半身"
-        case .lower: "下半身"
-        case .full: "全身"
-        case .unspecified: "未指定"
-        }
-    }
-
+nonisolated extension Region {
     /// 只看上肢和下肢分類的動作，不看核心、補強、有氧
     static func infer(_ categories: [ExerciseCategory]) -> Region {
         let lower = categories.contains(where: \.isLower)
