@@ -17,7 +17,7 @@ struct WorkoutSummary: Identifiable {
 
     /// 在 finish 之後呼叫：新紀錄比較的是這次以外的所有歷史
     @MainActor
-    init(session: WorkoutSession) {
+    init(session: WorkoutSession, unit: WeightUnit) {
         title = session.title
         duration = (session.endedAt ?? .now).timeIntervalSince(session.startedAt)
         lines = session.orderedItems.compactMap { item in
@@ -29,7 +29,7 @@ struct WorkoutSummary: Identifiable {
             return Line(
                 name: exercise.name,
                 completedSets: mine.count,
-                summary: item.summary,
+                summary: item.summary(unit: unit),
                 isNewRecord: SetLogic.isNewRecord(session: mine, history: history, logType: exercise.logType)
             )
         }

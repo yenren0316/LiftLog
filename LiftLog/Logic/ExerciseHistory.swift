@@ -25,15 +25,15 @@ extension Exercise {
     }
 
     /// 首頁與詳情用的精簡上次紀錄
-    var lastSummary: (date: Date, text: String)? {
+    func lastSummary(unit: WeightUnit) -> (date: Date, text: String)? {
         guard let item = completedItems.first, let date = item.session?.startedAt else { return nil }
-        return (date, SetFormat.compact(item.completedSets.map(\.values), logType: logType))
+        return (date, SetFormat.compact(item.completedSets.map(\.values), logType: logType, unit: unit))
     }
 }
 
 extension SessionExercise {
-    var summary: String {
-        SetFormat.compact(completedSets.map(\.values), logType: exercise?.logType ?? .weight)
+    func summary(unit: WeightUnit) -> String {
+        SetFormat.compact(completedSets.map(\.values), logType: exercise?.logType ?? .weight, unit: unit)
     }
 }
 

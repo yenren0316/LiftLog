@@ -166,6 +166,7 @@ private struct HistoryCard: View {
 private struct HistoryLine: View {
     var item: SessionExercise
     var date: Date
+    @AppStorage(WeightUnit.storageKey) private var unit: WeightUnit = .kg
 
     var body: some View {
         let hasMax = item.completedSets.contains { $0.kind == .max }
@@ -175,7 +176,7 @@ private struct HistoryLine: View {
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
                 Spacer(minLength: 12)
-                Text(item.summary)
+                Text(item.summary(unit: unit))
                     .font(.body.weight(.semibold))
                     .foregroundStyle(hasMax ? Theme.orange : .primary)
                     .multilineTextAlignment(.trailing)

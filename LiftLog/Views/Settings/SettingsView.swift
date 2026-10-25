@@ -6,6 +6,7 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var context
 
     @AppStorage("autoRestTimer") private var autoRestTimer = true
+    @AppStorage(WeightUnit.storageKey) private var unit: WeightUnit = .kg
     @State private var exportURL: URL?
     @State private var counts = (exercises: 0, sessions: 0, bodyWeights: 0)
     @State private var showingImporter = false
@@ -16,6 +17,22 @@ struct SettingsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 ScreenHeader(title: "設定")
+
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Label("重量單位", systemImage: "scalemass").font(.headline)
+                        Spacer()
+                        Picker("重量單位", selection: $unit) {
+                            ForEach(WeightUnit.allCases) { Text($0.symbol).tag($0) }
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 140)
+                    }
+                    Text("所有畫面依這個單位顯示與輸入，資料一律存成 kg。啞鈴、壺鈴記單顆重量。")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                .card()
 
                 VStack(alignment: .leading, spacing: 8) {
                     Toggle(isOn: $autoRestTimer) {

@@ -9,6 +9,7 @@ struct WorkoutView: View {
     @Environment(WorkoutCoordinator.self) private var coordinator
     @Environment(RestTimer.self) private var restTimer
     @AppStorage("autoRestTimer") private var autoRestTimer = true
+    @AppStorage(WeightUnit.storageKey) private var unit: WeightUnit = .kg
 
     @State private var confirmingDiscard = false
     @State private var askingIncomplete = false
@@ -105,7 +106,7 @@ struct WorkoutView: View {
     private func finish(_ choice: SetLogic.IncompleteChoice) {
         restTimer.skip()
         if WorkoutActions.finish(session, choice: choice, in: context) {
-            coordinator.summary = WorkoutSummary(session: session)
+            coordinator.summary = WorkoutSummary(session: session, unit: unit)
         } else {
             coordinator.isExpanded = false
             coordinator.showEmptyFinishNotice = true

@@ -262,9 +262,10 @@ private struct CategorySection: View {
 
 struct ExerciseRow: View {
     var exercise: Exercise
+    @AppStorage(WeightUnit.storageKey) private var unit: WeightUnit = .kg
 
     var body: some View {
-        let last = exercise.lastSummary
+        let last = exercise.lastSummary(unit: unit)
         let days = Recency.daysSince(exercise.lastCompletedDate)
         let staleness = Recency.staleness(days: days)
 
