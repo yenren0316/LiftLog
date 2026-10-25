@@ -91,6 +91,12 @@ struct HomeView: View {
         } message: { _ in
             Text("結束目前的訓練時，沒打勾的組會被刪除。")
         }
+        // 深層連結 liftlog://new：用預設答案打開建立菜單（App 剛啟動時也要接得到，所以 initial）
+        .onChange(of: coordinator.planRequestedByLink, initial: true) { _, requested in
+            guard requested else { return }
+            coordinator.planRequestedByLink = false
+            if planRequest == nil { openPlan(nil) }
+        }
         #if DEBUG
         // 開發用：啟動參數 -openExercise 臥推 直接打開記錄頁；-openDetail 臥推 直接打開動作詳情
         .task {

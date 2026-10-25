@@ -20,6 +20,8 @@ final class WorkoutCoordinator {
     var summary: WorkoutSummary?
     /// 完成時沒有任何已完成的組，整次訓練已刪除
     var showEmptyFinishNotice = false
+    /// 深層連結 liftlog://new 要求打開建立菜單；首頁收到後開啟並清掉
+    var planRequestedByLink = false
 
     /// 開始訓練的唯一入口：沒有進行中的訓練就直接開始；有的話先問
     func requestStart(_ exercises: [Exercise], context: ModelContext) {

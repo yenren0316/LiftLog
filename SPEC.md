@@ -358,6 +358,12 @@ CHANGE_04 刪除了 15 個從沒練過的動作（前抱式深蹲、分腿蹲、
   - 切換主題。
 - 快照內容有變才寫入，並呼叫 `WidgetCenter.shared.reloadAllTimelines()`。
 
+#### 11-2. 深層連結
+- `liftlog://new`：打開建立菜單，帶入預設答案；有進行中的訓練時，直接打開那次訓練。
+- `liftlog://workout`：打開進行中的訓練；沒有的話回到首頁。
+- 網址（onOpenURL）、控制項和 App Shortcut 的 intent 都交給 `DeepLinkRouter`，由 RootView 依當下有沒有進行中的訓練導向。建立菜單由首頁開啟；如果完成摘要的全螢幕畫面還開著，先關掉再開。
+- 開發用：啟動參數 `-openURL liftlog://new` 走同一套導向（`simctl openurl` 會先跳出系統確認視窗）；`-discardActive YES` 捨棄進行中的訓練。
+
 ## 初始資料
 - `tools/parse_log.py` 解析 `tools/workout_log.txt`，產生 `LiftLog/Data/seed.json`、`tools/unmatched.txt` 與 `tools/unit_review.txt`。
 - App 第一次啟動且資料庫為空時自動匯入 seed.json（v2，匯入時轉成訓練）。

@@ -11,6 +11,7 @@ struct RootView: View {
     @AppStorage(AppTheme.darkKey) private var darkTheme: AppTheme = .midnightBlue
     @AppStorage(AppTheme.lightKey) private var lightTheme: AppTheme = .coolGray
     @Query(filter: #Predicate<WorkoutSession> { $0.endedAt == nil }) private var active: [WorkoutSession]
+    private let router = DeepLinkRouter.shared
 
     private var themeSettings: ThemeSettings {
         ThemeSettings(theme: theme, followSystem: followSystem, dark: darkTheme, light: lightTheme)
@@ -23,6 +24,41 @@ struct RootView: View {
             .tint(Theme.accent)
             .preferredColorScheme(themeSettings.colorScheme)
             .onChange(of: themeSettings.key) { SnapshotWriter.shared.update() }
+            .onOpenURL { router.open($0) }
+            .onChange(of: router.pending, initial: true) { _, link in
+                if let link { handle(link) }
+            }
+    }
+
+    /// 深層連結：有進行中的訓練就打開它；建立菜單交給首頁開啟
+    private func handle(_ link: DeepLink) {
+        router.pending = nil
+        let coverShown = coordinator.isExpanded && (active.first != nil || coordinator.summary != nil)
+        switch link.destination(hasActiveWorkout: !active.isEmpty) {
+        case .workout:
+            coordinator.summary = nil
+            coordinator.isExpanded = true
+        case .plan:
+            closeWorkoutCover()
+            tab = 0
+            if coverShown {
+                // 等全螢幕畫面關掉再開 sheet
+                Task {
+                    try? await Task.sleep(for: .milliseconds(600))
+                    coordinator.planRequestedByLink = true
+                }
+            } else {
+                coordinator.planRequestedByLink = true
+            }
+        case .home:
+            closeWorkoutCover()
+            tab = 0
+        }
+    }
+
+    private func closeWorkoutCover() {
+        coordinator.isExpanded = false
+        coordinator.summary = nil
     }
 
     private var tabs: some View {
@@ -84,6 +120,14 @@ struct RootView: View {
                 coordinator.requestStart(names.compactMap { n in all.first { $0.name == n } }, context: context)
             } else if UserDefaults.standard.bool(forKey: "demoWorkout") {
                 coordinator.isExpanded = true
+            }
+            // 開發用：-discardActive YES 捨棄進行中的訓練，測試沒有訓練時的狀態
+            if UserDefaults.standard.bool(forKey: "discardActive"), let session = active.first {
+                WorkoutActions.discard(session, in: context)
+            }
+            // 開發用：-openURL liftlog://new 模擬點小工具（simctl openurl 會先跳出確認視窗）
+            if let link = UserDefaults.standard.string(forKey: "openURL"), let url = URL(string: link) {
+                router.open(url)
             }
             #endif
         }
