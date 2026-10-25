@@ -9,7 +9,7 @@ struct LastWorkoutWidget: Widget {
         }
         .configurationDisplayName("上次訓練")
         .description("距離上次訓練幾天，以及今天建議練哪裡。")
-        .supportedFamilies([.systemSmall])
+        .supportedFamilies([.systemSmall, .accessoryCircular, .accessoryRectangular, .accessoryInline])
     }
 }
 
@@ -38,9 +38,17 @@ struct LastWorkoutProvider: TimelineProvider {
 
 struct LastWorkoutWidgetView: View {
     var entry: LastWorkoutEntry
+    @Environment(\.widgetFamily) private var family
 
     var body: some View {
-        LastWorkoutSmallView(snapshot: entry.snapshot, date: entry.date)
-            .widgetURL((entry.snapshot?.link ?? .new).url)
+        Group {
+            switch family {
+            case .accessoryCircular: LastWorkoutCircularView(snapshot: entry.snapshot, date: entry.date)
+            case .accessoryRectangular: LastWorkoutRectangularView(snapshot: entry.snapshot, date: entry.date)
+            case .accessoryInline: LastWorkoutInlineView(snapshot: entry.snapshot, date: entry.date)
+            default: LastWorkoutSmallView(snapshot: entry.snapshot, date: entry.date)
+            }
+        }
+        .widgetURL((entry.snapshot?.link ?? .new).url)
     }
 }

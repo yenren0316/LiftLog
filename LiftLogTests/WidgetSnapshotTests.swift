@@ -111,6 +111,24 @@ struct WidgetSnapshotTests {
         #expect(Array(dates.dropFirst()) == (26...31).map { date($0, 0) } + [calendar.date(from: DateComponents(year: 2026, month: 11, day: 1))!])
     }
 
+    @Test func lockScreenTexts() {
+        var snapshot = WidgetSnapshot.make(history: PlanHistory([session(23, .upper, [.push])]),
+                                           activeStartedAt: nil, theme: ThemeSettings())
+        #expect(snapshot.inlineText(at: date(25), calendar: calendar) == "上次訓練 2 天前・今天下半身")
+        #expect(snapshot.rectangularFirstLine(days: 2) == "上次：2 天前・上半身")
+        // 今天已經練過：建議是下一次的
+        #expect(snapshot.inlineText(at: date(23, 20), calendar: calendar) == "今天練過・下次下半身")
+        #expect(WidgetSnapshot.suggestionLabel(days: 0) == "下次")
+        #expect(WidgetSnapshot.suggestionLabel(days: 2) == "今天")
+        // 部位未指定時只寫天數
+        snapshot.lastRegion = .unspecified
+        #expect(snapshot.rectangularFirstLine(days: 2) == "上次：2 天前")
+        // 沒有紀錄或訓練中，單行另外處理
+        snapshot.isInProgress = true
+        snapshot.startedAt = date(25, 18)
+        #expect(snapshot.inlineText(at: date(25, 19), calendar: calendar) == nil)
+    }
+
     @Test func storeWritesOnlyWhenChanged() throws {
         let defaults = try #require(UserDefaults(suiteName: "WidgetSnapshotTests.\(UUID().uuidString)"))
         var snapshot = WidgetSnapshot.make(history: PlanHistory([]), activeStartedAt: nil, theme: ThemeSettings())

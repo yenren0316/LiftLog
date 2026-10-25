@@ -372,6 +372,14 @@ CHANGE_04 刪除了 15 個從沒練過的動作（前抱式深蹲、分腿蹲、
 - timeline：現在一筆，加上之後 7 天每天午夜各一筆，天數自己往上加，不需要 App 喚醒；用完（`.atEnd`）再讀一次快照。
 - 外觀：用快照裡的主題 token，跟隨系統時依小工具的深淺選深色或淺色主題；讀不到快照時深色用石墨橙、淺色用冷灰。背景用 `containerBackground`。主要數字加 `widgetAccentable`，支援著色和透明模式。
 - 畫面在 `Shared/LastWorkoutViews.swift`，小工具和 App 的開發用預覽頁（啟動參數 `-widgetGallery small`）共用。
+- 今天已經練過時，建議其實是下一次的，標籤改成「下次建議：下半身」（鎖定畫面同理）。
+
+#### 11-4. 鎖定畫面小工具
+同一個小工具也支援鎖定畫面的三種尺寸。系統以單色顯示，用預設前景色，主要內容加 `widgetAccentable`。
+- accessoryCircular：中間大字天數、下方小字「天」；今天練過顯示 ✓；訓練中顯示啞鈴圖示；沒有紀錄顯示 ＋「開始」。
+- accessoryRectangular：第一行「上次：2 天前・上半身」，第二行「今天：下半身」（今天練過時為「下次：下半身」）；訓練中為「訓練中」和計時；沒有紀錄為「還沒有紀錄／開始第一次訓練」。
+- accessoryInline：「上次訓練 2 天前・今天下半身」；今天練過「今天練過・下次下半身」；訓練中「訓練中 32:20」；沒有紀錄「還沒有訓練紀錄」。
+- 點一下開啟 `liftlog://new`；訓練中開啟 `liftlog://workout`。預覽頁：`-widgetGallery lock`。
 
 ## 初始資料
 - `tools/parse_log.py` 解析 `tools/workout_log.txt`，產生 `LiftLog/Data/seed.json`、`tools/unmatched.txt` 與 `tools/unit_review.txt`。

@@ -23,6 +23,24 @@ nonisolated extension WidgetSnapshot {
     /// 點小工具開啟的連結：訓練中回到那次訓練，否則建立菜單
     var link: DeepLink { isInProgress ? .workout : .new }
 
+    /// 建議的標籤：今天已經練過時，建議其實是下一次的
+    static func suggestionLabel(days: Int) -> String {
+        days == 0 ? "下次" : "今天"
+    }
+
+    /// 鎖定畫面單行：「上次訓練 2 天前・今天下半身」
+    func inlineText(at date: Date, calendar: Calendar = .current) -> String? {
+        guard case .trained(let days) = status(at: date, calendar: calendar) else { return nil }
+        let suggestion = "\(Self.suggestionLabel(days: days))\(suggestedRegion.title)"
+        return days == 0 ? "今天練過・\(suggestion)" : "上次訓練 \(Self.daysText(days))・\(suggestion)"
+    }
+
+    /// 鎖定畫面矩形第一行：「上次：2 天前・上半身」
+    func rectangularFirstLine(days: Int) -> String {
+        let region = lastRegion.flatMap { $0 == .unspecified ? nil : $0.title }
+        return "上次：" + [Self.daysText(days), region].compactMap { $0 }.joined(separator: "・")
+    }
+
     /// timeline 的時間點：現在，加上之後 7 天每天的午夜（天數自己往上加，不需要 App 喚醒）
     static func timelineDates(from now: Date, days: Int = 7, calendar: Calendar = .current) -> [Date] {
         let today = calendar.startOfDay(for: now)
@@ -86,7 +104,7 @@ struct LastWorkoutSmallView: View {
                 }
                 Spacer(minLength: 4)
                 if let snapshot {
-                    caption("今天建議：\(snapshot.suggestedRegion.title)", p)
+                    caption("\(WidgetSnapshot.suggestionLabel(days: days))建議：\(snapshot.suggestedRegion.title)", p)
                 }
             }
         }
@@ -116,5 +134,84 @@ struct DaysText: View {
                 Text("天前").font(unitFont)
             }
         }
+    }
+}
+
+// MARK: - 鎖定畫面（第 5 節）：系統以單色顯示，用預設的前景色，不套主題
+
+/// 圓形：大字天數、下方「天」；今天練過顯示 ✓，訓練中顯示啞鈴
+struct LastWorkoutCircularView: View {
+    var snapshot: WidgetSnapshot?
+    var date: Date
+
+    var body: some View {
+        VStack(spacing: -2) {
+            switch snapshot?.status(at: date) ?? .neverTrained {
+            case .neverTrained:
+                Image(systemName: "plus").font(.title2.bold()).widgetAccentable()
+                Text("開始").font(.caption2.weight(.semibold))
+            case .inProgress:
+                Image(systemName: "dumbbell.fill").font(.title2).widgetAccentable()
+            case .trained(0):
+                Image(systemName: "checkmark").font(.title.bold()).widgetAccentable()
+            case .trained(let days):
+                Text(String(days))
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .minimumScaleFactor(0.5)
+                    .lineLimit(1)
+                    .widgetAccentable()
+                Text("天").font(.caption2.weight(.semibold))
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .containerBackground(for: .widget) { AccessoryWidgetBackground() }
+    }
+}
+
+/// 矩形：「上次：2 天前・上半身」「今天：下半身」
+struct LastWorkoutRectangularView: View {
+    var snapshot: WidgetSnapshot?
+    var date: Date
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            switch snapshot?.status(at: date) ?? .neverTrained {
+            case .neverTrained:
+                Text("還沒有紀錄").font(.headline).widgetAccentable()
+                Text("開始第一次訓練").foregroundStyle(.secondary)
+            case .inProgress(let startedAt):
+                Label("訓練中", systemImage: "dumbbell.fill").font(.headline).widgetAccentable()
+                Text(startedAt, style: .timer).monospacedDigit()
+            case .trained(let days):
+                if let snapshot {
+                    Text(snapshot.rectangularFirstLine(days: days)).font(.headline).widgetAccentable()
+                    Text("\(WidgetSnapshot.suggestionLabel(days: days))：\(snapshot.suggestedRegion.title)")
+                }
+            }
+        }
+        .lineLimit(1)
+        .minimumScaleFactor(0.8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .containerBackground(for: .widget) { Color.clear }
+    }
+}
+
+/// 單行：「上次訓練 2 天前・今天下半身」
+struct LastWorkoutInlineView: View {
+    var snapshot: WidgetSnapshot?
+    var date: Date
+
+    var body: some View {
+        Group {
+            switch snapshot?.status(at: date) ?? .neverTrained {
+            case .neverTrained:
+                Text("還沒有訓練紀錄")
+            case .inProgress(let startedAt):
+                Text("訓練中 \(Text(startedAt, style: .timer))")
+            case .trained:
+                Text(snapshot?.inlineText(at: date) ?? "")
+            }
+        }
+        .containerBackground(for: .widget) { Color.clear }
     }
 }

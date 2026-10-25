@@ -13,6 +13,8 @@ struct WidgetGalleryView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 switch page {
+                case "lock":
+                    lockPage
                 default:
                     smallPage
                 }
@@ -41,6 +43,34 @@ struct WidgetGalleryView: View {
             .padding(16)
             .frame(width: Self.smallSize.width, height: Self.smallSize.height)
             .background(Color(hex: p.background), in: .rect(cornerRadius: 24, style: .continuous))
+    }
+
+    // MARK: - 鎖定畫面小工具（系統以單色顯示，這裡用白色模擬）
+
+    private var lockPage: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            lockRow("上次訓練 2 天前", Self.trained)
+            lockRow("今天練過", Self.trainedToday)
+            lockRow("訓練中", Self.inProgress)
+            lockRow("還沒有紀錄", Self.never)
+        }
+        .foregroundStyle(.white)
+    }
+
+    private func lockRow(_ title: String, _ snapshot: WidgetSnapshot) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title).font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.6))
+            LastWorkoutInlineView(snapshot: snapshot, date: .now)
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(1)
+            HStack(spacing: 14) {
+                LastWorkoutCircularView(snapshot: snapshot, date: .now)
+                    .frame(width: 76, height: 76)
+                    .background(.white.opacity(0.18), in: .circle)
+                LastWorkoutRectangularView(snapshot: snapshot, date: .now)
+                    .frame(width: 172, height: 76)
+            }
+        }
     }
 
     private func labeled(_ title: String, @ViewBuilder content: () -> some View) -> some View {
