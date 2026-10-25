@@ -20,6 +20,8 @@ struct ExerciseEditView: View {
     @State private var logType: LogType = .weight
     @State private var note = ""
     @State private var isArchived = false
+    @State private var customRest = false
+    @State private var restSeconds = 90
     @State private var loaded = false
 
     private var trimmedName: String {
@@ -80,6 +82,18 @@ struct ExerciseEditView: View {
                     }
                 }
 
+                Section {
+                    Toggle("自訂休息時間", isOn: $customRest)
+                    if customRest {
+                        Stepper("\(restSeconds) 秒", value: $restSeconds, in: 15...600, step: 15)
+                            .monospacedDigit()
+                    }
+                } header: {
+                    Text("休息時間")
+                } footer: {
+                    Text("不自訂時依分類：\(RestDefaults.seconds(for: category)) 秒")
+                }
+
                 Section("備註") {
                     TextField("例如：注意事項、器材位置", text: $note, axis: .vertical)
                 }
@@ -132,6 +146,8 @@ struct ExerciseEditView: View {
         logType = exercise.logType
         note = exercise.note
         isArchived = exercise.isArchived
+        customRest = exercise.restSeconds != nil
+        restSeconds = exercise.restSeconds ?? RestDefaults.seconds(for: exercise.category)
     }
 
     private func save() {
@@ -147,6 +163,7 @@ struct ExerciseEditView: View {
         target.logType = logType
         target.note = note.trimmingCharacters(in: .whitespacesAndNewlines)
         target.isArchived = isArchived
+        target.restSeconds = customRest ? restSeconds : nil
         try? context.save()
         dismiss()
     }

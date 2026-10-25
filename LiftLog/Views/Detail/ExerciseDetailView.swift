@@ -53,6 +53,7 @@ private struct InfoCard: View {
                 row("別名", exercise.aliases.joined(separator: "、"))
             }
             row("器材", exercise.equipment.title)
+            row("休息", "\(exercise.effectiveRestSeconds) 秒" + (exercise.restSeconds == nil ? "（預設）" : ""))
             row("紀錄類型", exercise.logType.title)
             if !exercise.note.isEmpty {
                 Text(exercise.note).font(.footnote).foregroundStyle(.secondary)

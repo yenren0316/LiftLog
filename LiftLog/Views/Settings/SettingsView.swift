@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 struct SettingsView: View {
     @Environment(\.modelContext) private var context
 
+    @AppStorage("autoRestTimer") private var autoRestTimer = true
     @State private var exportURL: URL?
     @State private var counts = (exercises: 0, sessions: 0, bodyWeights: 0)
     @State private var showingImporter = false
@@ -15,6 +16,16 @@ struct SettingsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 ScreenHeader(title: "設定")
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Toggle(isOn: $autoRestTimer) {
+                        Label("打勾後自動開始休息計時", systemImage: "timer").font(.headline)
+                    }
+                    Text("預設：上下肢推拉 180 秒，其他 90 秒。每個動作可以在動作詳情的「編輯」裡自訂。")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                .card()
 
                 VStack(alignment: .leading, spacing: 16) {
                     Label("備份", systemImage: "externaldrive.fill")

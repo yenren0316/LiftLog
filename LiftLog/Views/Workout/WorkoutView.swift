@@ -7,19 +7,34 @@ struct WorkoutView: View {
 
     @Environment(\.modelContext) private var context
     @Environment(WorkoutCoordinator.self) private var coordinator
+    @Environment(RestTimer.self) private var restTimer
+    @AppStorage("autoRestTimer") private var autoRestTimer = true
 
     @State private var confirmingDiscard = false
     @State private var askingIncomplete = false
 
     var body: some View {
         NavigationStack {
-            WorkoutEditor(session: session) {
+            WorkoutEditor(session: session, onSetCompleted: setCompleted) {
                 header
             }
+            .safeAreaInset(edge: .top) { RestTimerBar() }
+            .animation(.snappy, value: restTimer.isRunning)
+            .sensoryFeedback(.success, trigger: restTimer.finishedCount)
+            #if DEBUG
+            // 開發用：啟動參數 -demoRest 90 開始休息倒數
+            .task {
+                let seconds = UserDefaults.standard.integer(forKey: "demoRest")
+                if seconds > 0, !restTimer.isRunning { restTimer.start(seconds: seconds) }
+            }
+            #endif
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("縮小", systemImage: "chevron.down") { coordinator.isExpanded = false }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    RestTimerMenu(defaultSeconds: session.orderedItems.last?.exercise?.effectiveRestSeconds ?? 90)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
@@ -37,6 +52,7 @@ struct WorkoutView: View {
             }
             .confirmationDialog("捨棄這次訓練？", isPresented: $confirmingDiscard, titleVisibility: .visible) {
                 Button("捨棄訓練", role: .destructive) {
+                    restTimer.skip()
                     coordinator.isExpanded = false
                     WorkoutActions.discard(session, in: context)
                 }
@@ -80,7 +96,14 @@ struct WorkoutView: View {
         }
     }
 
+    /// 打勾後自動開始休息倒數（設定頁可關閉）
+    private func setCompleted(_ item: SessionExercise) {
+        guard autoRestTimer, let exercise = item.exercise else { return }
+        restTimer.start(seconds: exercise.effectiveRestSeconds)
+    }
+
     private func finish(_ choice: SetLogic.IncompleteChoice) {
+        restTimer.skip()
         if WorkoutActions.finish(session, choice: choice, in: context) {
             coordinator.summary = WorkoutSummary(session: session)
         } else {

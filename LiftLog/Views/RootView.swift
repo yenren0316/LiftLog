@@ -4,6 +4,7 @@ import SwiftData
 struct RootView: View {
     @Environment(\.modelContext) private var context
     @State private var coordinator = WorkoutCoordinator()
+    @State private var restTimer = RestTimer()
     @State private var tab = 0
     @Query(filter: #Predicate<WorkoutSession> { $0.endedAt == nil }) private var active: [WorkoutSession]
 
@@ -23,6 +24,7 @@ struct RootView: View {
             }
         }
         .environment(coordinator)
+        .environment(restTimer)
         .fullScreenCover(isPresented: Binding(
             get: { coordinator.isExpanded && (active.first != nil || coordinator.summary != nil) },
             set: { coordinator.isExpanded = $0 }
@@ -38,6 +40,7 @@ struct RootView: View {
                 }
             }
             .environment(coordinator)
+            .environment(restTimer)
             .preferredColorScheme(.dark)
         }
         .alert("沒有完成任何一組", isPresented: Binding(
