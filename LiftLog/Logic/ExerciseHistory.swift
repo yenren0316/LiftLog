@@ -57,3 +57,19 @@ extension Exercise {
         sessionItems.filter { !$0.completedSets.isEmpty }.count
     }
 }
+
+extension Exercise {
+    /// 數據頁用：每次訓練的已完成組，由舊到新
+    var sessionSets: [SessionSets] {
+        completedItems.reversed().compactMap { item in
+            guard let session = item.session else { return nil }
+            return SessionSets(sessionID: session.id, date: session.startedAt, sets: item.completedSets.map(\.values))
+        }
+    }
+
+    /// 最近 N 天有這個動作的訓練次數
+    func trainingCount(withinDays days: Int, now: Date = .now) -> Int {
+        let cutoff = Calendar.current.date(byAdding: .day, value: -days, to: now) ?? now
+        return completedItems.filter { ($0.session?.startedAt ?? .distantPast) >= cutoff }.count
+    }
+}

@@ -1,19 +1,44 @@
 import SwiftUI
 import SwiftData
-import Charts
 
 struct ExerciseDetailView: View {
     let exercise: Exercise
 
+    enum Tab: String, CaseIterable, Identifiable {
+        case data, guide, history
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .data: "數據"
+            case .guide: "說明"
+            case .history: "歷史"
+            }
+        }
+    }
+
+    @State private var tab: Tab = .data
     @State private var showingEdit = false
+    @State private var openSession: WorkoutSession?
 
     var body: some View {
-        let items = exercise.completedItems
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                InfoCard(exercise: exercise)
-                TrendCard(exercise: exercise, items: items)
-                HistoryCard(exercise: exercise, items: items)
+                DetailHeader(exercise: exercise)
+                Picker("分頁", selection: $tab) {
+                    ForEach(Tab.allCases) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+
+                switch tab {
+                case .data:
+                    ExerciseDataTab(exercise: exercise, onOpenSession: open)
+                case .guide:
+                    ExerciseGuideTab(exercise: exercise)
+                case .history:
+                    HistoryCard(exercise: exercise, items: exercise.completedItems)
+                }
             }
             .padding(16)
         }
@@ -29,110 +54,68 @@ struct ExerciseDetailView: View {
         .sheet(isPresented: $showingEdit) {
             ExerciseEditView(exercise: exercise)
         }
+        .navigationDestination(item: $openSession) { SessionDetailView(session: $0) }
+    }
+
+    /// 點紀錄或圖表上的點，打開那次訓練
+    private func open(_ sessionID: UUID) {
+        openSession = exercise.completedItems.lazy.compactMap(\.session).first { $0.id == sessionID }
     }
 }
 
-private struct InfoCard: View {
-    var exercise: Exercise
+/// 頁首：名稱、分類、tags、器材、上次、近 90 天、開始或加入訓練
+private struct DetailHeader: View {
+    let exercise: Exercise
+
+    @Environment(\.modelContext) private var context
+    @Environment(WorkoutCoordinator.self) private var coordinator
+    @Query(filter: #Predicate<WorkoutSession> { $0.endedAt == nil }) private var active: [WorkoutSession]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if exercise.isArchived {
-                Label("已封存", systemImage: "archivebox")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Theme.yellow)
-            }
-            row("分類", exercise.category.fullTitle)
-            if !exercise.tags.isEmpty {
-                row("標籤", exercise.tags.map(\.title).joined(separator: "、"))
-            }
-            if !exercise.englishName.isEmpty {
-                row("英文名", exercise.englishName)
-            }
-            if !exercise.aliases.isEmpty {
-                row("別名", exercise.aliases.joined(separator: "、"))
-            }
-            row("器材", exercise.equipment.title)
-            row("休息", "\(exercise.effectiveRestSeconds) 秒" + (exercise.restSeconds == nil ? "（預設）" : ""))
-            row("紀錄類型", exercise.logType.title)
-            if !exercise.note.isEmpty {
-                Text(exercise.note).font(.footnote).foregroundStyle(.secondary)
-            }
-        }
-        .card()
-    }
-
-    private func row(_ title: String, _ value: String) -> some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text(title).foregroundStyle(.secondary)
-            Spacer(minLength: 16)
-            Text(value).font(.body.weight(.semibold)).multilineTextAlignment(.trailing)
-        }
-    }
-}
-
-private struct TrendCard: View {
-    var exercise: Exercise
-    var items: [SessionExercise]
-
-    private struct Point: Identifiable {
-        var id: PersistentIdentifier
-        var date: Date
-        var value: Double
-        var isMax: Bool
-    }
-
-    private var isCardio: Bool { exercise.logType == .cardio }
-
-    /// 每次訓練一個點：當次最佳的正式組或 MAX 組（不含熱身）；跑步機取坡度
-    private var points: [Point] {
-        items.compactMap { item in
-            guard let date = item.session?.startedAt else { return nil }
-            let sets = item.completedSets.map(\.values)
-            if isCardio {
-                guard let incline = sets.compactMap(\.incline).max() else { return nil }
-                return Point(id: item.persistentModelID, date: date, value: incline, isMax: false)
-            }
-            guard let best = SetLogic.best(sets, logType: exercise.logType) else { return nil }
-            let isMax = sets.contains { $0.kind == .max && $0.weightKg == best }
-            return Point(id: item.persistentModelID, date: date, value: best, isMax: isMax)
-        }
-    }
-
-    var body: some View {
-        let points = points
-        let reversed = exercise.logType == .assisted
+        let days = Recency.daysSince(exercise.lastCompletedDate)
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(isCardio ? "坡度趨勢" : reversed ? "輔助重量趨勢" : "重量趨勢")
-                    .font(.headline).foregroundStyle(.secondary)
-                Spacer()
-                if reversed {
-                    Text("越低越好 ↑").font(.caption).foregroundStyle(.secondary)
-                }
+            HStack(spacing: 6) {
+                Text(exercise.name).font(.title.bold())
+                ForEach(exercise.tags) { Chip(text: $0.title) }
+                if exercise.isArchived { Chip(text: "封存") }
             }
-            if points.count < 2 {
-                Text("至少要兩次紀錄才能畫圖")
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, minHeight: 120)
-            } else {
-                Chart(points) { p in
-                    LineMark(x: .value("日期", p.date), y: .value("重量", p.value))
-                        .foregroundStyle(Theme.green.opacity(0.6))
-                        .interpolationMethod(.monotone)
-                    PointMark(x: .value("日期", p.date), y: .value("重量", p.value))
-                        .foregroundStyle(by: .value("類型", p.isMax ? "MAX" : "一般"))
-                        .symbol(by: .value("類型", p.isMax ? "MAX" : "一般"))
-                        .symbolSize(p.isMax ? 90 : 40)
-                }
-                .chartForegroundStyleScale(["一般": Theme.green, "MAX": Theme.orange])
-                .chartSymbolScale(["一般": .circle, "MAX": .diamond])
-                .chartYScale(domain: .automatic(includesZero: false, reversed: reversed))
-                .chartLegend(points.contains(where: \.isMax) ? .visible : .hidden)
-                .frame(height: 220)
+            Text("\(exercise.category.fullTitle) · \(exercise.equipment.title)")
+                .foregroundStyle(.secondary)
+
+            HStack(spacing: 0) {
+                stat(days.map { $0 == 0 ? "今天" : "\($0) 天前" } ?? "未練過", "上次",
+                     color: Recency.staleness(days: days).color)
+                stat("\(exercise.trainingCount(withinDays: 90)) 次", "近 90 天", color: Theme.green)
             }
+
+            Button(action: startOrJoin) {
+                Label(active.isEmpty ? "用這個動作開始訓練" : "加入目前訓練",
+                      systemImage: active.isEmpty ? "play.fill" : "plus")
+                    .font(.headline)
+                    .foregroundStyle(.black)
+                    .frame(maxWidth: .infinity, minHeight: 50)
+                    .background(Theme.green, in: .capsule)
+            }
+            .buttonStyle(.plain)
         }
         .card()
+    }
+
+    private func stat(_ value: String, _ title: String, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title).font(.footnote).foregroundStyle(.secondary)
+            Text(value).font(.title3.bold().monospacedDigit()).foregroundStyle(color)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func startOrJoin() {
+        if let session = active.first {
+            _ = WorkoutActions.add(exercise, to: session, in: context)
+            coordinator.isExpanded = true
+        } else {
+            coordinator.requestStart([exercise], context: context)
+        }
     }
 }
 

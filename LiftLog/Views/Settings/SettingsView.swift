@@ -7,6 +7,10 @@ struct SettingsView: View {
 
     @AppStorage("autoRestTimer") private var autoRestTimer = true
     @AppStorage(WeightUnit.storageKey) private var unit: WeightUnit = .kg
+    @AppStorage(RoundingSteps.barbellKgKey) private var barbellKg = RoundingSteps.barbellKgDefault
+    @AppStorage(RoundingSteps.barbellLbsKey) private var barbellLbs = RoundingSteps.barbellLbsDefault
+    @AppStorage(RoundingSteps.otherKgKey) private var otherKg = RoundingSteps.otherKgDefault
+    @AppStorage(RoundingSteps.otherLbsKey) private var otherLbs = RoundingSteps.otherLbsDefault
     @State private var exportURL: URL?
     @State private var counts = (exercises: 0, sessions: 0, bodyWeights: 0)
     @State private var showingImporter = false
@@ -31,6 +35,15 @@ struct SettingsView: View {
                     Text("所有畫面依這個單位顯示與輸入，資料一律存成 kg。啞鈴、壺鈴記單顆重量。")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
+                }
+                .card()
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Label("強度換算表進位", systemImage: "number").font(.headline)
+                    stepper("槓鈴（kg）", value: $barbellKg, step: 0.5, unit: "kg")
+                    stepper("槓鈴（lbs）", value: $barbellLbs, step: 2.5, unit: "lb")
+                    stepper("其他器材（kg）", value: $otherKg, step: 0.5, unit: "kg")
+                    stepper("其他器材（lbs）", value: $otherLbs, step: 2.5, unit: "lb")
                 }
                 .card()
 
@@ -97,6 +110,16 @@ struct SettingsView: View {
         }
         .alert(message ?? "", isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } })) {
             Button("好") {}
+        }
+    }
+
+    private func stepper(_ title: String, value: Binding<Double>, step: Double, unit: String) -> some View {
+        Stepper(value: value, in: step...20, step: step) {
+            HStack {
+                Text(title)
+                Spacer()
+                Text("每 \(Units.number(value.wrappedValue)) \(unit)").monospacedDigit().foregroundStyle(.secondary)
+            }
         }
     }
 
