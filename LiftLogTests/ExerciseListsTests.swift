@@ -1,0 +1,38 @@
+import Foundation
+import Testing
+@testable import LiftLog
+
+@MainActor
+struct ExerciseListsTests {
+    private let bench = Exercise(name: "臥推", category: .horizontalPush, aliases: ["槓鈴臥推"], equipment: .barbell)
+    private let chestMachine = Exercise(name: "胸推訓練機", category: .horizontalPush, equipment: .machine, isArchived: true)
+    private let pushUp = Exercise(name: "伏地挺身", category: .horizontalPush, equipment: .bodyweight, logType: .bodyweight)
+    private let squat = Exercise(name: "背蹲舉", category: .kneeDominant, equipment: .barbell)
+
+    private var all: [Exercise] { [bench, chestMachine, pushUp, squat] }
+
+    @Test func archivedHiddenFromDefaultLibrary() {
+        let names = ExerciseLists.library(all, showArchived: false, filter: LibraryFilter(), query: "").map(\.name)
+        #expect(!names.contains("胸推訓練機"))
+        let withArchived = ExerciseLists.library(all, showArchived: true, filter: LibraryFilter(), query: "").map(\.name)
+        #expect(withArchived.contains("胸推訓練機"))
+    }
+
+    @Test func archivedNeverInPicker() {
+        let add = ExerciseLists.picker(all, category: nil, excluding: nil, query: "").map(\.name)
+        #expect(Set(add) == ["臥推", "伏地挺身", "背蹲舉"])
+        let replace = ExerciseLists.picker(all, category: .horizontalPush, excluding: bench, query: "").map(\.name)
+        #expect(replace == ["伏地挺身"])
+        // 搜尋比對別名
+        #expect(ExerciseLists.picker(all, category: nil, excluding: nil, query: "槓鈴").map(\.name) == ["臥推"])
+    }
+
+    @Test func untrainedLastInPickerSections() {
+        struct Item { var name: String; var last: Date? }
+        let items = [Item(name: "前蹲舉", last: nil), Item(name: "背蹲舉", last: .now), Item(name: "側蹲", last: .distantPast)]
+        let pickerOrder = Recency.sortedByNeglect(items, lastDate: \.last, name: \.name, untrainedLast: true).map(\.name)
+        #expect(pickerOrder == ["側蹲", "背蹲舉", "前蹲舉"])
+        let defaultOrder = Recency.sortedByNeglect(items, lastDate: \.last, name: \.name).map(\.name)
+        #expect(defaultOrder.first == "前蹲舉")
+    }
+}

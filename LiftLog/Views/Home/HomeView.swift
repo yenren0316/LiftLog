@@ -226,7 +226,12 @@ private struct CategorySection: View {
     var onTap: (Exercise) -> Void
     var onShowDetail: (Exercise) -> Void
 
+    @State private var showUntrained = false
+
     var body: some View {
+        // 未練過的不排最前面，收在最後一列「還沒練過（N）」
+        let trained = exercises.filter { $0.lastCompletedDate != nil }
+        let untrained = exercises.filter { $0.lastCompletedDate == nil }
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(category.title).font(.title2.bold())
@@ -236,8 +241,40 @@ private struct CategorySection: View {
             }
             .padding(.bottom, 8)
 
-            ForEach(Array(exercises.enumerated()), id: \.element.id) { index, exercise in
+            ForEach(Array(trained.enumerated()), id: \.element.id) { index, exercise in
                 if index > 0 { Divider().overlay(Theme.cardBorder) }
+                row(exercise)
+            }
+
+            if !untrained.isEmpty {
+                if !trained.isEmpty { Divider().overlay(Theme.cardBorder) }
+                Button { withAnimation { showUntrained.toggle() } } label: {
+                    HStack {
+                        Text("還沒練過（\(untrained.count)）")
+                            .font(.headline)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Image(systemName: "chevron.down")
+                            .rotationEffect(.degrees(showUntrained ? 0 : -90))
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 12)
+                    .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                if showUntrained {
+                    ForEach(untrained) { exercise in
+                        Divider().overlay(Theme.cardBorder)
+                        row(exercise)
+                    }
+                }
+            }
+        }
+        .card()
+    }
+
+    @ViewBuilder
+    private func row(_ exercise: Exercise) -> some View {
                 let selected = selection.contains { $0 === exercise }
                 Button { onTap(exercise) } label: {
                     HStack(spacing: 12) {
@@ -254,9 +291,6 @@ private struct CategorySection: View {
                 .contextMenu {
                     Button("動作詳情", systemImage: "chart.xyaxis.line") { onShowDetail(exercise) }
                 }
-            }
-        }
-        .card()
     }
 }
 
@@ -293,7 +327,7 @@ struct ExerciseRow: View {
                         Text("天前").font(.caption)
                     }
                 } else {
-                    Text("沒做過").font(.headline)
+                    Text("未練過").font(.headline)
                 }
             }
             .foregroundStyle(staleness.color)

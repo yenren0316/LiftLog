@@ -13,17 +13,15 @@ struct ExercisePickerView: View {
     var onPick: (Exercise) -> Void
 
     @Environment(\.dismiss) private var dismiss
-    @Query(filter: #Predicate<Exercise> { !$0.isArchived }, sort: \Exercise.name) private var exercises: [Exercise]
+    @Query(sort: \Exercise.name) private var exercises: [Exercise]
     @State private var query = ""
 
     var body: some View {
         NavigationStack {
-            let candidates = exercises.filter { e in
-                e !== excluding
-                    && (category == nil || e.category == category)
-                    && ExerciseSearch.matches(query: query, name: e.name, aliases: e.aliases, englishName: e.englishName)
-            }
-            let sections = Recency.sections(candidates, category: \.category, lastDate: \.lastCompletedDate, name: \.name)
+            let candidates = ExerciseLists.picker(exercises, category: category, excluding: excluding, query: query)
+            // 未練過的放在各組最後
+            let sections = Recency.sections(candidates, category: \.category, lastDate: \.lastCompletedDate,
+                                            name: \.name, untrainedLast: true)
             List {
                 if sections.isEmpty {
                     Text("沒有符合的動作").foregroundStyle(.secondary).listRowBackground(Theme.card)
@@ -65,9 +63,13 @@ struct ExercisePickerView: View {
             Text(exercise.name).font(.body.weight(.semibold))
             ForEach(exercise.tags) { Chip(text: $0.title) }
             Spacer()
-            Text(days.map { $0 == 0 ? "今天" : "\($0) 天前" } ?? "沒做過")
-                .font(.subheadline.monospacedDigit())
-                .foregroundStyle(Recency.staleness(days: days).color)
+            if let days {
+                Text(days == 0 ? "今天" : "\(days) 天前")
+                    .font(.subheadline.monospacedDigit())
+                    .foregroundStyle(Recency.staleness(days: days).color)
+            } else {
+                Chip(text: "未練過")
+            }
         }
         .padding(.vertical, 4)
         .contentShape(.rect)

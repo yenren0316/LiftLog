@@ -28,17 +28,19 @@ nonisolated enum Recency {
         return .fresh
     }
 
-    /// 最久沒做的排前面：從沒做過 → 日期由舊到新；同一天或都沒做過時依名稱
+    /// 最久沒做的排前面：日期由舊到新；同一天或都沒做過時依名稱。
+    /// 從沒做過的預設排最前面；untrainedLast 為 true 時排最後
     static func sortedByNeglect<T>(
         _ items: [T],
         lastDate: (T) -> Date?,
-        name: (T) -> String
+        name: (T) -> String,
+        untrainedLast: Bool = false
     ) -> [T] {
         items.sorted { a, b in
             switch (lastDate(a), lastDate(b)) {
             case (nil, nil): return name(a) < name(b)
-            case (nil, _): return true
-            case (_, nil): return false
+            case (nil, _): return !untrainedLast
+            case (_, nil): return untrainedLast
             case let (da?, db?):
                 return da == db ? name(a) < name(b) : da < db
             }
@@ -69,12 +71,13 @@ nonisolated enum Recency {
         _ items: [T],
         category: (T) -> ExerciseCategory,
         lastDate: (T) -> Date?,
-        name: (T) -> String
+        name: (T) -> String,
+        untrainedLast: Bool = false
     ) -> [(category: ExerciseCategory, items: [T])] {
         let grouped = Dictionary(grouping: items, by: category)
         return ExerciseCategory.allCases.compactMap { c in
             guard let members = grouped[c], !members.isEmpty else { return nil }
-            return (c, sortedByNeglect(members, lastDate: lastDate, name: name))
+            return (c, sortedByNeglect(members, lastDate: lastDate, name: name, untrainedLast: untrainedLast))
         }
     }
 }

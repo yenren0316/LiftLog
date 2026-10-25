@@ -111,3 +111,24 @@ nonisolated struct LibraryFilter: Equatable {
         return trainedOK && tags.isSubset(of: Set(exerciseTags))
     }
 }
+
+/// 各清單要列哪些動作：封存的動作不出現在預設清單與新增動作清單
+enum ExerciseLists {
+    static func library(_ all: [Exercise], showArchived: Bool, filter: LibraryFilter, query: String) -> [Exercise] {
+        all.filter { e in
+            (showArchived || !e.isArchived)
+                && filter.matches(tags: e.tags, trainingCount: e.trainingCount)
+                && ExerciseSearch.matches(query: query, name: e.name, aliases: e.aliases, englishName: e.englishName)
+        }
+    }
+
+    /// 訓練中「新增動作」與「換動作」
+    static func picker(_ all: [Exercise], category: ExerciseCategory?, excluding: Exercise?, query: String) -> [Exercise] {
+        all.filter { e in
+            !e.isArchived
+                && e !== excluding
+                && (category == nil || e.category == category)
+                && ExerciseSearch.matches(query: query, name: e.name, aliases: e.aliases, englishName: e.englishName)
+        }
+    }
+}

@@ -26,11 +26,7 @@ struct LibraryView: View {
                 .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                 .listRowSeparator(.hidden)
 
-                let visible = exercises.filter { e in
-                    (showArchived || !e.isArchived)
-                        && filter.matches(tags: e.tags, trainingCount: e.trainingCount)
-                        && ExerciseSearch.matches(query: query, name: e.name, aliases: e.aliases, englishName: e.englishName)
-                }
+                let visible = ExerciseLists.library(exercises, showArchived: showArchived, filter: filter, query: query)
                 ForEach(ExerciseCategory.allCases) { category in
                     let items = LibraryOrder.sorted(
                         visible.filter { $0.category == category },
