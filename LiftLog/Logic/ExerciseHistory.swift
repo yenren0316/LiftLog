@@ -50,3 +50,10 @@ extension WorkoutSession {
         return h > 0 ? String(format: "%d:%02d:%02d", h, m, s) : String(format: "%d:%02d", m, s)
     }
 }
+
+extension Exercise {
+    /// 有這個動作（而且有完成組）的訓練次數
+    var trainingCount: Int {
+        sessionItems.filter { !$0.completedSets.isEmpty }.count
+    }
+}

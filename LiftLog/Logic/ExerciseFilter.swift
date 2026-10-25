@@ -48,3 +48,66 @@ extension Exercise {
             && ExerciseSearch.matches(query: query, name: name, aliases: aliases, englishName: englishName)
     }
 }
+
+/// 動作庫分類內的四組，依顯示順序排列
+nonisolated enum LibraryGroup: Int, CaseIterable, Comparable {
+    case bilateral, unilateral, explosive, cable
+
+    /// 爆發優先；同時有爆發與單邊的歸爆發
+    static func of(tags: [ExerciseTag], equipment: Equipment) -> LibraryGroup {
+        if tags.contains(.explosive) { return .explosive }
+        if tags.contains(.unilateral) { return .unilateral }
+        if equipment == .cable { return .cable }
+        return .bilateral
+    }
+
+    static func < (a: LibraryGroup, b: LibraryGroup) -> Bool { a.rawValue < b.rawValue }
+}
+
+nonisolated enum LibraryOrder {
+    /// 雙邊自由重量 → 單邊 → 爆發 → Cable；同組內訓練次數多到少，再依名稱
+    static func sorted<T>(
+        _ items: [T],
+        tags: (T) -> [ExerciseTag],
+        equipment: (T) -> Equipment,
+        count: (T) -> Int,
+        name: (T) -> String
+    ) -> [T] {
+        items.sorted { a, b in
+            let ga = LibraryGroup.of(tags: tags(a), equipment: equipment(a))
+            let gb = LibraryGroup.of(tags: tags(b), equipment: equipment(b))
+            if ga != gb { return ga < gb }
+            if count(a) != count(b) { return count(a) > count(b) }
+            return name(a) < name(b)
+        }
+    }
+}
+
+/// 動作庫篩選：練過／未練過（單選）與 tags（複選），兩組取交集；選多個 tag 時要全部符合
+nonisolated struct LibraryFilter: Equatable {
+    enum Trained: String, CaseIterable, Identifiable {
+        case all, trained, untrained
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .all: "全部"
+            case .trained: "練過"
+            case .untrained: "未練過"
+            }
+        }
+    }
+
+    var trained: Trained = .all
+    var tags: Set<ExerciseTag> = []
+
+    func matches(tags exerciseTags: [ExerciseTag], trainingCount: Int) -> Bool {
+        let trainedOK = switch trained {
+        case .all: true
+        case .trained: trainingCount > 0
+        case .untrained: trainingCount == 0
+        }
+        return trainedOK && tags.isSubset(of: Set(exerciseTags))
+    }
+}

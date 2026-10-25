@@ -6,39 +6,43 @@ struct LibraryView: View {
     @Query(sort: \Exercise.name) private var exercises: [Exercise]
 
     @State private var showingNew = false
-    @State private var showArchived = false
-    @State private var filter: TagFilter = .all
+    @State private var filter = LibraryFilter()
     @State private var query = ""
     @State private var mergeSource: Exercise?
     @State private var deleteCandidate: Exercise?
+    @AppStorage("library.showArchived") private var showArchived = false
+    /// 收合的分類（rawValue 以逗號串起來保存）
+    @AppStorage("library.collapsed") private var collapsedRaw = ""
 
     var body: some View {
         NavigationStack {
             List {
                 Section {
-                    TagFilterBar(selection: $filter)
+                    filterBar
+                    Toggle("顯示已封存", isOn: $showArchived)
+                        .font(.subheadline)
                 }
                 .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                 .listRowSeparator(.hidden)
 
-                let visible = exercises.filter { $0.matches(filter, query: query) }
-                ForEach(ExerciseCategory.allCases) { category in
-                    let items = visible.filter { $0.category == category && !$0.isArchived }
-                    if !items.isEmpty {
-                        Section(category.fullTitle) {
-                            ForEach(items) { row($0) }
-                        }
-                    }
+                let visible = exercises.filter { e in
+                    (showArchived || !e.isArchived)
+                        && filter.matches(tags: e.tags, trainingCount: e.trainingCount)
+                        && ExerciseSearch.matches(query: query, name: e.name, aliases: e.aliases, englishName: e.englishName)
                 }
-
-                let archived = visible.filter(\.isArchived)
-                if !archived.isEmpty {
-                    Section {
-                        Toggle("顯示已封存（\(archived.count)）", isOn: $showArchived)
-                            .listRowBackground(Theme.card)
-                        if showArchived {
-                            ForEach(archived) { row($0) }
+                ForEach(ExerciseCategory.allCases) { category in
+                    let items = LibraryOrder.sorted(
+                        visible.filter { $0.category == category },
+                        tags: \.tags, equipment: \.equipment, count: \.trainingCount, name: \.name
+                    )
+                    if !items.isEmpty {
+                        Section {
+                            if !collapsed.contains(category) {
+                                ForEach(items) { row($0) }
+                            }
+                        } header: {
+                            sectionHeader(category, count: items.count)
                         }
                     }
                 }
@@ -48,7 +52,7 @@ struct LibraryView: View {
                     Text("長按動作可以合併或刪除。有紀錄的動作只能封存。")
                 }
             }
-            .listSectionSpacing(16)
+            .listSectionSpacing(12)
             .scrollContentBackground(.hidden)
             .screenBackground()
             .navigationTitle("動作庫")
@@ -80,6 +84,69 @@ struct LibraryView: View {
         }
     }
 
+    // MARK: - 篩選
+
+    private var filterBar: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                ForEach(LibraryFilter.Trained.allCases) { option in
+                    chip(option.title, selected: filter.trained == option) { filter.trained = option }
+                }
+            }
+            HStack(spacing: 8) {
+                ForEach(ExerciseTag.allCases) { tag in
+                    chip(tag.title, selected: filter.tags.contains(tag), systemImage: filter.tags.contains(tag) ? "checkmark" : nil) {
+                        if filter.tags.contains(tag) { filter.tags.remove(tag) } else { filter.tags.insert(tag) }
+                    }
+                }
+            }
+        }
+    }
+
+    private func chip(_ title: String, selected: Bool, systemImage: String? = nil, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                if let systemImage { Image(systemName: systemImage) }
+                Text(title)
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(selected ? .black : .primary)
+            .padding(.horizontal, 14)
+            .frame(minHeight: 34)
+            .background(selected ? Theme.green : Theme.card, in: .capsule)
+            .overlay(Capsule().stroke(Theme.cardBorder))
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - 分區
+
+    private var collapsed: Set<ExerciseCategory> {
+        Set(collapsedRaw.split(separator: ",").compactMap { ExerciseCategory(rawValue: String($0)) })
+    }
+
+    private func toggleCollapsed(_ category: ExerciseCategory) {
+        var set = collapsed
+        if set.contains(category) { set.remove(category) } else { set.insert(category) }
+        collapsedRaw = set.map(\.rawValue).sorted().joined(separator: ",")
+    }
+
+    private func sectionHeader(_ category: ExerciseCategory, count: Int) -> some View {
+        Button { withAnimation { toggleCollapsed(category) } } label: {
+            HStack {
+                Text("\(category.fullTitle) · \(count)")
+                Spacer()
+                Image(systemName: "chevron.down")
+                    .rotationEffect(.degrees(collapsed.contains(category) ? -90 : 0))
+            }
+            .font(.subheadline.weight(.semibold))
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - 列
+
     private func row(_ exercise: Exercise) -> some View {
         NavigationLink {
             ExerciseDetailView(exercise: exercise)
@@ -89,6 +156,7 @@ struct LibraryView: View {
                     HStack(spacing: 6) {
                         Text(exercise.name).font(.body.weight(.semibold))
                         ForEach(exercise.tags) { Chip(text: $0.title) }
+                        if exercise.isArchived { Chip(text: "封存") }
                     }
                     Text(subtitle(for: exercise))
                         .font(.footnote)
@@ -96,11 +164,12 @@ struct LibraryView: View {
                         .lineLimit(1)
                 }
                 Spacer()
-                Text("\(exercise.completedItems.count) 次")
+                Text("\(exercise.trainingCount) 次")
                     .font(.footnote.monospacedDigit())
                     .foregroundStyle(.secondary)
             }
             .padding(.vertical, 4)
+            .opacity(exercise.isArchived ? 0.6 : 1)
         }
         .listRowBackground(Theme.card)
         .swipeActions {
@@ -122,10 +191,9 @@ struct LibraryView: View {
         }
     }
 
+    /// 「器材 · 上次 2025/10/05」或「器材 · 未練過」；別名不顯示但可搜尋
     private func subtitle(for exercise: Exercise) -> String {
-        var parts = [exercise.equipment.title]
-        if exercise.logType != .weight { parts.append(exercise.logType.title) }
-        if !exercise.aliases.isEmpty { parts.append("別名：" + exercise.aliases.joined(separator: "、")) }
-        return parts.joined(separator: " · ")
+        let last = exercise.lastCompletedDate.map { "上次 \($0.shortDate)" } ?? "未練過"
+        return "\(exercise.equipment.title) · \(last)"
     }
 }
