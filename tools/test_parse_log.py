@@ -46,10 +46,20 @@ class NameMappingTests(unittest.TestCase):
         self.assertEqual(one("單手壺鈴擺盪 16kg 3次")["exercise"], "單手壺鈴擺盪")
         self.assertEqual(one("彈力繩盪壺鈴 20kg 做到沒力x3")["exercise"], "彈力繩壺鈴擺盪")
 
-    def test_machines_are_skipped(self):
-        for line in ["腿推機 120 5x5", "背部訓練機 15.9 5x5", "背部下拉訓練機 45lbs 5x5", "肩推機 11.3 5x5"]:
-            status, _ = parse_line(line, [])
-            self.assertEqual(status, "skip", line)
+    def test_machines_are_imported_as_separate_exercises(self):
+        self.assertEqual(one("腿推機 120 5x5")["exercise"], "腿推機")
+        self.assertEqual(one("背部訓練機 15.9 5x5")["exercise"], "背部訓練機")
+        self.assertEqual(one("背部下拉訓練機 45lbs 5x5")["exercise"], "背部下拉訓練機")
+        self.assertEqual(one("臥姿腿部彎曲機 41kg 5x5")["exercise"], "臥姿腿彎舉機")
+        self.assertEqual(one("肩推機 11.3 5x5")["exercise"], "肩推機")
+        self.assertEqual(one("肩推 30kg 3x8")["exercise"], "肩推")
+
+    def test_renamed_single_arm_press(self):
+        self.assertEqual(one("半椅單手臥推 10kg 一邊10下x3")["exercise"], "單手啞鈴臥推")
+
+    def test_inverted_row_is_bodyweight(self):
+        row = one("反式划船 15格 5x5")
+        self.assertEqual((row["weightKg"], row["reps"], row["sets"], row["note"]), (None, 5, 5, "15格"))
 
     def test_pull_ups(self):
         assisted = one("引體向上輔助 -19 5x5")
@@ -65,10 +75,40 @@ class NameMappingTests(unittest.TestCase):
 
 class WholeLogTests(unittest.TestCase):
     def test_body_weight_and_dates(self):
-        entries, body_weights, unmatched, _ = parse_log("2026\n6/24 70.8kg\n臥推 42.6 5x5\n1/1 教練課\n")
+        entries, body_weights, unmatched, _, _ = parse_log("2026\n6/24 70.8kg\n臥推 42.6 5x5\n1/1 教練課\n")
         self.assertEqual(body_weights, [dict(date="2026-06-24T12:00:00+08:00", kg=70.8)])
         self.assertEqual(entries[0]["date"], "2026-06-24T12:00:00+08:00")
         self.assertEqual(len(unmatched), 1)
+
+
+class UnitReviewTests(unittest.TestCase):
+    def parse(self, lines):
+        entries, _, _, _, review = parse_log("2026\n1/1\n" + "\n".join(lines))
+        return entries, review
+
+    def test_unitless_compared_with_explicit_records(self):
+        entries, review = self.parse(["啞鈴臥推 20kg Max", "啞鈴臥推 50 MAX", "啞鈴臥推 18 5x5"])
+        # 參考 20 kg × 1.5 = 30：50 → lbs，18 → kg
+        self.assertEqual(entries[1]["weightKg"], 22.68)
+        self.assertIn("50lbs", entries[1]["note"])
+        self.assertEqual(entries[2]["weightKg"], 18)
+        self.assertEqual(len(review), 2)
+        self.assertTrue(review[0][4].startswith("改成 lbs"))
+        self.assertTrue(review[1][4].startswith("維持 kg"))
+
+    def test_without_reference_uses_twenty(self):
+        entries, _ = self.parse(["仰臥拉舉 40 8x3", "仰臥拉舉 14 10x3"])
+        self.assertEqual(entries[0]["weightKg"], 18.14)
+        self.assertEqual(entries[1]["weightKg"], 14)
+
+    def test_kettlebells_reviewed_too(self):
+        entries, review = self.parse(["盪壺鈴 24kg 15x3", "盪壺鈴 24 12x3"])
+        self.assertEqual(entries[1]["weightKg"], 24)
+        self.assertEqual(len(review), 1)
+
+    def test_barbell_not_reviewed(self):
+        _, review = self.parse(["上斜臥推 51.6 MAX"])
+        self.assertEqual(review, [])
 
 
 if __name__ == "__main__":

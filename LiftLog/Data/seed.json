@@ -8,7 +8,8 @@
    "tags": [],
    "aliases": [
     "深蹲",
-    "槓鈴深蹲"
+    "槓鈴深蹲",
+    "高背深蹲"
    ],
    "englishName": "",
    "equipment": "barbell",
@@ -90,6 +91,77 @@
    "englishName": "",
    "equipment": "kettlebell",
    "logType": "weight",
+   "note": "",
+   "isArchived": false
+  },
+  {
+   "id": "3C1EA460-BA04-5043-BD5C-408016D54ABE",
+   "name": "前蹲舉",
+   "category": "kneeDominant",
+   "tags": [],
+   "aliases": [],
+   "englishName": "",
+   "equipment": "barbell",
+   "logType": "weight",
+   "note": "",
+   "isArchived": false
+  },
+  {
+   "id": "F04C8FD7-11A4-58ED-92EE-74D9324BFE6E",
+   "name": "前抱式深蹲",
+   "category": "kneeDominant",
+   "tags": [],
+   "aliases": [
+    "高腳杯深蹲",
+    "抱蹲"
+   ],
+   "englishName": "",
+   "equipment": "dumbbell",
+   "logType": "weight",
+   "note": "",
+   "isArchived": false
+  },
+  {
+   "id": "F571B760-1CF4-58EF-ACFC-FAD20224FC53",
+   "name": "分腿蹲",
+   "category": "kneeDominant",
+   "tags": [
+    "unilateral"
+   ],
+   "aliases": [],
+   "englishName": "",
+   "equipment": "dumbbell",
+   "logType": "weight",
+   "note": "",
+   "isArchived": false
+  },
+  {
+   "id": "51FBA059-2700-5407-A474-8EB76533E1CC",
+   "name": "單腳深蹲",
+   "category": "kneeDominant",
+   "tags": [
+    "unilateral"
+   ],
+   "aliases": [],
+   "englishName": "",
+   "equipment": "bodyweight",
+   "logType": "bodyweight",
+   "note": "",
+   "isArchived": false
+  },
+  {
+   "id": "18CBAD70-7520-5C7E-8E8C-82EC6FBC8C96",
+   "name": "跳箱",
+   "category": "kneeDominant",
+   "tags": [
+    "explosive"
+   ],
+   "aliases": [
+    "箱上跳"
+   ],
+   "englishName": "",
+   "equipment": "box",
+   "logType": "bodyweight",
    "note": "",
    "isArchived": false
   },
@@ -257,6 +329,33 @@
    "isArchived": false
   },
   {
+   "id": "B0B55799-8A9F-5A44-BA5C-267DF066D5B0",
+   "name": "早安運動",
+   "category": "hipDominant",
+   "tags": [],
+   "aliases": [],
+   "englishName": "",
+   "equipment": "barbell",
+   "logType": "weight",
+   "note": "",
+   "isArchived": false
+  },
+  {
+   "id": "B6777FB2-6233-5AC8-8933-6247F180AEBE",
+   "name": "單手分腿抓舉",
+   "category": "hipDominant",
+   "tags": [
+    "unilateral",
+    "explosive"
+   ],
+   "aliases": [],
+   "englishName": "",
+   "equipment": "dumbbell",
+   "logType": "weight",
+   "note": "",
+   "isArchived": false
+  },
+  {
    "id": "69903A6B-205B-55B8-BEBE-189342CF8EFA",
    "name": "臥推",
    "category": "horizontalPush",
@@ -319,13 +418,15 @@
    "isArchived": false
   },
   {
-   "id": "AB951A89-4260-55BC-9FDE-A3083A9C678D",
-   "name": "半椅單手臥推",
+   "id": "50DCCECC-FC86-506D-A9C5-6E8E3211BAB4",
+   "name": "單手啞鈴臥推",
    "category": "horizontalPush",
    "tags": [
     "unilateral"
    ],
-   "aliases": [],
+   "aliases": [
+    "半椅單手臥推"
+   ],
    "englishName": "",
    "equipment": "dumbbell",
    "logType": "weight",
@@ -341,6 +442,18 @@
    "englishName": "",
    "equipment": "barbell",
    "logType": "weight",
+   "note": "",
+   "isArchived": false
+  },
+  {
+   "id": "B0DA80C6-61A0-5FB1-97BD-EEF1BB89895D",
+   "name": "伏地挺身",
+   "category": "horizontalPush",
+   "tags": [],
+   "aliases": [],
+   "englishName": "",
+   "equipment": "bodyweight",
+   "logType": "bodyweight",
    "note": "",
    "isArchived": false
   },
@@ -368,7 +481,7 @@
    ],
    "englishName": "",
    "equipment": "bodyweight",
-   "logType": "weight",
+   "logType": "bodyweight",
    "note": "",
    "isArchived": false
   },
@@ -415,6 +528,36 @@
    ],
    "englishName": "",
    "equipment": "cable",
+   "logType": "weight",
+   "note": "",
+   "isArchived": false
+  },
+  {
+   "id": "9CCEE6E5-32D6-50AA-83A5-42883B3BA76D",
+   "name": "屈體划船",
+   "category": "horizontalPull",
+   "tags": [],
+   "aliases": [
+    "曲體划船"
+   ],
+   "englishName": "",
+   "equipment": "barbell",
+   "logType": "weight",
+   "note": "",
+   "isArchived": false
+  },
+  {
+   "id": "73A893D8-F81D-5340-932D-0373BCC7878E",
+   "name": "單手啞鈴划船",
+   "category": "horizontalPull",
+   "tags": [
+    "unilateral"
+   ],
+   "aliases": [
+    "單邊划船"
+   ],
+   "englishName": "",
+   "equipment": "dumbbell",
    "logType": "weight",
    "note": "",
    "isArchived": false
@@ -486,6 +629,22 @@
    "englishName": "",
    "equipment": "bodyweight",
    "logType": "assisted",
+   "note": "",
+   "isArchived": false
+  },
+  {
+   "id": "6F8711A2-9A14-5E5A-AB95-D2FC739D8C7B",
+   "name": "爆發上推",
+   "category": "verticalPush",
+   "tags": [
+    "explosive"
+   ],
+   "aliases": [
+    "Push Press"
+   ],
+   "englishName": "",
+   "equipment": "barbell",
+   "logType": "weight",
    "note": "",
    "isArchived": false
   },
@@ -571,6 +730,18 @@
    "isArchived": false
   },
   {
+   "id": "E6FCB8EB-DF14-5763-A5CE-8D5657C8B0C3",
+   "name": "攪拌式",
+   "category": "rotation",
+   "tags": [],
+   "aliases": [],
+   "englishName": "",
+   "equipment": "ball",
+   "logType": "timed",
+   "note": "",
+   "isArchived": false
+  },
+  {
    "id": "3412B4DC-49F7-5475-9002-33EFBF67F2B0",
    "name": "單手硬舉原地踏步",
    "category": "loadedCarry",
@@ -593,6 +764,56 @@
    "englishName": "",
    "equipment": "barbell",
    "logType": "weight",
+   "note": "",
+   "isArchived": false
+  },
+  {
+   "id": "8F35DF95-8A20-5C8A-8C2E-AA5D7DCFE663",
+   "name": "農夫走路",
+   "category": "loadedCarry",
+   "tags": [],
+   "aliases": [],
+   "englishName": "",
+   "equipment": "dumbbell",
+   "logType": "timed",
+   "note": "",
+   "isArchived": false
+  },
+  {
+   "id": "49EA10DE-F90E-53A2-9558-EB3D97A34FB0",
+   "name": "單手負重行走",
+   "category": "loadedCarry",
+   "tags": [
+    "unilateral"
+   ],
+   "aliases": [],
+   "englishName": "",
+   "equipment": "dumbbell",
+   "logType": "timed",
+   "note": "",
+   "isArchived": false
+  },
+  {
+   "id": "D0B1D51C-CDBF-58FB-B551-53AA6D37448C",
+   "name": "熊爬",
+   "category": "unusualPosture",
+   "tags": [],
+   "aliases": [],
+   "englishName": "",
+   "equipment": "bodyweight",
+   "logType": "timed",
+   "note": "",
+   "isArchived": false
+  },
+  {
+   "id": "D5F6AD0C-2B23-5BC2-896F-0DA9311F0AFB",
+   "name": "懸吊",
+   "category": "unusualPosture",
+   "tags": [],
+   "aliases": [],
+   "englishName": "",
+   "equipment": "bar",
+   "logType": "timed",
    "note": "",
    "isArchived": false
   },
@@ -673,6 +894,128 @@
    "logType": "cardio",
    "note": "",
    "isArchived": false
+  },
+  {
+   "id": "5340EB2A-4507-5543-B5B1-92FDEA641369",
+   "name": "腿推機",
+   "category": "kneeDominant",
+   "tags": [],
+   "aliases": [],
+   "englishName": "",
+   "equipment": "machine",
+   "logType": "weight",
+   "note": "",
+   "isArchived": true
+  },
+  {
+   "id": "A8F46482-2F1B-5512-96DE-7390F7315C25",
+   "name": "深蹲訓練機",
+   "category": "kneeDominant",
+   "tags": [],
+   "aliases": [],
+   "englishName": "",
+   "equipment": "machine",
+   "logType": "weight",
+   "note": "",
+   "isArchived": true
+  },
+  {
+   "id": "46C022DC-905F-5508-BC34-9B262BF00C42",
+   "name": "超級深蹲訓練架",
+   "category": "kneeDominant",
+   "tags": [],
+   "aliases": [],
+   "englishName": "",
+   "equipment": "machine",
+   "logType": "weight",
+   "note": "",
+   "isArchived": true
+  },
+  {
+   "id": "48855280-7B2E-5716-A7C0-FEBD8A199E98",
+   "name": "腿部伸張機",
+   "category": "kneeDominant",
+   "tags": [],
+   "aliases": [],
+   "englishName": "",
+   "equipment": "machine",
+   "logType": "weight",
+   "note": "",
+   "isArchived": true
+  },
+  {
+   "id": "3C2372A3-37DA-5DE3-B30F-92638EA6DC0E",
+   "name": "臥姿腿彎舉機",
+   "category": "hipDominant",
+   "tags": [],
+   "aliases": [
+    "臥姿腿部彎曲機"
+   ],
+   "englishName": "",
+   "equipment": "machine",
+   "logType": "weight",
+   "note": "",
+   "isArchived": true
+  },
+  {
+   "id": "A4124E85-13CA-5FB1-9198-93D03276E78F",
+   "name": "胸推訓練機",
+   "category": "horizontalPush",
+   "tags": [],
+   "aliases": [],
+   "englishName": "",
+   "equipment": "machine",
+   "logType": "weight",
+   "note": "",
+   "isArchived": true
+  },
+  {
+   "id": "A5C6FBA8-5D79-55EB-A169-A88DD02D983D",
+   "name": "肩推機",
+   "category": "verticalPush",
+   "tags": [],
+   "aliases": [],
+   "englishName": "",
+   "equipment": "machine",
+   "logType": "weight",
+   "note": "",
+   "isArchived": true
+  },
+  {
+   "id": "D39B3002-0325-5F91-A8E7-DA0453523F5C",
+   "name": "垂直舉肩訓練機",
+   "category": "accessory",
+   "tags": [],
+   "aliases": [],
+   "englishName": "",
+   "equipment": "machine",
+   "logType": "weight",
+   "note": "",
+   "isArchived": true
+  },
+  {
+   "id": "F7D352C9-96A1-5A05-8AFA-6C1DC298F9D9",
+   "name": "背部訓練機",
+   "category": "horizontalPull",
+   "tags": [],
+   "aliases": [],
+   "englishName": "",
+   "equipment": "machine",
+   "logType": "weight",
+   "note": "",
+   "isArchived": true
+  },
+  {
+   "id": "AEBF68EC-BDF6-5652-9E16-72D0BDA5F6A2",
+   "name": "背部下拉訓練機",
+   "category": "verticalPull",
+   "tags": [],
+   "aliases": [],
+   "englishName": "",
+   "equipment": "machine",
+   "logType": "weight",
+   "note": "",
+   "isArchived": true
   }
  ],
  "entries": [
@@ -1478,7 +1821,7 @@
    "minutes": null,
    "note": "一邊",
    "date": "2024-08-17T12:02:00+08:00",
-   "exerciseId": "AB951A89-4260-55BC-9FDE-A3083A9C678D"
+   "exerciseId": "50DCCECC-FC86-506D-A9C5-6E8E3211BAB4"
   },
   {
    "weightKg": 10.0,
@@ -1817,6 +2160,18 @@
    "exerciseId": "D590B6CD-FF8E-512A-B9A2-49141678ED88"
   },
   {
+   "weightKg": 20.41,
+   "sets": 5,
+   "reps": 5,
+   "isMax": false,
+   "incline": null,
+   "speed": null,
+   "minutes": null,
+   "note": "45lbs",
+   "date": "2024-09-24T12:01:00+08:00",
+   "exerciseId": "AEBF68EC-BDF6-5652-9E16-72D0BDA5F6A2"
+  },
+  {
    "weightKg": 9.07,
    "sets": 3,
    "reps": 10,
@@ -1825,8 +2180,8 @@
    "speed": null,
    "minutes": null,
    "note": "20lbs 一邊",
-   "date": "2024-09-24T12:01:00+08:00",
-   "exerciseId": "AB951A89-4260-55BC-9FDE-A3083A9C678D"
+   "date": "2024-09-24T12:02:00+08:00",
+   "exerciseId": "50DCCECC-FC86-506D-A9C5-6E8E3211BAB4"
   },
   {
    "weightKg": 94.6,
@@ -1970,7 +2325,7 @@
    "minutes": null,
    "note": "20lbs 一邊",
    "date": "2024-10-06T12:02:00+08:00",
-   "exerciseId": "AB951A89-4260-55BC-9FDE-A3083A9C678D"
+   "exerciseId": "50DCCECC-FC86-506D-A9C5-6E8E3211BAB4"
   },
   {
    "weightKg": 125.0,
@@ -2837,6 +3192,42 @@
    "exerciseId": "D66E16C2-F24C-5F40-B5F2-5EA34F4A6D62"
   },
   {
+   "weightKg": 160.0,
+   "sets": 5,
+   "reps": 5,
+   "isMax": false,
+   "incline": null,
+   "speed": null,
+   "minutes": null,
+   "note": "",
+   "date": "2025-01-19T12:00:00+08:00",
+   "exerciseId": "5340EB2A-4507-5543-B5B1-92FDEA641369"
+  },
+  {
+   "weightKg": 50.0,
+   "sets": 5,
+   "reps": 5,
+   "isMax": false,
+   "incline": null,
+   "speed": null,
+   "minutes": null,
+   "note": "",
+   "date": "2025-01-19T12:01:00+08:00",
+   "exerciseId": "48855280-7B2E-5716-A7C0-FEBD8A199E98"
+  },
+  {
+   "weightKg": 41.0,
+   "sets": 5,
+   "reps": 5,
+   "isMax": false,
+   "incline": null,
+   "speed": null,
+   "minutes": null,
+   "note": "",
+   "date": "2025-01-19T12:02:00+08:00",
+   "exerciseId": "3C2372A3-37DA-5DE3-B30F-92638EA6DC0E"
+  },
+  {
    "weightKg": 42.6,
    "sets": 5,
    "reps": 5,
@@ -2931,6 +3322,18 @@
    "note": "",
    "date": "2025-01-28T12:00:00+08:00",
    "exerciseId": "CF7CE1CF-ADC9-5F44-A9D1-CE551E1F0DCA"
+  },
+  {
+   "weightKg": 160.0,
+   "sets": 5,
+   "reps": 5,
+   "isMax": false,
+   "incline": null,
+   "speed": null,
+   "minutes": null,
+   "note": "",
+   "date": "2025-01-28T12:01:00+08:00",
+   "exerciseId": "5340EB2A-4507-5543-B5B1-92FDEA641369"
   },
   {
    "weightKg": 58.5,
@@ -3050,7 +3453,7 @@
    "minutes": null,
    "note": "一邊",
    "date": "2025-03-04T12:02:00+08:00",
-   "exerciseId": "AB951A89-4260-55BC-9FDE-A3083A9C678D"
+   "exerciseId": "50DCCECC-FC86-506D-A9C5-6E8E3211BAB4"
   },
   {
    "weightKg": 49.4,
@@ -3087,6 +3490,18 @@
    "note": "",
    "date": "2025-03-08T12:00:00+08:00",
    "exerciseId": "FDA1A21A-6987-5D20-A0E3-E4E51C2891EF"
+  },
+  {
+   "weightKg": 160.0,
+   "sets": 5,
+   "reps": 5,
+   "isMax": false,
+   "incline": null,
+   "speed": null,
+   "minutes": null,
+   "note": "",
+   "date": "2025-03-08T12:01:00+08:00",
+   "exerciseId": "5340EB2A-4507-5543-B5B1-92FDEA641369"
   },
   {
    "weightKg": 19.0,
@@ -3398,7 +3813,7 @@
    "minutes": null,
    "note": "一邊",
    "date": "2025-04-04T12:02:00+08:00",
-   "exerciseId": "AB951A89-4260-55BC-9FDE-A3083A9C678D"
+   "exerciseId": "50DCCECC-FC86-506D-A9C5-6E8E3211BAB4"
   },
   {
    "weightKg": 56.2,
@@ -3435,6 +3850,18 @@
    "note": "槓鈴",
    "date": "2025-04-10T12:00:00+08:00",
    "exerciseId": "AAFDDDBC-E171-5EF2-B0B7-39C1CD7CD2D1"
+  },
+  {
+   "weightKg": 160.0,
+   "sets": 5,
+   "reps": 5,
+   "isMax": false,
+   "incline": null,
+   "speed": null,
+   "minutes": null,
+   "note": "",
+   "date": "2025-04-10T12:01:00+08:00",
+   "exerciseId": "5340EB2A-4507-5543-B5B1-92FDEA641369"
   },
   {
    "weightKg": 12.0,
@@ -4229,6 +4656,18 @@
    "exerciseId": "7AE896B4-0623-519C-8E29-CD7411BCE42C"
   },
   {
+   "weightKg": 160.0,
+   "sets": 5,
+   "reps": 5,
+   "isMax": false,
+   "incline": null,
+   "speed": null,
+   "minutes": null,
+   "note": "",
+   "date": "2025-08-01T12:01:00+08:00",
+   "exerciseId": "5340EB2A-4507-5543-B5B1-92FDEA641369"
+  },
+  {
    "weightKg": 10.0,
    "sets": 3,
    "reps": 10,
@@ -4238,7 +4677,7 @@
    "minutes": null,
    "note": "一邊",
    "date": "2025-08-02T12:00:00+08:00",
-   "exerciseId": "AB951A89-4260-55BC-9FDE-A3083A9C678D"
+   "exerciseId": "50DCCECC-FC86-506D-A9C5-6E8E3211BAB4"
   },
   {
    "weightKg": 7.9,
@@ -4299,6 +4738,18 @@
    "note": "",
    "date": "2025-08-08T12:00:00+08:00",
    "exerciseId": "FDA1A21A-6987-5D20-A0E3-E4E51C2891EF"
+  },
+  {
+   "weightKg": 160.0,
+   "sets": 5,
+   "reps": 5,
+   "isMax": false,
+   "incline": null,
+   "speed": null,
+   "minutes": null,
+   "note": "",
+   "date": "2025-08-08T12:01:00+08:00",
+   "exerciseId": "5340EB2A-4507-5543-B5B1-92FDEA641369"
   },
   {
    "weightKg": 58.54,
@@ -4395,6 +4846,18 @@
    "note": "",
    "date": "2025-09-04T12:00:00+08:00",
    "exerciseId": "2AD8BFD9-70E7-5148-B4E3-5B760DBCC6C8"
+  },
+  {
+   "weightKg": 31.75,
+   "sets": 5,
+   "reps": 5,
+   "isMax": false,
+   "incline": null,
+   "speed": null,
+   "minutes": null,
+   "note": "(一邊)",
+   "date": "2025-09-04T12:01:00+08:00",
+   "exerciseId": "AEBF68EC-BDF6-5652-9E16-72D0BDA5F6A2"
   },
   {
    "weightKg": 12.0,
@@ -4587,6 +5050,18 @@
    "note": "",
    "date": "2025-10-12T12:00:00+08:00",
    "exerciseId": "FDA1A21A-6987-5D20-A0E3-E4E51C2891EF"
+  },
+  {
+   "weightKg": 120.0,
+   "sets": 5,
+   "reps": 5,
+   "isMax": false,
+   "incline": null,
+   "speed": null,
+   "minutes": null,
+   "note": "",
+   "date": "2025-10-12T12:01:00+08:00",
+   "exerciseId": "5340EB2A-4507-5543-B5B1-92FDEA641369"
   },
   {
    "weightKg": 60.8,
@@ -5150,7 +5625,7 @@
    "minutes": null,
    "note": "一邊",
    "date": "2026-04-04T12:02:00+08:00",
-   "exerciseId": "AB951A89-4260-55BC-9FDE-A3083A9C678D"
+   "exerciseId": "50DCCECC-FC86-506D-A9C5-6E8E3211BAB4"
   },
   {
    "weightKg": 14.7,
@@ -5318,7 +5793,7 @@
    "minutes": null,
    "note": "一邊",
    "date": "2026-05-23T12:02:00+08:00",
-   "exerciseId": "AB951A89-4260-55BC-9FDE-A3083A9C678D"
+   "exerciseId": "50DCCECC-FC86-506D-A9C5-6E8E3211BAB4"
   },
   {
    "weightKg": 80.0,
@@ -5513,6 +5988,18 @@
    "exerciseId": "0E21A912-9332-5742-85DD-8BD0064ED85D"
   },
   {
+   "weightKg": 80.0,
+   "sets": 5,
+   "reps": 5,
+   "isMax": false,
+   "incline": null,
+   "speed": null,
+   "minutes": null,
+   "note": "",
+   "date": "2026-06-22T12:01:00+08:00",
+   "exerciseId": "5340EB2A-4507-5543-B5B1-92FDEA641369"
+  },
+  {
    "weightKg": 42.6,
    "sets": 5,
    "reps": 5,
@@ -5594,7 +6081,7 @@
    "minutes": null,
    "note": "一邊",
    "date": "2026-06-27T12:01:00+08:00",
-   "exerciseId": "AB951A89-4260-55BC-9FDE-A3083A9C678D"
+   "exerciseId": "50DCCECC-FC86-506D-A9C5-6E8E3211BAB4"
   },
   {
    "weightKg": null,
@@ -5657,6 +6144,18 @@
    "exerciseId": "29063F91-02ED-5F3C-9338-6BA8CE6E4066"
   },
   {
+   "weightKg": 15.9,
+   "sets": 5,
+   "reps": 5,
+   "isMax": false,
+   "incline": null,
+   "speed": null,
+   "minutes": null,
+   "note": "一邊",
+   "date": "2026-07-01T12:00:00+08:00",
+   "exerciseId": "F7D352C9-96A1-5A05-8AFA-6C1DC298F9D9"
+  },
+  {
    "weightKg": null,
    "sets": null,
    "reps": null,
@@ -5665,8 +6164,20 @@
    "speed": 4.0,
    "minutes": 30.0,
    "note": "",
-   "date": "2026-07-01T12:00:00+08:00",
+   "date": "2026-07-01T12:01:00+08:00",
    "exerciseId": "29063F91-02ED-5F3C-9338-6BA8CE6E4066"
+  },
+  {
+   "weightKg": 120.0,
+   "sets": 5,
+   "reps": 5,
+   "isMax": false,
+   "incline": null,
+   "speed": null,
+   "minutes": null,
+   "note": "",
+   "date": "2026-07-02T12:00:00+08:00",
+   "exerciseId": "5340EB2A-4507-5543-B5B1-92FDEA641369"
   },
   {
    "weightKg": null,
@@ -5677,7 +6188,7 @@
    "speed": 4.2,
    "minutes": 30.0,
    "note": "",
-   "date": "2026-07-02T12:00:00+08:00",
+   "date": "2026-07-02T12:01:00+08:00",
    "exerciseId": "29063F91-02ED-5F3C-9338-6BA8CE6E4066"
   },
   {
@@ -5705,6 +6216,18 @@
    "exerciseId": "29063F91-02ED-5F3C-9338-6BA8CE6E4066"
   },
   {
+   "weightKg": 81.6,
+   "sets": 5,
+   "reps": 5,
+   "isMax": false,
+   "incline": null,
+   "speed": null,
+   "minutes": null,
+   "note": "",
+   "date": "2026-07-04T12:00:00+08:00",
+   "exerciseId": "A8F46482-2F1B-5512-96DE-7390F7315C25"
+  },
+  {
    "weightKg": null,
    "sets": null,
    "reps": null,
@@ -5713,7 +6236,7 @@
    "speed": 4.0,
    "minutes": 30.0,
    "note": "",
-   "date": "2026-07-04T12:00:00+08:00",
+   "date": "2026-07-04T12:01:00+08:00",
    "exerciseId": "29063F91-02ED-5F3C-9338-6BA8CE6E4066"
   },
   {
@@ -5765,6 +6288,18 @@
    "exerciseId": "29063F91-02ED-5F3C-9338-6BA8CE6E4066"
   },
   {
+   "weightKg": 120.0,
+   "sets": 5,
+   "reps": 5,
+   "isMax": false,
+   "incline": null,
+   "speed": null,
+   "minutes": null,
+   "note": "",
+   "date": "2026-07-08T12:00:00+08:00",
+   "exerciseId": "5340EB2A-4507-5543-B5B1-92FDEA641369"
+  },
+  {
    "weightKg": null,
    "sets": null,
    "reps": null,
@@ -5773,7 +6308,7 @@
    "speed": 4.0,
    "minutes": 30.0,
    "note": "",
-   "date": "2026-07-08T12:00:00+08:00",
+   "date": "2026-07-08T12:01:00+08:00",
    "exerciseId": "29063F91-02ED-5F3C-9338-6BA8CE6E4066"
   },
   {
@@ -5861,6 +6396,18 @@
    "exerciseId": "527D1C30-364E-56BF-B891-DD1963325836"
   },
   {
+   "weightKg": 40.8,
+   "sets": 8,
+   "reps": 3,
+   "isMax": false,
+   "incline": null,
+   "speed": null,
+   "minutes": null,
+   "note": "",
+   "date": "2026-07-12T12:00:00+08:00",
+   "exerciseId": "46C022DC-905F-5508-BC34-9B262BF00C42"
+  },
+  {
    "weightKg": null,
    "sets": null,
    "reps": null,
@@ -5869,7 +6416,7 @@
    "speed": 4.2,
    "minutes": 30.0,
    "note": "",
-   "date": "2026-07-12T12:00:00+08:00",
+   "date": "2026-07-12T12:01:00+08:00",
    "exerciseId": "29063F91-02ED-5F3C-9338-6BA8CE6E4066"
   },
   {
@@ -5909,6 +6456,18 @@
    "exerciseId": "194554BD-2086-5975-843B-CBE8FB8DF75B"
   },
   {
+   "weightKg": 11.3,
+   "sets": 3,
+   "reps": 8,
+   "isMax": false,
+   "incline": null,
+   "speed": null,
+   "minutes": null,
+   "note": "",
+   "date": "2026-07-14T12:01:00+08:00",
+   "exerciseId": "D39B3002-0325-5F91-A8E7-DA0453523F5C"
+  },
+  {
    "weightKg": 13.61,
    "sets": 3,
    "reps": 8,
@@ -5917,7 +6476,7 @@
    "speed": null,
    "minutes": null,
    "note": "30lbs",
-   "date": "2026-07-14T12:01:00+08:00",
+   "date": "2026-07-14T12:02:00+08:00",
    "exerciseId": "A1B410B5-2693-5743-A9D6-2C51A3C51961"
   },
   {
@@ -5981,6 +6540,18 @@
    "exerciseId": "45E8936C-B619-5B71-8CFF-A0E2A591B5B2"
   },
   {
+   "weightKg": 120.0,
+   "sets": 5,
+   "reps": 5,
+   "isMax": false,
+   "incline": null,
+   "speed": null,
+   "minutes": null,
+   "note": "",
+   "date": "2026-07-21T12:00:00+08:00",
+   "exerciseId": "5340EB2A-4507-5543-B5B1-92FDEA641369"
+  },
+  {
    "weightKg": null,
    "sets": null,
    "reps": null,
@@ -5989,7 +6560,7 @@
    "speed": 4.0,
    "minutes": 30.0,
    "note": "",
-   "date": "2026-07-21T12:00:00+08:00",
+   "date": "2026-07-21T12:01:00+08:00",
    "exerciseId": "29063F91-02ED-5F3C-9338-6BA8CE6E4066"
   },
   {
@@ -6017,6 +6588,18 @@
    "exerciseId": "29063F91-02ED-5F3C-9338-6BA8CE6E4066"
   },
   {
+   "weightKg": 27.2,
+   "sets": 5,
+   "reps": 5,
+   "isMax": false,
+   "incline": null,
+   "speed": null,
+   "minutes": null,
+   "note": "一邊",
+   "date": "2026-07-25T12:00:00+08:00",
+   "exerciseId": "F7D352C9-96A1-5A05-8AFA-6C1DC298F9D9"
+  },
+  {
    "weightKg": null,
    "sets": null,
    "reps": null,
@@ -6025,7 +6608,7 @@
    "speed": 4.3,
    "minutes": 30.0,
    "note": "",
-   "date": "2026-07-25T12:00:00+08:00",
+   "date": "2026-07-25T12:01:00+08:00",
    "exerciseId": "29063F91-02ED-5F3C-9338-6BA8CE6E4066"
   },
   {
@@ -6161,6 +6744,18 @@
    "exerciseId": "29063F91-02ED-5F3C-9338-6BA8CE6E4066"
   },
   {
+   "weightKg": 120.0,
+   "sets": 5,
+   "reps": 5,
+   "isMax": false,
+   "incline": null,
+   "speed": null,
+   "minutes": null,
+   "note": "",
+   "date": "2026-07-31T12:00:00+08:00",
+   "exerciseId": "5340EB2A-4507-5543-B5B1-92FDEA641369"
+  },
+  {
    "weightKg": null,
    "sets": null,
    "reps": null,
@@ -6169,7 +6764,7 @@
    "speed": 4.4,
    "minutes": 30.0,
    "note": "",
-   "date": "2026-07-31T12:00:00+08:00",
+   "date": "2026-07-31T12:01:00+08:00",
    "exerciseId": "29063F91-02ED-5F3C-9338-6BA8CE6E4066"
   },
   {
@@ -6317,6 +6912,18 @@
    "exerciseId": "29063F91-02ED-5F3C-9338-6BA8CE6E4066"
   },
   {
+   "weightKg": 120.0,
+   "sets": 5,
+   "reps": 5,
+   "isMax": false,
+   "incline": null,
+   "speed": null,
+   "minutes": null,
+   "note": "",
+   "date": "2026-08-10T12:00:00+08:00",
+   "exerciseId": "5340EB2A-4507-5543-B5B1-92FDEA641369"
+  },
+  {
    "weightKg": null,
    "sets": null,
    "reps": null,
@@ -6325,7 +6932,7 @@
    "speed": 4.0,
    "minutes": 30.0,
    "note": "",
-   "date": "2026-08-10T12:00:00+08:00",
+   "date": "2026-08-10T12:01:00+08:00",
    "exerciseId": "29063F91-02ED-5F3C-9338-6BA8CE6E4066"
   },
   {
@@ -6509,6 +7116,18 @@
    "exerciseId": "29063F91-02ED-5F3C-9338-6BA8CE6E4066"
   },
   {
+   "weightKg": 120.0,
+   "sets": 5,
+   "reps": 5,
+   "isMax": false,
+   "incline": null,
+   "speed": null,
+   "minutes": null,
+   "note": "",
+   "date": "2026-08-22T12:00:00+08:00",
+   "exerciseId": "5340EB2A-4507-5543-B5B1-92FDEA641369"
+  },
+  {
    "weightKg": null,
    "sets": null,
    "reps": null,
@@ -6517,7 +7136,7 @@
    "speed": 4.0,
    "minutes": 30.0,
    "note": "",
-   "date": "2026-08-22T12:00:00+08:00",
+   "date": "2026-08-22T12:01:00+08:00",
    "exerciseId": "29063F91-02ED-5F3C-9338-6BA8CE6E4066"
   },
   {
@@ -6557,6 +7176,18 @@
    "exerciseId": "29063F91-02ED-5F3C-9338-6BA8CE6E4066"
   },
   {
+   "weightKg": 11.3,
+   "sets": 5,
+   "reps": 5,
+   "isMax": false,
+   "incline": null,
+   "speed": null,
+   "minutes": null,
+   "note": "",
+   "date": "2026-08-25T12:00:00+08:00",
+   "exerciseId": "A4124E85-13CA-5FB1-9198-93D03276E78F"
+  },
+  {
    "weightKg": null,
    "sets": null,
    "reps": null,
@@ -6565,7 +7196,7 @@
    "speed": 4.0,
    "minutes": 30.0,
    "note": "",
-   "date": "2026-08-25T12:00:00+08:00",
+   "date": "2026-08-25T12:01:00+08:00",
    "exerciseId": "29063F91-02ED-5F3C-9338-6BA8CE6E4066"
   },
   {
@@ -6761,6 +7392,18 @@
    "exerciseId": "371A79E6-AC88-518B-B426-E2E11E8ADDD1"
   },
   {
+   "weightKg": 120.0,
+   "sets": 5,
+   "reps": 5,
+   "isMax": false,
+   "incline": null,
+   "speed": null,
+   "minutes": null,
+   "note": "",
+   "date": "2026-09-18T12:01:00+08:00",
+   "exerciseId": "5340EB2A-4507-5543-B5B1-92FDEA641369"
+  },
+  {
    "weightKg": null,
    "sets": null,
    "reps": null,
@@ -6769,7 +7412,7 @@
    "speed": 4.0,
    "minutes": 30.0,
    "note": "",
-   "date": "2026-09-18T12:01:00+08:00",
+   "date": "2026-09-18T12:02:00+08:00",
    "exerciseId": "29063F91-02ED-5F3C-9338-6BA8CE6E4066"
   },
   {
@@ -6917,16 +7560,16 @@
    "exerciseId": "29063F91-02ED-5F3C-9338-6BA8CE6E4066"
   },
   {
-   "weightKg": null,
-   "sets": null,
-   "reps": null,
+   "weightKg": 120.0,
+   "sets": 5,
+   "reps": 5,
    "isMax": false,
-   "incline": 12.0,
-   "speed": 4.0,
-   "minutes": 30.0,
+   "incline": null,
+   "speed": null,
+   "minutes": null,
    "note": "",
    "date": "2026-10-05T12:00:00+08:00",
-   "exerciseId": "29063F91-02ED-5F3C-9338-6BA8CE6E4066"
+   "exerciseId": "5340EB2A-4507-5543-B5B1-92FDEA641369"
   },
   {
    "weightKg": null,
@@ -6937,7 +7580,31 @@
    "speed": 4.0,
    "minutes": 30.0,
    "note": "",
+   "date": "2026-10-05T12:01:00+08:00",
+   "exerciseId": "29063F91-02ED-5F3C-9338-6BA8CE6E4066"
+  },
+  {
+   "weightKg": 15.9,
+   "sets": 5,
+   "reps": 5,
+   "isMax": false,
+   "incline": null,
+   "speed": null,
+   "minutes": null,
+   "note": "",
    "date": "2026-10-06T12:00:00+08:00",
+   "exerciseId": "F7D352C9-96A1-5A05-8AFA-6C1DC298F9D9"
+  },
+  {
+   "weightKg": null,
+   "sets": null,
+   "reps": null,
+   "isMax": false,
+   "incline": 12.0,
+   "speed": 4.0,
+   "minutes": 30.0,
+   "note": "",
+   "date": "2026-10-06T12:01:00+08:00",
    "exerciseId": "29063F91-02ED-5F3C-9338-6BA8CE6E4066"
   },
   {
@@ -7073,16 +7740,16 @@
    "exerciseId": "C7A65D05-AB56-5882-941A-0DF2352958A9"
   },
   {
-   "weightKg": null,
-   "sets": null,
-   "reps": null,
+   "weightKg": 15.9,
+   "sets": 5,
+   "reps": 5,
    "isMax": false,
-   "incline": 12.0,
-   "speed": 4.0,
-   "minutes": 30.0,
+   "incline": null,
+   "speed": null,
+   "minutes": null,
    "note": "",
    "date": "2026-10-13T12:01:00+08:00",
-   "exerciseId": "29063F91-02ED-5F3C-9338-6BA8CE6E4066"
+   "exerciseId": "F7D352C9-96A1-5A05-8AFA-6C1DC298F9D9"
   },
   {
    "weightKg": null,
@@ -7093,7 +7760,31 @@
    "speed": 4.0,
    "minutes": 30.0,
    "note": "",
+   "date": "2026-10-13T12:02:00+08:00",
+   "exerciseId": "29063F91-02ED-5F3C-9338-6BA8CE6E4066"
+  },
+  {
+   "weightKg": 11.3,
+   "sets": 5,
+   "reps": 5,
+   "isMax": false,
+   "incline": null,
+   "speed": null,
+   "minutes": null,
+   "note": "",
    "date": "2026-10-15T12:00:00+08:00",
+   "exerciseId": "A5C6FBA8-5D79-55EB-A169-A88DD02D983D"
+  },
+  {
+   "weightKg": null,
+   "sets": null,
+   "reps": null,
+   "isMax": false,
+   "incline": 12.0,
+   "speed": 4.0,
+   "minutes": 30.0,
+   "note": "",
+   "date": "2026-10-15T12:01:00+08:00",
    "exerciseId": "29063F91-02ED-5F3C-9338-6BA8CE6E4066"
   },
   {
@@ -7133,6 +7824,18 @@
    "exerciseId": "D8FFB3BD-36DC-5423-89FF-CD06D02BC08E"
   },
   {
+   "weightKg": 120.0,
+   "sets": 5,
+   "reps": 5,
+   "isMax": false,
+   "incline": null,
+   "speed": null,
+   "minutes": null,
+   "note": "",
+   "date": "2026-10-22T12:00:00+08:00",
+   "exerciseId": "5340EB2A-4507-5543-B5B1-92FDEA641369"
+  },
+  {
    "weightKg": null,
    "sets": null,
    "reps": null,
@@ -7141,7 +7844,7 @@
    "speed": 4.0,
    "minutes": 30.0,
    "note": "",
-   "date": "2026-10-22T12:00:00+08:00",
+   "date": "2026-10-22T12:01:00+08:00",
    "exerciseId": "29063F91-02ED-5F3C-9338-6BA8CE6E4066"
   },
   {

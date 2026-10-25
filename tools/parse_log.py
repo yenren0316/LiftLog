@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""把 workout_log.txt 轉成 App 用的 seed.json，並輸出 unmatched.txt 供人工檢查。
+"""把 workout_log.txt 轉成 App 用的 seed.json，並輸出 unmatched.txt 與 unit_review.txt 供人工檢查。
 
 用法：python3 tools/parse_log.py
 測試：python3 -m unittest discover tools
@@ -13,83 +13,111 @@ ROOT = Path(__file__).resolve().parent.parent
 LOG = ROOT / "tools" / "workout_log.txt"
 SEED = ROOT / "LiftLog" / "Data" / "seed.json"
 UNMATCHED = ROOT / "tools" / "unmatched.txt"
+UNIT_REVIEW = ROOT / "tools" / "unit_review.txt"
 
 KG_PER_LB = 0.45359237
 TZ = "+08:00"
 # 用名稱產生固定的 UUID，重新產生 seed.json 時 id 不會變
 ID_NAMESPACE = uuid.UUID("6f1d3c52-8a4e-4b7a-9c1e-2f5b7d9e0a11")
 
+
 # ---------------------------------------------------------------- 動作庫
-# (名稱, 分類, tags, 別名, 器材, 紀錄類型)
+def ex(name, category, tags, aliases, equipment, log_type, archived=False):
+    return dict(name=name, category=category, tags=tags, aliases=aliases,
+                equipment=equipment, logType=log_type, archived=archived)
+
+
+U, X = "unilateral", "explosive"
+
 EXERCISES = [
     # 下肢推（膝主導）
-    ("背蹲舉", "kneeDominant", [], ["深蹲", "槓鈴深蹲"], "barbell", "weight"),
-    ("後腳抬高蹲", "kneeDominant", ["unilateral"],
-     ["保加利亞分腿蹲", "保加利亞蹲", "槓鈴保加利亞蹲", "槓鈴保加利亞分腿蹲"], "dumbbell", "weight"),
-    ("高背槓分腿蹲", "kneeDominant", ["unilateral"], [], "barbell", "weight"),
-    ("側蹲", "kneeDominant", ["unilateral"], ["地震側蹲"], "dumbbell", "weight"),
-    ("六角槓階梯上下", "kneeDominant", ["unilateral"], [], "barbell", "weight"),
-    ("壺鈴原地起跳", "kneeDominant", ["explosive"], [], "kettlebell", "weight"),
+    ex("背蹲舉", "kneeDominant", [], ["深蹲", "槓鈴深蹲", "高背深蹲"], "barbell", "weight"),
+    ex("後腳抬高蹲", "kneeDominant", [U], ["保加利亞分腿蹲", "保加利亞蹲", "槓鈴保加利亞蹲", "槓鈴保加利亞分腿蹲"], "dumbbell", "weight"),
+    ex("高背槓分腿蹲", "kneeDominant", [U], [], "barbell", "weight"),
+    ex("側蹲", "kneeDominant", [U], ["地震側蹲"], "dumbbell", "weight"),
+    ex("六角槓階梯上下", "kneeDominant", [U], [], "barbell", "weight"),
+    ex("壺鈴原地起跳", "kneeDominant", [X], [], "kettlebell", "weight"),
+    ex("前蹲舉", "kneeDominant", [], [], "barbell", "weight"),
+    ex("前抱式深蹲", "kneeDominant", [], ["高腳杯深蹲", "抱蹲"], "dumbbell", "weight"),
+    ex("分腿蹲", "kneeDominant", [U], [], "dumbbell", "weight"),
+    ex("單腳深蹲", "kneeDominant", [U], [], "bodyweight", "bodyweight"),
+    ex("跳箱", "kneeDominant", [X], ["箱上跳"], "box", "bodyweight"),
     # 下肢拉（髖主導）
-    ("傳統硬舉", "hipDominant", [], ["硬舉"], "barbell", "weight"),
-    ("六角槓硬舉", "hipDominant", [], [], "barbell", "weight"),
-    ("相撲硬舉", "hipDominant", [], [], "barbell", "weight"),
-    ("羅馬尼亞式硬舉", "hipDominant", [], ["羅馬尼亞蹲", "RDL"], "dumbbell", "weight"),
-    ("單腳 RDL", "hipDominant", ["unilateral"],
-     ["單腳羅馬尼亞式硬舉", "單腳啞鈴 RDL", "單側 RDL"], "dumbbell", "weight"),
-    ("臀推", "hipDominant", [], [], "barbell", "weight"),
-    ("壺鈴擺盪", "hipDominant", ["explosive"], ["盪壺鈴", "雙手壺鈴擺盪"], "kettlebell", "weight"),
-    ("單手壺鈴擺盪", "hipDominant", ["unilateral", "explosive"], [], "kettlebell", "weight"),
-    ("彈力繩壺鈴擺盪", "hipDominant", ["explosive"], ["彈力繩盪壺鈴"], "kettlebell", "weight"),
-    ("單手抓舉", "hipDominant", ["unilateral", "explosive"], ["單手啞鈴抓舉", "啞鈴抓舉"], "dumbbell", "weight"),
-    ("拋沙包", "hipDominant", ["explosive"], [], "other", "weight"),
+    ex("傳統硬舉", "hipDominant", [], ["硬舉"], "barbell", "weight"),
+    ex("六角槓硬舉", "hipDominant", [], [], "barbell", "weight"),
+    ex("相撲硬舉", "hipDominant", [], [], "barbell", "weight"),
+    ex("羅馬尼亞式硬舉", "hipDominant", [], ["羅馬尼亞蹲", "RDL"], "dumbbell", "weight"),
+    ex("單腳 RDL", "hipDominant", [U], ["單腳羅馬尼亞式硬舉", "單腳啞鈴 RDL", "單側 RDL"], "dumbbell", "weight"),
+    ex("臀推", "hipDominant", [], [], "barbell", "weight"),
+    ex("壺鈴擺盪", "hipDominant", [X], ["盪壺鈴", "雙手壺鈴擺盪"], "kettlebell", "weight"),
+    ex("單手壺鈴擺盪", "hipDominant", [U, X], [], "kettlebell", "weight"),
+    ex("彈力繩壺鈴擺盪", "hipDominant", [X], ["彈力繩盪壺鈴"], "kettlebell", "weight"),
+    ex("單手抓舉", "hipDominant", [U, X], ["單手啞鈴抓舉", "啞鈴抓舉"], "dumbbell", "weight"),
+    ex("拋沙包", "hipDominant", [X], [], "other", "weight"),
+    ex("早安運動", "hipDominant", [], [], "barbell", "weight"),
+    ex("單手分腿抓舉", "hipDominant", [U, X], [], "dumbbell", "weight"),
     # 上肢水平推
-    ("臥推", "horizontalPush", [], ["槓鈴臥推"], "barbell", "weight"),
-    ("上斜臥推", "horizontalPush", [], [], "barbell", "weight"),
-    ("地板臥推", "horizontalPush", [], [], "barbell", "weight"),
-    ("啞鈴臥推", "horizontalPush", [], [], "dumbbell", "weight"),
-    ("地板啞鈴臥推", "horizontalPush", [], [], "dumbbell", "weight"),
-    ("半椅單手臥推", "horizontalPush", ["unilateral"], [], "dumbbell", "weight"),
-    ("滾木槓臥推", "horizontalPush", [], [], "barbell", "weight"),
+    ex("臥推", "horizontalPush", [], ["槓鈴臥推"], "barbell", "weight"),
+    ex("上斜臥推", "horizontalPush", [], [], "barbell", "weight"),
+    ex("地板臥推", "horizontalPush", [], [], "barbell", "weight"),
+    ex("啞鈴臥推", "horizontalPush", [], [], "dumbbell", "weight"),
+    ex("地板啞鈴臥推", "horizontalPush", [], [], "dumbbell", "weight"),
+    ex("單手啞鈴臥推", "horizontalPush", [U], ["半椅單手臥推"], "dumbbell", "weight"),
+    ex("滾木槓臥推", "horizontalPush", [], [], "barbell", "weight"),
+    ex("伏地挺身", "horizontalPush", [], [], "bodyweight", "bodyweight"),
     # 上肢水平拉
-    ("爆發划船", "horizontalPull", ["explosive"], [], "barbell", "weight"),
-    ("反式划船", "horizontalPull", [], ["反式滑船"], "bodyweight", "weight"),
-    ("棒式划船", "horizontalPull", ["unilateral"], ["棒式啞鈴划船", "棒式壺鈴划船"], "dumbbell", "weight"),
-    ("單邊地雷管划船", "horizontalPull", ["unilateral"], [], "barbell", "weight"),
-    ("坐姿 Cable 划船", "horizontalPull", [], ["坐姿划船", "Cable 划船", "坐姿cable划船"], "cable", "weight"),
+    ex("爆發划船", "horizontalPull", [X], [], "barbell", "weight"),
+    ex("反式划船", "horizontalPull", [], ["反式滑船"], "bodyweight", "bodyweight"),
+    ex("棒式划船", "horizontalPull", [U], ["棒式啞鈴划船", "棒式壺鈴划船"], "dumbbell", "weight"),
+    ex("單邊地雷管划船", "horizontalPull", [U], [], "barbell", "weight"),
+    ex("坐姿 Cable 划船", "horizontalPull", [], ["坐姿划船", "Cable 划船", "坐姿cable划船"], "cable", "weight"),
+    ex("屈體划船", "horizontalPull", [], ["曲體划船"], "barbell", "weight"),
+    ex("單手啞鈴划船", "horizontalPull", [U], ["單邊划船"], "dumbbell", "weight"),
     # 上肢垂直推
-    ("肩推", "verticalPush", [], ["站姿槓鈴肩推", "槓鈴肩推"], "barbell", "weight"),
-    ("坐姿槓鈴肩推", "verticalPush", [], [], "barbell", "weight"),
-    ("坐姿啞鈴肩推", "verticalPush", [], ["啞鈴肩推", "坐姿肩推"], "dumbbell", "weight"),
-    ("窄跪姿單手啞鈴肩推", "verticalPush", ["unilateral"], [], "dumbbell", "weight"),
-    ("雙槓撐", "verticalPush", [], ["雙槓撐輔助"], "bodyweight", "assisted"),
+    ex("肩推", "verticalPush", [], ["站姿槓鈴肩推", "槓鈴肩推"], "barbell", "weight"),
+    ex("坐姿槓鈴肩推", "verticalPush", [], [], "barbell", "weight"),
+    ex("坐姿啞鈴肩推", "verticalPush", [], ["啞鈴肩推", "坐姿肩推"], "dumbbell", "weight"),
+    ex("窄跪姿單手啞鈴肩推", "verticalPush", [U], [], "dumbbell", "weight"),
+    ex("雙槓撐", "verticalPush", [], ["雙槓撐輔助"], "bodyweight", "assisted"),
+    ex("爆發上推", "verticalPush", [X], ["Push Press"], "barbell", "weight"),
     # 上肢垂直拉
-    ("輔助引體向上", "verticalPull", [], ["引體向上輔助", "引體向上", "自重引體向上"], "bodyweight", "assisted"),
-    ("仰臥拉舉", "verticalPull", [], ["Pull over", "啞鈴仰臥拉舉"], "dumbbell", "weight"),
-    ("滑輪下拉", "verticalPull", [], ["Cable 滑輪下拉"], "cable", "weight"),
+    ex("輔助引體向上", "verticalPull", [], ["引體向上輔助", "引體向上", "自重引體向上"], "bodyweight", "assisted"),
+    ex("仰臥拉舉", "verticalPull", [], ["Pull over", "啞鈴仰臥拉舉"], "dumbbell", "weight"),
+    ex("滑輪下拉", "verticalPull", [], ["Cable 滑輪下拉"], "cable", "weight"),
     # 轉體
-    ("腹前推", "rotation", [], [], "cable", "weight"),
-    ("地雷管抗旋轉", "rotation", [], [], "barbell", "weight"),
-    ("坐姿分腿壺鈴三點搬移", "rotation", [], [], "kettlebell", "weight"),
+    ex("腹前推", "rotation", [], [], "cable", "weight"),
+    ex("地雷管抗旋轉", "rotation", [], [], "barbell", "weight"),
+    ex("坐姿分腿壺鈴三點搬移", "rotation", [], [], "kettlebell", "weight"),
+    ex("攪拌式", "rotation", [], [], "ball", "timed"),
     # 負重行走
-    ("單手硬舉原地踏步", "loadedCarry", ["unilateral"], [], "barbell", "weight"),
-    ("六角槓原地踏步", "loadedCarry", [], [], "barbell", "weight"),
+    ex("單手硬舉原地踏步", "loadedCarry", [U], [], "barbell", "weight"),
+    ex("六角槓原地踏步", "loadedCarry", [], [], "barbell", "weight"),
+    ex("農夫走路", "loadedCarry", [], [], "dumbbell", "timed"),
+    ex("單手負重行走", "loadedCarry", [U], [], "dumbbell", "timed"),
+    # 違常姿勢
+    ex("熊爬", "unusualPosture", [], [], "bodyweight", "timed"),
+    ex("懸吊", "unusualPosture", [], [], "bar", "timed"),
     # 補強
-    ("腹肌滾輪", "accessory", [], [], "other", "weight"),
-    ("三頭肌滑輪下拉", "accessory", [], ["三頭下拉", "三頭滑輪下拉"], "cable", "weight"),
-    ("二頭彎舉", "accessory", [], [], "dumbbell", "weight"),
-    ("面拉", "accessory", [], [], "cable", "weight"),
-    ("YTW", "accessory", [], [], "dumbbell", "weight"),
+    ex("腹肌滾輪", "accessory", [], [], "other", "weight"),
+    ex("三頭肌滑輪下拉", "accessory", [], ["三頭下拉", "三頭滑輪下拉"], "cable", "weight"),
+    ex("二頭彎舉", "accessory", [], [], "dumbbell", "weight"),
+    ex("面拉", "accessory", [], [], "cable", "weight"),
+    ex("YTW", "accessory", [], [], "dumbbell", "weight"),
     # 有氧
-    ("跑步機", "cardio", [], ["室內步行", "跑步"], "other", "cardio"),
+    ex("跑步機", "cardio", [], ["室內步行", "跑步"], "other", "cardio"),
+    # 固定軌道的機台：封存（不出現在預設清單，歷史保留）
+    ex("腿推機", "kneeDominant", [], [], "machine", "weight", archived=True),
+    ex("深蹲訓練機", "kneeDominant", [], [], "machine", "weight", archived=True),
+    ex("超級深蹲訓練架", "kneeDominant", [], [], "machine", "weight", archived=True),
+    ex("腿部伸張機", "kneeDominant", [], [], "machine", "weight", archived=True),
+    ex("臥姿腿彎舉機", "hipDominant", [], ["臥姿腿部彎曲機"], "machine", "weight", archived=True),
+    ex("胸推訓練機", "horizontalPush", [], [], "machine", "weight", archived=True),
+    ex("肩推機", "verticalPush", [], [], "machine", "weight", archived=True),
+    ex("垂直舉肩訓練機", "accessory", [], [], "machine", "weight", archived=True),
+    ex("背部訓練機", "horizontalPull", [], [], "machine", "weight", archived=True),
+    ex("背部下拉訓練機", "verticalPull", [], [], "machine", "weight", archived=True),
 ]
-EX_BY_NAME = {e[0]: e for e in EXERCISES}
-
-# 暫不放入動作庫的機械動作：舊紀錄不匯入，列在 unmatched.txt
-SKIPPED_MACHINES = [
-    "腿推機", "深蹲訓練機", "超級深蹲訓練架", "腿部伸張機", "臥姿腿彎舉機", "臥姿腿部彎曲機",
-    "胸推訓練機", "背部訓練機", "背部下拉訓練機", "肩推機", "垂直舉肩訓練機",
-]
+EX_BY_NAME = {e["name"]: e for e in EXERCISES}
 
 # 原文用這個別名時，把器材變化寫進備註
 VARIANT_NOTES = {
@@ -111,18 +139,20 @@ def squash(s):
 def build_lookup():
     """忽略空白與大小寫的名稱表，長的排前面，比對時取最長相符"""
     table = {}
-    for name, _, _, aliases, _, _ in EXERCISES:
-        for written in [name, *aliases]:
-            table[squash(written)] = (name, VARIANT_NOTES.get(written, ""))
-    for machine in SKIPPED_MACHINES:
-        table[squash(machine)] = (None, machine)
+    for e in EXERCISES:
+        for written in [e["name"], *e["aliases"]]:
+            table[squash(written)] = (e["name"], VARIANT_NOTES.get(written, ""))
     return sorted(table.items(), key=lambda kv: -len(kv[0]))
 
 
 LOOKUP = build_lookup()
 
-# 沒寫單位、超過 20 視為 lbs 的啞鈴動作
-DUMBBELL_LBS_RULE = {n for n, e in EX_BY_NAME.items() if e[4] == "dumbbell"}
+# 記單顆重量、需要審查沒寫單位數字的器材
+SINGLE_WEIGHT_EQUIPMENT = {"dumbbell", "kettlebell"}
+# 沒有明確單位的參考紀錄時，超過這個數字視為 lbs
+UNITLESS_LBS_THRESHOLD = 20
+# 有參考紀錄時，超過「明確單位紀錄的最大值 × 這個倍數」視為 lbs
+UNITLESS_LBS_RATIO = 1.5
 
 # ---------------------------------------------------------------- 特例
 # 原文整行 -> 手動整理的結果（list，可拆成多筆）
@@ -168,10 +198,14 @@ def parse_cardio(text):
 
 
 def parse_body(name, rest, raw, review):
-    """解析動作名後面的文字，回傳 dict。"""
-    _, _, _, _, equipment, log_type = EX_BY_NAME[name]
+    """解析動作名後面的文字，回傳 dict。
+
+    啞鈴／壺鈴沒寫單位的數字先當 kg，記在 unitless，最後由 resolve_units 依參考紀錄決定是否改成 lbs。
+    """
+    e = EX_BY_NAME[name]
+    equipment, log_type = e["equipment"], e["logType"]
     out = dict(weight=None, sets=None, reps=None, isMax=False,
-               incline=None, speed=None, minutes=None, notes=[])
+               incline=None, speed=None, minutes=None, notes=[], unitless=None, explicit=False)
     s = rest
 
     if log_type == "cardio":
@@ -229,12 +263,12 @@ def parse_body(name, rest, raw, review):
         if unit.startswith("lb"):
             out["weight"] = value * KG_PER_LB
             out["notes"].append(f"{fmt(value)}lbs")
-        elif unit == "" and name in DUMBBELL_LBS_RULE and value > 20:
-            out["weight"] = value * KG_PER_LB
-            out["notes"].append(f"{fmt(value)}lbs")
-            review.append(("沒寫單位、超過 20 當作 lbs", raw, f"{fmt(value)}lbs = {out['weight']:.2f} kg"))
+            out["explicit"] = True
         else:
             out["weight"] = value
+            out["explicit"] = unit == "kg"
+            if unit == "" and equipment in SINGLE_WEIGHT_EQUIPMENT:
+                out["unitless"] = value
         s = s.replace(head, head[:span[0]] + " " + head[span[1]:], 1)
 
     leftover = re.sub(r"\s+", " ", s).strip(" ，,")
@@ -254,7 +288,7 @@ def parse_body(name, rest, raw, review):
 
 
 def match_name(line):
-    """回傳 ((動作名或 None, 變化備註), 剩下的文字)；動作名為 None 代表是暫不匯入的機械"""
+    """回傳 ((動作名, 變化備註), 剩下的文字)；對不上回傳 (None, None)"""
     sq = squash(line)
     for key, value in LOOKUP:
         if sq.startswith(key):
@@ -276,7 +310,10 @@ def entry(name, weight=None, sets=None, reps=None, isMax=False,
 
 
 def parse_line(line, review):
-    """解析一行動作。回傳 ("ok", [entry...]) 或 ("skip"/"unmatched", 原因)"""
+    """解析一行動作。回傳 ("ok", [entry...]) 或 ("unmatched", 原因)。
+
+    entry 會帶 _unitless / _explicit / _raw 給 resolve_units 使用，輸出前移除。
+    """
     if line in OVERRIDES:
         items = OVERRIDES[line]
         review.append(("手動整理", line, " / ".join(
@@ -288,13 +325,45 @@ def parse_line(line, review):
     if matched is None:
         return "unmatched", "動作名稱對不上"
     name, variant = matched
-    if name is None:
-        return "skip", f"機械動作（{variant}）暫不匯入"
 
     p = parse_body(name, rest, line, review)
     notes = ([variant] if variant else []) + p["notes"]
-    return "ok", [entry(name, p["weight"], p["sets"], p["reps"], p["isMax"],
-                        p["incline"], p["speed"], p["minutes"], " ".join(notes))]
+    e = entry(name, p["weight"], p["sets"], p["reps"], p["isMax"],
+              p["incline"], p["speed"], p["minutes"], " ".join(notes))
+    e["_unitless"], e["_explicit"], e["_raw"] = p["unitless"], p["explicit"], line
+    return "ok", [e]
+
+
+def resolve_units(entries):
+    """啞鈴／壺鈴沒寫單位的數字：比同動作有明確單位的紀錄大很多，就當成 lbs。
+
+    參考值 = 同動作有寫 kg 或 lbs 的紀錄中最重的（換算成 kg）。
+    - 有參考值：數字 > 參考值 × 1.5 → lbs
+    - 沒有參考值：數字 > 20 → lbs
+    回傳審查清單 [(日期, 動作, 原文, 目前存的值, 建議)]。
+    """
+    reference = {}
+    for e in entries:
+        if e.get("_explicit") and e["weightKg"] is not None:
+            reference[e["exercise"]] = max(reference.get(e["exercise"], 0), e["weightKg"])
+
+    review = []
+    for e in entries:
+        value = e.get("_unitless")
+        if value is None:
+            continue
+        ref = reference.get(e["exercise"])
+        limit = ref * UNITLESS_LBS_RATIO if ref else UNITLESS_LBS_THRESHOLD
+        basis = f"參考：同動作有寫單位的最大值 {fmt(ref)} kg" if ref else "沒有參考紀錄，以 20 為界"
+        if value > limit:
+            kg = round(value * KG_PER_LB, 2)
+            e["weightKg"] = kg
+            e["note"] = " ".join(filter(None, [e["note"], f"{fmt(value)}lbs"]))
+            decision = f"改成 lbs：{fmt(value)} lbs = {kg} kg（{basis}，上限 {fmt(round(limit, 2))}）"
+        else:
+            decision = f"維持 kg（{basis}，未超過 {fmt(round(limit, 2))}）"
+        review.append((e["date"][:10], e["exercise"], e["_raw"], e["weightKg"], decision))
+    return review
 
 
 def iso(year, month, day, minute):
@@ -335,7 +404,11 @@ def parse_log(text):
             order += 1
             entries.append(e)
 
-    return entries, body_weights, unmatched, review
+    unit_review = resolve_units(entries)
+    for e in entries:
+        for key in ("_unitless", "_explicit", "_raw"):
+            e.pop(key, None)
+    return entries, body_weights, unmatched, review, unit_review
 
 
 def exercise_id(name):
@@ -343,16 +416,17 @@ def exercise_id(name):
 
 
 def main():
-    entries, body_weights, unmatched, review = parse_log(LOG.read_text(encoding="utf-8"))
+    entries, body_weights, unmatched, review, unit_review = parse_log(LOG.read_text(encoding="utf-8"))
 
     for e in entries:
         e["exerciseId"] = exercise_id(e.pop("exercise"))
 
     seed = dict(
         version=2,
-        exercises=[dict(id=exercise_id(n), name=n, category=cat, tags=tags, aliases=aliases,
-                        englishName="", equipment=eq, logType=lt, note="", isArchived=False)
-                   for n, cat, tags, aliases, eq, lt in EXERCISES],
+        exercises=[dict(id=exercise_id(e["name"]), name=e["name"], category=e["category"], tags=e["tags"],
+                        aliases=e["aliases"], englishName="", equipment=e["equipment"], logType=e["logType"],
+                        note="", isArchived=e["archived"])
+                   for e in EXERCISES],
         entries=entries,
         bodyWeights=body_weights,
     )
@@ -367,10 +441,19 @@ def main():
         for why, text, detail in review:
             f.write(f"{why}\t{text}\t{detail}\n")
 
+    with UNIT_REVIEW.open("w", encoding="utf-8") as f:
+        f.write("# 啞鈴／壺鈴沒寫單位的紀錄（啞鈴、壺鈴一律記單顆重量）\n")
+        f.write("# 日期\t動作\t原文\t目前存的值 (kg)\t判斷\n")
+        for date, name, raw, kg, decision in unit_review:
+            f.write(f"{date}\t{name}\t{raw}\t{kg}\t{decision}\n")
+        f.write("\n# 手動整理的特例\n")
+        f.write("2026-07-10\t羅馬尼亞式硬舉\t羅馬尼亞蹲 5x5 （啞鈴 30一邊）\t13.61\t改成 lbs：30 lbs = 13.61 kg\n")
+
     used = {e["exerciseId"] for e in entries}
-    print(f"entries={len(entries)} bodyWeights={len(body_weights)} "
-          f"unmatched={len(unmatched)} review={len(review)}")
-    print("從沒做過的動作：", [n for n in EX_BY_NAME if exercise_id(n) not in used])
+    converted = sum(1 for r in unit_review if r[4].startswith("改成"))
+    print(f"entries={len(entries)} bodyWeights={len(body_weights)} unmatched={len(unmatched)} "
+          f"review={len(review)} unitReview={len(unit_review)} (改成 lbs {converted})")
+    print("從沒做過的動作：", [e["name"] for e in EXERCISES if exercise_id(e["name"]) not in used])
 
 
 if __name__ == "__main__":

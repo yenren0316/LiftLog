@@ -5,6 +5,8 @@ struct HomeView: View {
     @Query(filter: #Predicate<Exercise> { !$0.isArchived }, sort: \Exercise.name)
     private var exercises: [Exercise]
     @Query private var allSets: [SetRecord]
+    /// 統計用：包含封存的動作（封存動作的歷史仍計入近 30 天）
+    @Query private var allExercises: [Exercise]
 
     @Environment(\.modelContext) private var context
     @Environment(WorkoutCoordinator.self) private var coordinator
@@ -35,7 +37,7 @@ struct HomeView: View {
                             .buttonStyle(.plain)
                         }
                         ActivityGraph(days: trainingDays)
-                        CategoryBarsCard(exercises: exercises) { category in
+                        CategoryBarsCard(exercises: allExercises) { category in
                             withAnimation { proxy.scrollTo(category, anchor: .top) }
                         }
                         TagFilterBar(selection: $filter)
