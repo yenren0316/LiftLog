@@ -10,7 +10,7 @@ struct ExerciseGuideTab: View {
         VStack(alignment: .leading, spacing: 20) {
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
-                    Text("動作說明").font(.headline).foregroundStyle(.secondary)
+                    Text("動作說明").font(.headline).foregroundStyle(Theme.textSecondary)
                     Spacer()
                     Button("編輯", systemImage: "pencil") { editing = true }
                         .labelStyle(.titleAndIcon)
@@ -27,9 +27,9 @@ struct ExerciseGuideTab: View {
             .card()
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("我的筆記").font(.headline).foregroundStyle(.secondary)
+                Text("我的筆記").font(.headline).foregroundStyle(Theme.textSecondary)
                 Text(exercise.myNotes.isEmpty ? "還沒有筆記，按上方「編輯」新增。" : exercise.myNotes)
-                    .foregroundStyle(exercise.myNotes.isEmpty ? .secondary : .primary)
+                    .foregroundStyle(exercise.myNotes.isEmpty ? Theme.textSecondary : Theme.textPrimary)
             }
             .card()
         }
@@ -40,7 +40,7 @@ struct ExerciseGuideTab: View {
 
     private func field(_ title: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(title).font(.subheadline).foregroundStyle(.secondary)
+            Text(title).font(.subheadline).foregroundStyle(Theme.textSecondary)
             Text(value.isEmpty ? "—" : value).font(.body.weight(.semibold))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -48,14 +48,14 @@ struct ExerciseGuideTab: View {
 
     private func list(_ title: String, _ items: [String], numbered: Bool) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(title).font(.subheadline).foregroundStyle(.secondary)
+            Text(title).font(.subheadline).foregroundStyle(Theme.textSecondary)
             if items.isEmpty {
                 Text("—")
             }
             ForEach(Array(items.enumerated()), id: \.offset) { index, item in
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(numbered ? "\(index + 1)." : "•")
-                        .foregroundStyle(numbered ? Theme.green : Theme.red)
+                        .foregroundStyle(numbered ? Theme.accent : Theme.danger)
                         .monospacedDigit()
                     Text(item)
                 }
@@ -79,28 +79,31 @@ private struct GuideEditView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("核心抗動類型") {
-                    TextField("例如：抗伸展", text: $core)
+                Group {
+                    Section("核心抗動類型") {
+                        TextField("例如：抗伸展", text: $core)
+                    }
+                    Section {
+                        TextEditor(text: $cues).frame(minHeight: 120)
+                    } header: {
+                        Text("動作要點")
+                    } footer: {
+                        Text("一行一條，建議 3–5 條")
+                    }
+                    Section {
+                        TextEditor(text: $mistakes).frame(minHeight: 80)
+                    } header: {
+                        Text("常見錯誤")
+                    } footer: {
+                        Text("一行一條，建議 2–3 條")
+                    }
+                    Section("退階") { TextField("退階", text: $regression, axis: .vertical) }
+                    Section("進階") { TextField("進階", text: $progression, axis: .vertical) }
+                    Section("我的筆記") {
+                        TextEditor(text: $notes).frame(minHeight: 120)
+                    }
                 }
-                Section {
-                    TextEditor(text: $cues).frame(minHeight: 120)
-                } header: {
-                    Text("動作要點")
-                } footer: {
-                    Text("一行一條，建議 3–5 條")
-                }
-                Section {
-                    TextEditor(text: $mistakes).frame(minHeight: 80)
-                } header: {
-                    Text("常見錯誤")
-                } footer: {
-                    Text("一行一條，建議 2–3 條")
-                }
-                Section("退階") { TextField("退階", text: $regression, axis: .vertical) }
-                Section("進階") { TextField("進階", text: $progression, axis: .vertical) }
-                Section("我的筆記") {
-                    TextEditor(text: $notes).frame(minHeight: 120)
-                }
+                .listRowBackground(Theme.card)
             }
             .scrollContentBackground(.hidden)
             .screenBackground()

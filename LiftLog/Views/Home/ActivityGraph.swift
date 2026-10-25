@@ -18,13 +18,13 @@ struct ActivityGraph: View {
 
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline) {
-                Text("訓練日曆").font(.headline).foregroundStyle(.secondary)
+                Text("訓練日曆").font(.headline).foregroundStyle(Theme.textSecondary)
                 Spacer()
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text("今年").font(.subheadline).foregroundStyle(.secondary)
+                    Text("今年").font(.subheadline).foregroundStyle(Theme.textSecondary)
                     Text(String(daysThisYear))
-                        .font(.title3.bold().monospacedDigit()).foregroundStyle(Theme.green)
-                    Text("天").font(.subheadline).foregroundStyle(.secondary)
+                        .font(.title3.bold().monospacedDigit()).foregroundStyle(Theme.accent)
+                    Text("天").font(.subheadline).foregroundStyle(Theme.textSecondary)
                 }
             }
 
@@ -46,11 +46,11 @@ struct ActivityGraph: View {
 
             HStack(spacing: 4) {
                 Spacer()
-                Text("少").font(.caption2).foregroundStyle(.secondary)
+                Text("少").font(.caption2).foregroundStyle(Theme.textSecondary)
                 ForEach(0...3, id: \.self) { level in
                     RoundedRectangle(cornerRadius: 3).fill(color(level: level)).frame(width: 10, height: 10)
                 }
-                Text("多").font(.caption2).foregroundStyle(.secondary)
+                Text("多").font(.caption2).foregroundStyle(Theme.textSecondary)
             }
         }
         .card()
@@ -76,7 +76,7 @@ struct ActivityGraph: View {
                 let previous = w > 0 ? weeks[w - 1].compactMap { $0 }.first.map { calendar.component(.month, from: $0) } : nil
                 Text(month != nil && month != previous ? "\(month!)月" : "")
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
                     .fixedSize()
                     .frame(width: cell, alignment: .leading)
             }
@@ -85,10 +85,10 @@ struct ActivityGraph: View {
 
     private func color(level: Int) -> Color {
         switch level {
-        case 0: Theme.track
-        case 1: Theme.green.opacity(0.4)
-        case 2: Theme.green.opacity(0.7)
-        default: Theme.green
+        case 0: Theme.field
+        case 1: Theme.accent.opacity(0.4)
+        case 2: Theme.accent.opacity(0.7)
+        default: Theme.accent
         }
     }
 }

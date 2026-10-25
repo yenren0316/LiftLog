@@ -176,9 +176,9 @@ private struct OptionButton: View {
         Button(action: action) {
             Text(title)
                 .font(.headline)
-                .foregroundStyle(isSelected ? Color.black : Color.primary)
+                .foregroundStyle(isSelected ? Theme.onAccent : Theme.textPrimary)
                 .frame(maxWidth: .infinity, minHeight: 52)
-                .background(isSelected ? Theme.green : Theme.field, in: .capsule)
+                .background(isSelected ? Theme.accent : Theme.field, in: .capsule)
         }
         .buttonStyle(.plain)
     }
@@ -193,9 +193,9 @@ private struct PrimaryButton: View {
         Button(action: action) {
             Text(title)
                 .font(.title3.bold())
-                .foregroundStyle(.black)
+                .foregroundStyle(Theme.onAccent)
                 .frame(maxWidth: .infinity, minHeight: 60)
-                .background(Theme.green.opacity(isEnabled ? 1 : 0.4), in: .capsule)
+                .background(Theme.accent.opacity(isEnabled ? 1 : 0.4), in: .capsule)
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)
@@ -235,7 +235,7 @@ private struct ModeStep: View {
             HStack(spacing: 8) {
                 Image(systemName: selected ? "checkmark.circle.fill" : "circle")
                     .font(.title2)
-                    .foregroundStyle(selected ? Theme.green : .secondary)
+                    .foregroundStyle(selected ? Theme.accent : Theme.textSecondary)
                 Text("模式 \(mode.variant ?? "")").font(.title2.bold())
                 if mode.id == recommended?.id { AccentChip(text: "建議") }
                 Spacer()
@@ -243,7 +243,7 @@ private struct ModeStep: View {
             FlowSlots(slots: mode.slots)
         }
         .card()
-        .overlay(RoundedRectangle(cornerRadius: Theme.cardRadius).stroke(selected ? Theme.green : .clear, lineWidth: 2))
+        .overlay(RoundedRectangle(cornerRadius: Theme.cardRadius).stroke(selected ? Theme.accent : .clear, lineWidth: 2))
         .contentShape(.rect)
     }
 }
@@ -256,7 +256,7 @@ private struct FlowSlots: View {
         HStack(spacing: 6) {
             ForEach(Array(slots.enumerated()), id: \.offset) { index, slot in
                 if index > 0 {
-                    Image(systemName: "arrow.right").font(.caption.bold()).foregroundStyle(.secondary)
+                    Image(systemName: "arrow.right").font(.caption.bold()).foregroundStyle(Theme.textSecondary)
                 }
                 Text(slot.title)
                     .font(.headline)
@@ -275,9 +275,9 @@ struct AccentChip: View {
     var body: some View {
         Text(text)
             .font(.caption.weight(.bold))
-            .foregroundStyle(.black)
+            .foregroundStyle(Theme.onAccent)
             .padding(.horizontal, 8).padding(.vertical, 3)
-            .background(Theme.green, in: .capsule)
+            .background(Theme.accent, in: .capsule)
     }
 }
 
@@ -332,12 +332,12 @@ private struct SlotCard: View {
             }
             Text(state.slot.role.shortGuide)
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.textSecondary)
                 .padding(.bottom, 8)
 
             if items.isEmpty {
                 Text("沒有符合的動作，這個位置會略過")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
                     .padding(.vertical, 8)
             } else if state.slot == .cardio {
                 // 有氧固定是跑步機
@@ -345,7 +345,7 @@ private struct SlotCard: View {
             } else {
                 let shown = showAll ? items : Array(items.prefix(Self.visibleCount))
                 ForEach(Array(shown.enumerated()), id: \.element.id) { index, candidate in
-                    if index > 0 { Divider().overlay(Theme.cardBorder) }
+                    if index > 0 { Divider().overlay(Theme.separator) }
                     row(candidate, isFirst: index == 0)
                 }
                 if items.count > Self.visibleCount {
@@ -355,7 +355,7 @@ private struct SlotCard: View {
                             .frame(maxWidth: .infinity, minHeight: 44)
                     }
                     .buttonStyle(.plain)
-                    .foregroundStyle(Theme.green)
+                    .foregroundStyle(Theme.accent)
                 }
             }
         }
@@ -383,7 +383,7 @@ struct CandidateRow: View {
             if let isSelected {
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .font(.title2)
-                    .foregroundStyle(isSelected ? Theme.green : .secondary)
+                    .foregroundStyle(isSelected ? Theme.accent : Theme.textSecondary)
             }
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
@@ -397,7 +397,7 @@ struct CandidateRow: View {
                     HStack(spacing: 6) {
                         AccentChip(text: "建議")
                         if let reason = suggestion {
-                            Text(reason).font(.subheadline).foregroundStyle(Theme.green)
+                            Text(reason).font(.subheadline).foregroundStyle(Theme.accent)
                         }
                     }
                 }

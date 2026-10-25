@@ -6,9 +6,25 @@ struct RootView: View {
     @State private var coordinator = WorkoutCoordinator()
     @State private var restTimer = RestTimer()
     @State private var tab = 0
+    @AppStorage(AppTheme.storageKey) private var theme: AppTheme = .graphiteOrange
+    @AppStorage(AppTheme.followSystemKey) private var followSystem = false
+    @AppStorage(AppTheme.darkKey) private var darkTheme: AppTheme = .midnightBlue
+    @AppStorage(AppTheme.lightKey) private var lightTheme: AppTheme = .coolGray
     @Query(filter: #Predicate<WorkoutSession> { $0.endedAt == nil }) private var active: [WorkoutSession]
 
+    private var themeSettings: ThemeSettings {
+        ThemeSettings(theme: theme, followSystem: followSystem, dark: darkTheme, light: lightTheme)
+    }
+
     var body: some View {
+        // 換主題時重建畫面，讓所有 token 重新取色
+        tabs
+            .id(themeSettings.key)
+            .tint(Theme.accent)
+            .preferredColorScheme(themeSettings.colorScheme)
+    }
+
+    private var tabs: some View {
         TabView(selection: $tab) {
             Tab("該練什麼", systemImage: "dumbbell.fill", value: 0) {
                 HomeView().workoutMiniBar()
@@ -41,7 +57,7 @@ struct RootView: View {
             }
             .environment(coordinator)
             .environment(restTimer)
-            .preferredColorScheme(.dark)
+            .preferredColorScheme(themeSettings.colorScheme)
         }
         .alert("沒有完成任何一組", isPresented: Binding(
             get: { coordinator.showEmptyFinishNotice },
@@ -72,5 +88,5 @@ struct RootView: View {
 }
 
 #Preview {
-    RootView().preferredColorScheme(.dark)
+    RootView()
 }

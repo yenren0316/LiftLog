@@ -22,10 +22,10 @@ struct HealthImportSheet: View {
                 if loading {
                     ProgressView().frame(maxWidth: .infinity).listRowBackground(Color.clear)
                 } else if let errorMessage {
-                    Text(errorMessage).foregroundStyle(Theme.red).listRowBackground(Theme.card)
+                    Text(errorMessage).foregroundStyle(Theme.danger).listRowBackground(Theme.card)
                 } else if available.isEmpty {
                     Text(emptyMessage(hasImportedAll: !workouts.isEmpty))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
                         .listRowBackground(Theme.card)
                 }
 
@@ -82,7 +82,7 @@ private struct WorkoutRow: View {
                 Text(workout.isRunning ? "室內跑步" : "室內步行").font(.headline)
                 Spacer()
                 Text(workout.start.formatted(.dateTime.month().day().weekday().hour().minute()))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
             }
             HStack(spacing: 12) {
                 Text("\(Units.number(workout.minutes)) 分")
@@ -94,8 +94,8 @@ private struct WorkoutRow: View {
                 }
             }
             .font(.body.weight(.semibold).monospacedDigit())
-            .foregroundStyle(Theme.green)
-            Text(workout.source).font(.caption).foregroundStyle(.secondary)
+            .foregroundStyle(Theme.accent)
+            Text(workout.source).font(.caption).foregroundStyle(Theme.textSecondary)
         }
         .padding(.vertical, 4)
         .contentShape(.rect)

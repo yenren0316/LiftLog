@@ -10,7 +10,7 @@ struct RestTimerBar: View {
                 let remaining = timer.remaining(at: context.date)
                 VStack(spacing: 8) {
                     HStack(spacing: 10) {
-                        Image(systemName: "timer").foregroundStyle(Theme.green)
+                        Image(systemName: "timer").foregroundStyle(Theme.accent)
                         Text("休息 \(WorkoutSession.format(duration: remaining.rounded(.up)))")
                             .font(.title3.bold().monospacedDigit())
                         Spacer()
@@ -18,11 +18,11 @@ struct RestTimerBar: View {
                         step("+15") { timer.adjust(by: 15) }
                         step("跳過") { timer.skip() }
                     }
-                    ThinBar(fraction: timer.duration > 0 ? remaining / timer.duration : 0, color: Theme.green)
+                    ThinBar(fraction: timer.duration > 0 ? remaining / timer.duration : 0, color: Theme.accent)
                 }
                 .padding(14)
                 .background(Theme.card, in: .rect(cornerRadius: 20))
-                .overlay(RoundedRectangle(cornerRadius: 20).stroke(Theme.green.opacity(0.4)))
+                .overlay(RoundedRectangle(cornerRadius: 20).stroke(Theme.accent.opacity(0.4)))
                 .padding(.horizontal, 16)
                 .padding(.bottom, 6)
             }
@@ -56,7 +56,7 @@ struct RestTimerMenu: View {
             }
         } label: {
             Image(systemName: timer.isRunning ? "timer.circle.fill" : "timer")
-                .foregroundStyle(timer.isRunning ? Theme.green : .primary)
+                .foregroundStyle(timer.isRunning ? Theme.accent : Theme.textPrimary)
         }
     }
 }

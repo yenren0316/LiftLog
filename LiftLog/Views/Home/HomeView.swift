@@ -42,7 +42,7 @@ struct HomeView: View {
                             visible, category: \.category, lastDate: \.lastCompletedDate, name: \.name
                         )
                         if sections.isEmpty {
-                            Text("沒有符合的動作").foregroundStyle(.secondary).card()
+                            Text("沒有符合的動作").foregroundStyle(Theme.textSecondary).card()
                         }
                         ForEach(sections, id: \.category) { section in
                             CategorySection(
@@ -145,13 +145,13 @@ private struct NextPlanCard: View {
         Button { onOpen(answers) } label: {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("下一次建議").font(.headline).foregroundStyle(.secondary)
+                    Text("下一次建議").font(.headline).foregroundStyle(Theme.textSecondary)
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text(answers.region.title).font(.title.bold())
                         if let last {
                             Text("上次 \(last.date.formatted(.dateTime.month(.defaultDigits).day())) 是\(last.region.title)")
                                 .font(.subheadline)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Theme.textSecondary)
                         }
                     }
                     Text("\(answers.count) 個動作・\(answers.cardio ? "加跑步機" : "不加跑步機")")
@@ -160,7 +160,7 @@ private struct NextPlanCard: View {
                 Spacer(minLength: 8)
                 Image(systemName: "chevron.right")
                     .font(.title3.weight(.semibold))
-                    .foregroundStyle(Theme.green)
+                    .foregroundStyle(Theme.accent)
             }
             .contentShape(.rect)
         }
@@ -190,7 +190,7 @@ private struct CategoryBarsCard: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("最近 30 天")
                 .font(.headline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.textSecondary)
             ForEach(categories) { category in
                 let count = counts[category] ?? 0
                 Button { onSelect(category) } label: {
@@ -208,10 +208,10 @@ private struct CategoryBarsCard: View {
                 }
                 .buttonStyle(.plain)
             }
-            Divider().overlay(Theme.cardBorder)
+            Divider().overlay(Theme.separator)
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 roleCount("單邊", unilateral)
-                Text("・").foregroundStyle(.secondary)
+                Text("・").foregroundStyle(Theme.textSecondary)
                 roleCount("爆發", explosive)
                 Spacer()
                 if exercises.contains(where: { $0.category == .cardio }) {
@@ -222,7 +222,7 @@ private struct CategoryBarsCard: View {
                             Text(String(cardio))
                                 .font(.title3.bold().monospacedDigit())
                                 .foregroundStyle(color(for: cardio))
-                            Text("天").font(.subheadline).foregroundStyle(.secondary)
+                            Text("天").font(.subheadline).foregroundStyle(Theme.textSecondary)
                         }
                     }
                     .buttonStyle(.plain)
@@ -238,15 +238,15 @@ private struct CategoryBarsCard: View {
             Text(String(count))
                 .font(.title3.bold().monospacedDigit())
                 .foregroundStyle(color(for: count))
-            Text("次").font(.subheadline).foregroundStyle(.secondary)
+            Text("次").font(.subheadline).foregroundStyle(Theme.textSecondary)
         }
     }
 
     private func color(for count: Int) -> Color {
         switch count {
-        case 0: Theme.red
-        case 1...2: Theme.yellow
-        default: Theme.green
+        case 0: Theme.danger
+        case 1...2: Theme.warning
+        default: Theme.done
         }
     }
 }
@@ -266,27 +266,27 @@ private struct CategorySection: View {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(category.title).font(.title2.bold())
                 if let subtitle = category.subtitle {
-                    Text(subtitle).font(.subheadline).foregroundStyle(.secondary)
+                    Text(subtitle).font(.subheadline).foregroundStyle(Theme.textSecondary)
                 }
             }
             .padding(.bottom, 8)
 
             ForEach(Array(trained.enumerated()), id: \.element.id) { index, exercise in
-                if index > 0 { Divider().overlay(Theme.cardBorder) }
+                if index > 0 { Divider().overlay(Theme.separator) }
                 row(exercise)
             }
 
             if !untrained.isEmpty {
-                if !trained.isEmpty { Divider().overlay(Theme.cardBorder) }
+                if !trained.isEmpty { Divider().overlay(Theme.separator) }
                 Button { withAnimation { showUntrained.toggle() } } label: {
                     HStack {
                         Text("還沒練過（\(untrained.count)）")
                             .font(.headline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Theme.textSecondary)
                         Spacer()
                         Image(systemName: "chevron.down")
                             .rotationEffect(.degrees(showUntrained ? 0 : -90))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Theme.textSecondary)
                     }
                     .padding(.vertical, 12)
                     .contentShape(.rect)
@@ -294,7 +294,7 @@ private struct CategorySection: View {
                 .buttonStyle(.plain)
                 if showUntrained {
                     ForEach(untrained) { exercise in
-                        Divider().overlay(Theme.cardBorder)
+                        Divider().overlay(Theme.separator)
                         row(exercise)
                     }
                 }
@@ -331,7 +331,7 @@ struct ExerciseRow: View {
                 if let last {
                     Text("\(last.date.shortDate) · \(last.text)")
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
                         .lineLimit(1)
                 }
             }
@@ -357,12 +357,12 @@ struct ExerciseRow: View {
 private struct StalenessLegend: View {
     var body: some View {
         HStack(spacing: 16) {
-            item(Theme.green, "60 天內")
-            item(Theme.yellow, "超過 60 天")
-            item(Theme.red, "超過 180 天")
+            item(Theme.done, "60 天內")
+            item(Theme.warning, "超過 60 天")
+            item(Theme.danger, "超過 180 天")
         }
         .font(.subheadline)
-        .foregroundStyle(.secondary)
+        .foregroundStyle(Theme.textSecondary)
         .frame(maxWidth: .infinity)
         .card(padding: 14)
     }

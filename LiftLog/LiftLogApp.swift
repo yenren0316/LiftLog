@@ -8,8 +8,6 @@ struct LiftLogApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
-                .preferredColorScheme(.dark)
-                .tint(Theme.green)
         }
         .modelContainer(container)
     }

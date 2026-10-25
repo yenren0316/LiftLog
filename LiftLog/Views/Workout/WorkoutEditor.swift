@@ -136,7 +136,7 @@ struct WorkoutEditor<Header: View>: View {
             HStack {
                 Button { detailExercise = exercise } label: {
                     HStack(spacing: 6) {
-                        Text(exercise.name).font(.title3.bold()).foregroundStyle(Theme.green)
+                        Text(exercise.name).font(.title3.bold()).foregroundStyle(Theme.accent)
                         RoleBadge(role: item.role)
                         // 和角色同名的標籤不重複顯示
                         ForEach(exercise.tags.filter { $0.title != item.role.title }) { Chip(text: $0.title) }
@@ -150,10 +150,10 @@ struct WorkoutEditor<Header: View>: View {
 
             Text(item.role.shortGuide)
                 .font(.footnote)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.textSecondary)
 
             if !item.note.isEmpty {
-                Text(item.note).font(.subheadline).foregroundStyle(.secondary)
+                Text(item.note).font(.subheadline).foregroundStyle(Theme.textSecondary)
             }
 
             SetHeaderRow(logType: logType, unilateral: exercise.tags.contains(.unilateral),
@@ -176,7 +176,7 @@ struct WorkoutEditor<Header: View>: View {
                     },
                     onDelete: { delete(row.set) }
                 )
-                .listRowBackground(row.set.isCompleted ? Theme.green.opacity(0.16) : Theme.card)
+                .listRowBackground(row.set.isCompleted ? Theme.done.opacity(0.18) : Theme.card)
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     Button("刪除", systemImage: "trash", role: .destructive) { delete(row.set) }
                 }
@@ -392,8 +392,8 @@ struct RoleBadge: View {
     var body: some View {
         Text(role.title)
             .font(.caption.weight(.bold))
-            .foregroundStyle(Theme.green)
+            .foregroundStyle(Theme.accent)
             .padding(.horizontal, 8).padding(.vertical, 3)
-            .overlay(Capsule().stroke(Theme.green, lineWidth: 1))
+            .overlay(Capsule().stroke(Theme.accent, lineWidth: 1))
     }
 }

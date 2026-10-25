@@ -71,7 +71,7 @@ struct WorkoutMiniBar: View {
                 HStack(spacing: 12) {
                     Image(systemName: "figure.strengthtraining.traditional")
                         .font(.title3)
-                        .foregroundStyle(Theme.green)
+                        .foregroundStyle(Theme.accent)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(session.title.isEmpty ? "訓練中" : session.title)
                             .font(.subheadline.weight(.semibold))
@@ -79,16 +79,16 @@ struct WorkoutMiniBar: View {
                         TimelineView(.periodic(from: .now, by: 1)) { context in
                             Text("訓練中 \(WorkoutSession.format(duration: context.date.timeIntervalSince(session.startedAt)))")
                                 .font(.caption.monospacedDigit())
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Theme.textSecondary)
                         }
                     }
                     Spacer()
-                    Image(systemName: "chevron.up").foregroundStyle(.secondary)
+                    Image(systemName: "chevron.up").foregroundStyle(Theme.textSecondary)
                 }
                 .padding(.horizontal, 18)
                 .frame(height: 56)
                 .background(Theme.card, in: .capsule)
-                .overlay(Capsule().stroke(Theme.green.opacity(0.5)))
+                .overlay(Capsule().stroke(Theme.accent.opacity(0.5)))
                 .padding(.horizontal, 16)
                 .padding(.bottom, 4)
             }

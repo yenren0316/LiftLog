@@ -47,8 +47,8 @@ struct WorkoutView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("完成", action: finishTapped)
                         .buttonStyle(.borderedProminent)
-                        .tint(Theme.green)
-                        .foregroundStyle(.black)
+                        .tint(Theme.accent)
+                        .foregroundStyle(Theme.onAccent)
                 }
             }
             .confirmationDialog("捨棄這次訓練？", isPresented: $confirmingDiscard, titleVisibility: .visible) {
@@ -84,7 +84,7 @@ struct WorkoutView: View {
                 }
             }
             .font(.subheadline)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Theme.textSecondary)
         }
     }
 

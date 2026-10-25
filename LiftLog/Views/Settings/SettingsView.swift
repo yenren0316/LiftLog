@@ -22,6 +22,8 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 20) {
                 ScreenHeader(title: "設定")
 
+                ThemeSection()
+
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
                         Label("重量單位", systemImage: "scalemass").font(.headline)
@@ -34,7 +36,7 @@ struct SettingsView: View {
                     }
                     Text("所有畫面依這個單位顯示與輸入，資料一律存成 kg。啞鈴、壺鈴記單顆重量。")
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
                 }
                 .card()
 
@@ -51,9 +53,9 @@ struct SettingsView: View {
                     Toggle(isOn: $autoRestTimer) {
                         Label("打勾後自動開始休息計時", systemImage: "timer").font(.headline)
                     }
-                    Text("預設：上下肢推拉 180 秒，其他 90 秒。每個動作可以在動作詳情的「編輯」裡自訂。")
+                    Text("預設依角色：主項、爆發、推、拉 180 秒；單邊、核心 90 秒；補強 60 秒。每個動作可以在動作詳情的「編輯」裡自訂。")
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
                 }
                 .card()
 
@@ -62,7 +64,7 @@ struct SettingsView: View {
                         .font(.title3.bold())
                     Text("免費簽署的 App 被刪掉後資料就沒了。記得定期匯出，存到「檔案」或用 AirDrop 傳到 Mac。")
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
 
                     HStack(spacing: 0) {
                         stat(counts.exercises, "動作")
@@ -88,7 +90,7 @@ struct SettingsView: View {
                         .font(.system(.title3, design: .monospaced).bold())
                     Text("版本 \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")")
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.top, 20)
@@ -118,7 +120,7 @@ struct SettingsView: View {
             HStack {
                 Text(title)
                 Spacer()
-                Text("每 \(Units.number(value.wrappedValue)) \(unit)").monospacedDigit().foregroundStyle(.secondary)
+                Text("每 \(Units.number(value.wrappedValue)) \(unit)").monospacedDigit().foregroundStyle(Theme.textSecondary)
             }
         }
     }
@@ -127,8 +129,8 @@ struct SettingsView: View {
         VStack(spacing: 2) {
             Text(String(value))
                 .font(.system(size: 30, weight: .bold, design: .rounded).monospacedDigit())
-                .foregroundStyle(Theme.green)
-            Text(title).font(.footnote).foregroundStyle(.secondary)
+                .foregroundStyle(Theme.accent)
+            Text(title).font(.footnote).foregroundStyle(Theme.textSecondary)
         }
         .frame(maxWidth: .infinity)
     }
@@ -136,9 +138,9 @@ struct SettingsView: View {
     private func actionLabel(_ title: String, icon: String, filled: Bool) -> some View {
         Label(title, systemImage: icon)
             .font(.headline)
-            .foregroundStyle(filled ? .black : .white)
+            .foregroundStyle(filled ? Theme.onAccent : Theme.textPrimary)
             .frame(maxWidth: .infinity, minHeight: 54)
-            .background(filled ? Theme.green : Theme.field, in: .capsule)
+            .background(filled ? Theme.accent : Theme.field, in: .capsule)
     }
 
     /// 重新產生匯出檔，確保分享出去的是最新資料

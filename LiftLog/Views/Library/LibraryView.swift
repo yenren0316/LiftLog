@@ -106,11 +106,11 @@ struct LibraryView: View {
                 Text(title)
             }
             .font(.subheadline.weight(.semibold))
-            .foregroundStyle(selected ? .black : .primary)
+            .foregroundStyle(selected ? Theme.onAccent : Theme.textPrimary)
             .padding(.horizontal, 14)
             .frame(minHeight: 34)
-            .background(selected ? Theme.green : Theme.card, in: .capsule)
-            .overlay(Capsule().stroke(Theme.cardBorder))
+            .background(selected ? Theme.accent : Theme.card, in: .capsule)
+            .overlay(Capsule().stroke(Theme.separator))
         }
         .buttonStyle(.plain)
     }
@@ -156,13 +156,13 @@ struct LibraryView: View {
                     }
                     Text(subtitle(for: exercise))
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
                         .lineLimit(1)
                 }
                 Spacer()
                 Text("\(exercise.trainingCount) 次")
                     .font(.footnote.monospacedDigit())
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
             }
             .padding(.vertical, 4)
             .opacity(exercise.isArchived ? 0.6 : 1)
@@ -173,7 +173,7 @@ struct LibraryView: View {
                 exercise.isArchived.toggle()
                 try? context.save()
             }
-            .tint(exercise.isArchived ? Theme.green : Theme.yellow)
+            .tint(exercise.isArchived ? Theme.accent : Theme.warning)
         }
         .contextMenu {
             Button("合併到…", systemImage: "arrow.triangle.merge") { mergeSource = exercise }

@@ -46,9 +46,9 @@ struct WorkoutSummaryView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Image(systemName: "checkmark.seal.fill")
                         .font(.system(size: 48))
-                        .foregroundStyle(Theme.green)
+                        .foregroundStyle(Theme.accent)
                     Text("訓練完成").font(.largeTitle.bold())
-                    Text(summary.title).font(.title3).foregroundStyle(.secondary)
+                    Text(summary.title).font(.title3).foregroundStyle(Theme.textSecondary)
                 }
 
                 HStack(spacing: 0) {
@@ -63,12 +63,12 @@ struct WorkoutSummaryView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         Label("新紀錄", systemImage: "trophy.fill")
                             .font(.headline)
-                            .foregroundStyle(Theme.yellow)
+                            .foregroundStyle(Theme.warning)
                         ForEach(records) { line in
                             HStack {
                                 Text(line.name).font(.body.weight(.semibold))
                                 Spacer()
-                                Text(line.summary).foregroundStyle(Theme.yellow)
+                                Text(line.summary).foregroundStyle(Theme.warning)
                             }
                         }
                     }
@@ -81,12 +81,12 @@ struct WorkoutSummaryView: View {
                             HStack {
                                 Text(line.name).font(.body.weight(.semibold))
                                 if line.isNewRecord {
-                                    Image(systemName: "trophy.fill").foregroundStyle(Theme.yellow)
+                                    Image(systemName: "trophy.fill").foregroundStyle(Theme.warning)
                                 }
                                 Spacer()
-                                Text("\(line.completedSets) 組").foregroundStyle(.secondary)
+                                Text("\(line.completedSets) 組").foregroundStyle(Theme.textSecondary)
                             }
-                            Text(line.summary).font(.subheadline).foregroundStyle(.secondary)
+                            Text(line.summary).font(.subheadline).foregroundStyle(Theme.textSecondary)
                         }
                     }
                 }
@@ -95,9 +95,9 @@ struct WorkoutSummaryView: View {
                 Button(action: onClose) {
                     Text("完成")
                         .font(.title3.bold())
-                        .foregroundStyle(.black)
+                        .foregroundStyle(Theme.onAccent)
                         .frame(maxWidth: .infinity, minHeight: 56)
-                        .background(Theme.green, in: .capsule)
+                        .background(Theme.accent, in: .capsule)
                 }
                 .buttonStyle(.plain)
             }
@@ -110,8 +110,8 @@ struct WorkoutSummaryView: View {
         VStack(spacing: 2) {
             Text(value)
                 .font(.system(size: 28, weight: .bold, design: .rounded).monospacedDigit())
-                .foregroundStyle(Theme.green)
-            Text(title).font(.footnote).foregroundStyle(.secondary)
+                .foregroundStyle(Theme.accent)
+            Text(title).font(.footnote).foregroundStyle(Theme.textSecondary)
         }
         .frame(maxWidth: .infinity)
     }

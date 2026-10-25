@@ -17,7 +17,7 @@ struct ReplaceExerciseSheet: View {
         NavigationStack {
             List {
                 Section {
-                    Text(item.role.shortGuide).foregroundStyle(.secondary)
+                    Text(item.role.shortGuide).foregroundStyle(Theme.textSecondary)
                 } header: {
                     Text("位置：\(slot.title)")
                 }
@@ -26,7 +26,7 @@ struct ReplaceExerciseSheet: View {
                 if let ranked {
                     Section {
                         if ranked.items.isEmpty {
-                            Text("沒有符合的動作").foregroundStyle(.secondary)
+                            Text("沒有符合的動作").foregroundStyle(Theme.textSecondary)
                         }
                         ForEach(Array(ranked.items.enumerated()), id: \.element.id) { index, candidate in
                             Button { pick(candidate) } label: {

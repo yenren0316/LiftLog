@@ -42,7 +42,7 @@ struct SessionDetailView: View {
                 if let duration = session.duration {
                     Label(WorkoutSession.format(duration: duration), systemImage: "timer")
                         .monospacedDigit()
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
                 }
             }
         }

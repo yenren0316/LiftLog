@@ -33,25 +33,25 @@ private struct RecordsCard: View {
         VStack(alignment: .leading, spacing: 12) {
             Label("個人紀錄", systemImage: "trophy.fill")
                 .font(.headline)
-                .foregroundStyle(Theme.yellow)
+                .foregroundStyle(Theme.warning)
             if records.isEmpty {
                 Text(exercise.logType == .cardio ? "有氧沒有個人紀錄，請看下方圖表。" : "還沒有紀錄")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
             }
             ForEach(Array(records.enumerated()), id: \.element.id) { index, record in
-                if index > 0 { Divider().overlay(Theme.cardBorder) }
+                if index > 0 { Divider().overlay(Theme.separator) }
                 Button { onOpenSession(record.sessionID) } label: {
                     HStack(alignment: .firstTextBaseline) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(record.title).font(.body.weight(.semibold))
                             Text(record.date.shortDate + (record.caption.map { " · \($0)" } ?? ""))
                                 .font(.footnote)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Theme.textSecondary)
                         }
                         Spacer()
                         Text(valueText(record))
                             .font(.title3.bold().monospacedDigit())
-                            .foregroundStyle(Theme.green)
+                            .foregroundStyle(Theme.accent)
                         Image(systemName: "chevron.right").font(.footnote).foregroundStyle(.tertiary)
                     }
                     .contentShape(.rect)
@@ -97,9 +97,9 @@ private struct TrendChartCard: View {
 
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("趨勢").font(.headline).foregroundStyle(.secondary)
+                Text("趨勢").font(.headline).foregroundStyle(Theme.textSecondary)
                 if reversed {
-                    Text("越低越好 ↑").font(.caption).foregroundStyle(.secondary)
+                    Text("越低越好 ↑").font(.caption).foregroundStyle(Theme.textSecondary)
                 }
                 Spacer()
                 if metric.isWeight || logType == .assisted {
@@ -126,13 +126,13 @@ private struct TrendChartCard: View {
 
             if points.count < 2 {
                 Text("紀錄不足，無法畫圖")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
                     .frame(maxWidth: .infinity, minHeight: 160)
             } else {
                 Text(selected.map { "\($0.date.shortDate) · \(valueText($0.value, metric: metric))" }
                      ?? "長按拖曳看數值，點一下打開那次訓練")
                     .font(.footnote.monospacedDigit())
-                    .foregroundStyle(selected == nil ? .secondary : .primary)
+                    .foregroundStyle(selected == nil ? Theme.textSecondary : Theme.textPrimary)
 
                 chart(points, metric: metric, reversed: reversed)
                     .frame(height: 220)
@@ -146,7 +146,7 @@ private struct TrendChartCard: View {
             ForEach(points) { p in
                 let y = display(p.value, metric: metric)
                 LineMark(x: .value("日期", p.date), y: .value("數值", y))
-                    .foregroundStyle(Theme.green.opacity(0.6))
+                    .foregroundStyle(Theme.accent.opacity(0.6))
                     .interpolationMethod(.monotone)
                 PointMark(x: .value("日期", p.date), y: .value("數值", y))
                     .foregroundStyle(by: .value("類型", p.isMax ? "MAX" : "一般"))
@@ -155,10 +155,10 @@ private struct TrendChartCard: View {
             }
             if let selected {
                 RuleMark(x: .value("日期", selected.date))
-                    .foregroundStyle(.white.opacity(0.4))
+                    .foregroundStyle(Theme.textSecondary.opacity(0.6))
             }
         }
-        .chartForegroundStyleScale(["一般": Theme.green, "MAX": Theme.orange])
+        .chartForegroundStyleScale(["一般": Theme.accent, "MAX": Theme.warning])
         .chartSymbolScale(["一般": .circle, "MAX": .diamond])
         .chartYScale(domain: .automatic(includesZero: false, reversed: reversed))
         .chartLegend(points.contains(where: \.isMax) ? .visible : .hidden)
@@ -262,7 +262,7 @@ private struct IntensityCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("強度換算表").font(.headline).foregroundStyle(.secondary)
+            Text("強度換算表").font(.headline).foregroundStyle(Theme.textSecondary)
             Picker("基準", selection: $base) {
                 ForEach(Base.allCases) { Text($0.title).tag($0) }
             }
@@ -275,19 +275,19 @@ private struct IntensityCard: View {
                         .font(.title3.weight(.semibold).monospacedDigit())
                         .padding(10)
                         .background(Theme.field, in: .rect(cornerRadius: 10))
-                    Text(unit.symbol).foregroundStyle(.secondary)
+                    Text(unit.symbol).foregroundStyle(Theme.textSecondary)
                 }
             }
 
             if let baseKg {
                 Text("基準 \(unit.formatWithUnit(kg: baseKg)) · 進位每 \(Units.number(step)) \(unit.symbol)")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
                 ForEach(IntensityTable.rows(base1RMKg: baseKg, unit: unit, step: step)) { row in
                     HStack {
                         Text("\(row.percent)%")
                             .font(.body.monospacedDigit())
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Theme.textSecondary)
                             .frame(width: 48, alignment: .leading)
                         Text("\(Units.number(row.weight)) \(unit.symbol)")
                             .font(.body.weight(.semibold).monospacedDigit())
@@ -299,14 +299,14 @@ private struct IntensityCard: View {
                 }
             } else {
                 Text(base == .manual ? "請輸入 1RM" : "沒有可用的紀錄")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
             }
         }
         .card()
     }
 
     private func purposeColor(_ percent: Int) -> Color {
-        percent >= 85 ? Theme.red : percent >= 75 ? Theme.yellow : Theme.green
+        percent >= 85 ? Theme.danger : percent >= 75 ? Theme.warning : Theme.done
     }
 }
 
@@ -320,12 +320,12 @@ private struct AlternativesCard: View {
         let others = candidates.filter { $0.category == exercise.category && $0 !== exercise }
         let list = Array(Recency.sortedByNeglect(others, lastDate: \.lastCompletedDate, name: \.name, untrainedLast: true).prefix(5))
         VStack(alignment: .leading, spacing: 12) {
-            Text("同分類替代動作").font(.headline).foregroundStyle(.secondary)
+            Text("同分類替代動作").font(.headline).foregroundStyle(Theme.textSecondary)
             if list.isEmpty {
-                Text("這個分類沒有其他動作").foregroundStyle(.secondary)
+                Text("這個分類沒有其他動作").foregroundStyle(Theme.textSecondary)
             }
             ForEach(Array(list.enumerated()), id: \.element.id) { index, other in
-                if index > 0 { Divider().overlay(Theme.cardBorder) }
+                if index > 0 { Divider().overlay(Theme.separator) }
                 NavigationLink {
                     ExerciseDetailView(exercise: other)
                 } label: {

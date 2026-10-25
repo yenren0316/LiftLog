@@ -19,7 +19,7 @@ struct MergeTargetView: View {
                 Section {
                     Text("「\(source.name)」的 \(source.completedItems.count) 次紀錄會移到你選的動作，名稱和別名會變成目標的別名，然後刪除「\(source.name)」。")
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
                         .listRowBackground(Color.clear)
                 }
                 let candidates = exercises.filter {
@@ -33,9 +33,9 @@ struct MergeTargetView: View {
                             ForEach(items) { exercise in
                                 Button { target = exercise } label: {
                                     HStack {
-                                        Text(exercise.name).foregroundStyle(.primary)
+                                        Text(exercise.name).foregroundStyle(Theme.textPrimary)
                                         Spacer()
-                                        Text("\(exercise.completedItems.count) 次").foregroundStyle(.secondary)
+                                        Text("\(exercise.completedItems.count) 次").foregroundStyle(Theme.textSecondary)
                                     }
                                 }
                                 .listRowBackground(Theme.card)

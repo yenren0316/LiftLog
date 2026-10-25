@@ -80,21 +80,21 @@ private struct DetailHeader: View {
                 if exercise.isArchived { Chip(text: "封存") }
             }
             Text("\(exercise.category.fullTitle) · \(exercise.equipment.title)")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.textSecondary)
 
             HStack(spacing: 0) {
                 stat(days.map { $0 == 0 ? "今天" : "\($0) 天前" } ?? "未練過", "上次",
                      color: Recency.staleness(days: days).color)
-                stat("\(exercise.trainingCount(withinDays: 90)) 次", "近 90 天", color: Theme.green)
+                stat("\(exercise.trainingCount(withinDays: 90)) 次", "近 90 天", color: Theme.accent)
             }
 
             Button(action: startOrJoin) {
                 Label(active.isEmpty ? "用這個動作開始訓練" : "加入目前訓練",
                       systemImage: active.isEmpty ? "play.fill" : "plus")
                     .font(.headline)
-                    .foregroundStyle(.black)
+                    .foregroundStyle(Theme.onAccent)
                     .frame(maxWidth: .infinity, minHeight: 50)
-                    .background(Theme.green, in: .capsule)
+                    .background(Theme.accent, in: .capsule)
             }
             .buttonStyle(.plain)
         }
@@ -103,7 +103,7 @@ private struct DetailHeader: View {
 
     private func stat(_ value: String, _ title: String, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(title).font(.footnote).foregroundStyle(.secondary)
+            Text(title).font(.footnote).foregroundStyle(Theme.textSecondary)
             Text(value).font(.title3.bold().monospacedDigit()).foregroundStyle(color)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -125,12 +125,12 @@ private struct HistoryCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("全部紀錄（\(items.count) 次）").font(.headline).foregroundStyle(.secondary)
+            Text("全部紀錄（\(items.count) 次）").font(.headline).foregroundStyle(Theme.textSecondary)
             if items.isEmpty {
-                Text("還沒有紀錄").foregroundStyle(.secondary)
+                Text("還沒有紀錄").foregroundStyle(Theme.textSecondary)
             }
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                if index > 0 { Divider().overlay(Theme.cardBorder) }
+                if index > 0 { Divider().overlay(Theme.separator) }
                 if let session = item.session {
                     NavigationLink {
                         SessionDetailView(session: session)
@@ -156,18 +156,18 @@ private struct HistoryLine: View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(alignment: .firstTextBaseline) {
                 Text(date.shortDate)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
                     .monospacedDigit()
                 Spacer(minLength: 12)
                 Text(item.summary(unit: unit))
                     .font(.body.weight(.semibold))
-                    .foregroundStyle(hasMax ? Theme.orange : .primary)
+                    .foregroundStyle(hasMax ? Theme.warning : Theme.textPrimary)
                     .multilineTextAlignment(.trailing)
             }
             if !item.note.isEmpty {
                 Text(item.note)
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
         }

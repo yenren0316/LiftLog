@@ -35,76 +35,79 @@ struct ExerciseEditView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    TextField("動作名稱", text: $name)
-                        .font(.title3)
-                    TextField("英文名（選填）", text: $englishName)
-                        .textInputAutocapitalization(.words)
-                } footer: {
-                    if nameTaken { Text("已經有同名的動作").foregroundStyle(Theme.red) }
-                }
-
-                Section("分類") {
-                    Picker("動作分類", selection: $category) {
-                        ForEach(ExerciseCategory.allCases) { Text($0.fullTitle).tag($0) }
-                    }
-                    ForEach(ExerciseTag.allCases) { tag in
-                        Toggle(tag.title, isOn: Binding(
-                            get: { tags.contains(tag) },
-                            set: { on in
-                                if on { tags.insert(tag) } else { tags.remove(tag) }
-                            }
-                        ))
-                    }
-                }
-
-                Section {
-                    ForEach(aliases, id: \.self) { Text($0) }
-                        .onDelete { aliases.remove(atOffsets: $0) }
-                    HStack {
-                        TextField("新增別名", text: $newAlias)
-                            .onSubmit(addAlias)
-                        Button("加入", action: addAlias)
-                            .disabled(newAlias.trimmingCharacters(in: .whitespaces).isEmpty)
-                    }
-                } header: {
-                    Text("別名")
-                } footer: {
-                    Text("匯入舊紀錄和搜尋時會比對別名。向左滑可刪除。")
-                }
-
-                Section("器材與紀錄方式") {
-                    Picker("器材", selection: $equipment) {
-                        ForEach(Equipment.allCases) { Text($0.title).tag($0) }
-                    }
-                    Picker("紀錄類型", selection: $logType) {
-                        ForEach(LogType.allCases) { Text($0.title).tag($0) }
-                    }
-                }
-
-                Section {
-                    Toggle("自訂休息時間", isOn: $customRest)
-                    if customRest {
-                        Stepper("\(restSeconds) 秒", value: $restSeconds, in: 15...600, step: 15)
-                            .monospacedDigit()
-                    }
-                } header: {
-                    Text("休息時間")
-                } footer: {
-                    Text("不自訂時依訓練中的角色：主項、爆發、推、拉 180 秒；單邊、核心 90 秒；補強 60 秒")
-                }
-
-                Section("備註") {
-                    TextField("例如：注意事項、器材位置", text: $note, axis: .vertical)
-                }
-
-                if exercise != nil {
+                Group {
                     Section {
-                        Toggle("封存", isOn: $isArchived)
+                        TextField("動作名稱", text: $name)
+                            .font(.title3)
+                        TextField("英文名（選填）", text: $englishName)
+                            .textInputAutocapitalization(.words)
                     } footer: {
-                        Text("封存後不會出現在「該練什麼」，歷史紀錄會保留。合併與刪除請在動作庫長按該動作。")
+                        if nameTaken { Text("已經有同名的動作").foregroundStyle(Theme.danger) }
+                    }
+
+                    Section("分類") {
+                        Picker("動作分類", selection: $category) {
+                            ForEach(ExerciseCategory.allCases) { Text($0.fullTitle).tag($0) }
+                        }
+                        ForEach(ExerciseTag.allCases) { tag in
+                            Toggle(tag.title, isOn: Binding(
+                                get: { tags.contains(tag) },
+                                set: { on in
+                                    if on { tags.insert(tag) } else { tags.remove(tag) }
+                                }
+                            ))
+                        }
+                    }
+
+                    Section {
+                        ForEach(aliases, id: \.self) { Text($0) }
+                            .onDelete { aliases.remove(atOffsets: $0) }
+                        HStack {
+                            TextField("新增別名", text: $newAlias)
+                                .onSubmit(addAlias)
+                            Button("加入", action: addAlias)
+                                .disabled(newAlias.trimmingCharacters(in: .whitespaces).isEmpty)
+                        }
+                    } header: {
+                        Text("別名")
+                    } footer: {
+                        Text("匯入舊紀錄和搜尋時會比對別名。向左滑可刪除。")
+                    }
+
+                    Section("器材與紀錄方式") {
+                        Picker("器材", selection: $equipment) {
+                            ForEach(Equipment.allCases) { Text($0.title).tag($0) }
+                        }
+                        Picker("紀錄類型", selection: $logType) {
+                            ForEach(LogType.allCases) { Text($0.title).tag($0) }
+                        }
+                    }
+
+                    Section {
+                        Toggle("自訂休息時間", isOn: $customRest)
+                        if customRest {
+                            Stepper("\(restSeconds) 秒", value: $restSeconds, in: 15...600, step: 15)
+                                .monospacedDigit()
+                        }
+                    } header: {
+                        Text("休息時間")
+                    } footer: {
+                        Text("不自訂時依訓練中的角色：主項、爆發、推、拉 180 秒；單邊、核心 90 秒；補強 60 秒")
+                    }
+
+                    Section("備註") {
+                        TextField("例如：注意事項、器材位置", text: $note, axis: .vertical)
+                    }
+
+                    if exercise != nil {
+                        Section {
+                            Toggle("封存", isOn: $isArchived)
+                        } footer: {
+                            Text("封存後不會出現在「該練什麼」，歷史紀錄會保留。合併與刪除請在動作庫長按該動作。")
+                        }
                     }
                 }
+                .listRowBackground(Theme.card)
             }
             .scrollContentBackground(.hidden)
             .screenBackground()

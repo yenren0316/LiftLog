@@ -66,13 +66,13 @@ struct SetRow: View {
 
             Text(previous.map { SetFormat.short($0, logType: logType, unit: unit) } ?? "—")
                 .font(.subheadline.monospacedDigit())
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.textSecondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             ForEach(SetField.fields(for: logType), id: \.self) { field in
-                TextField("", text: text(field), prompt: Text(placeholderText(field)).foregroundStyle(.secondary))
+                TextField("", text: text(field), prompt: Text(placeholderText(field)).foregroundStyle(Theme.textSecondary.opacity(0.55)))
                     .keyboardType(field.isDecimal ? .decimalPad : .numberPad)
                     .multilineTextAlignment(.center)
                     .font(.title3.weight(.semibold).monospacedDigit())
@@ -88,9 +88,9 @@ struct SetRow: View {
             } label: {
                 Image(systemName: "checkmark")
                     .font(.headline.weight(.bold))
-                    .foregroundStyle(set.isCompleted ? .black : .secondary)
+                    .foregroundStyle(set.isCompleted ? Theme.done : Theme.textSecondary)
                     .frame(width: SetColumns.check, height: 40)
-                    .background(set.isCompleted ? Theme.green : Theme.field, in: .rect(cornerRadius: 8))
+                    .background(set.isCompleted ? Theme.done.opacity(0.18) : Theme.field, in: .rect(cornerRadius: 8))
             }
             .buttonStyle(.plain)
         }
@@ -101,9 +101,9 @@ struct SetRow: View {
 
     private var numberColor: Color {
         switch set.kind {
-        case .normal: .primary
-        case .warmup: Theme.yellow
-        case .max: Theme.orange
+        case .normal: Theme.textPrimary
+        case .warmup: Theme.accent
+        case .max: Theme.warning
         }
     }
 
@@ -146,7 +146,7 @@ struct SetHeaderRow: View {
             Image(systemName: "checkmark").frame(width: SetColumns.check)
         }
         .font(.caption.weight(.semibold))
-        .foregroundStyle(.secondary)
+        .foregroundStyle(Theme.textSecondary)
     }
 
     private var titles: [String] {

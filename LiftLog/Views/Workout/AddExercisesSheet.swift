@@ -41,7 +41,7 @@ struct AddExercisesSheet: View {
                 .listRowSeparator(.hidden)
 
                 if sections.isEmpty {
-                    Text("沒有符合的動作").foregroundStyle(.secondary).listRowBackground(Theme.card)
+                    Text("沒有符合的動作").foregroundStyle(Theme.textSecondary).listRowBackground(Theme.card)
                 }
                 ForEach(sections, id: \.category) { section in
                     Section {
@@ -99,7 +99,7 @@ struct AddExercisesSheet: View {
             HStack(spacing: 12) {
                 Image(systemName: added || isSelected ? "checkmark.circle.fill" : "circle")
                     .font(.title2)
-                    .foregroundStyle(isSelected ? Theme.green : .secondary)
+                    .foregroundStyle(isSelected ? Theme.accent : Theme.textSecondary)
                 Text(exercise.name).font(.body.weight(.semibold))
                 ForEach(exercise.tags) { Chip(text: $0.title) }
                 Spacer()
@@ -156,9 +156,9 @@ struct AddExercisesSheet: View {
             } label: {
                 Text("加入（\(selected.count)）")
                     .font(.title3.bold())
-                    .foregroundStyle(.black)
+                    .foregroundStyle(Theme.onAccent)
                     .frame(maxWidth: .infinity, minHeight: 56)
-                    .background(Theme.green.opacity(selected.isEmpty ? 0.4 : 1), in: .capsule)
+                    .background(Theme.accent.opacity(selected.isEmpty ? 0.4 : 1), in: .capsule)
             }
             .buttonStyle(.plain)
             .disabled(selected.isEmpty)
@@ -180,10 +180,10 @@ struct FilterChip: View {
         Button(action: action) {
             Text(title)
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(isSelected ? Color.black : Color.primary)
+                .foregroundStyle(isSelected ? Theme.onAccent : Theme.textPrimary)
                 .padding(.horizontal, 14)
                 .frame(minHeight: 36)
-                .background(isSelected ? Theme.green : Theme.field, in: .capsule)
+                .background(isSelected ? Theme.accent : Theme.field, in: .capsule)
         }
         .buttonStyle(.plain)
     }

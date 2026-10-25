@@ -25,9 +25,9 @@ struct SessionsView: View {
                         Button { coordinator.requestStart([], context: context) } label: {
                             Label("開始空白訓練", systemImage: "plus")
                                 .font(.title3.bold())
-                                .foregroundStyle(.black)
+                                .foregroundStyle(Theme.onAccent)
                                 .frame(maxWidth: .infinity, minHeight: 56)
-                                .background(Theme.green, in: .capsule)
+                                .background(Theme.accent, in: .capsule)
                         }
                         .buttonStyle(.plain)
                     }
@@ -76,16 +76,16 @@ struct SessionsView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Label("進行中", systemImage: "figure.strengthtraining.traditional")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Theme.green)
+                    .foregroundStyle(Theme.accent)
                 Text(session.title.isEmpty ? "空白訓練" : session.title).font(.title3.bold())
                 TimelineView(.periodic(from: .now, by: 1)) { timeline in
                     Text(WorkoutSession.format(duration: timeline.date.timeIntervalSince(session.startedAt)))
                         .font(.title.bold().monospacedDigit())
                 }
-                Text("點一下繼續").font(.footnote).foregroundStyle(.secondary)
+                Text("點一下繼續").font(.footnote).foregroundStyle(Theme.textSecondary)
             }
             .card()
-            .overlay(RoundedRectangle(cornerRadius: Theme.cardRadius).stroke(Theme.green.opacity(0.5)))
+            .overlay(RoundedRectangle(cornerRadius: Theme.cardRadius).stroke(Theme.accent.opacity(0.5)))
         }
         .buttonStyle(.plain)
     }
@@ -99,18 +99,18 @@ private struct SessionRow: View {
             HStack {
                 Text(session.startedAt.formatted(.dateTime.year().month(.twoDigits).day(.twoDigits).weekday(.abbreviated)))
                     .font(.subheadline.monospacedDigit())
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
                 Spacer()
                 if let duration = session.duration {
                     Label(WorkoutSession.format(duration: duration), systemImage: "timer")
                         .font(.subheadline.monospacedDigit())
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
                 }
             }
             Text(session.title.isEmpty ? "訓練" : session.title)
                 .font(.body.weight(.semibold))
                 .lineLimit(2)
-            Text("\(session.items.count) 個動作").font(.footnote).foregroundStyle(.secondary)
+            Text("\(session.items.count) 個動作").font(.footnote).foregroundStyle(Theme.textSecondary)
         }
         .padding(.vertical, 4)
     }

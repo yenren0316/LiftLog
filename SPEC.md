@@ -21,7 +21,7 @@ App 只給自己用、不上架，用免費 Apple ID（Personal Team）安裝。
 - SwiftUI + SwiftData，圖表用 Swift Charts，不使用第三方套件。
 - 資料完全存在本機。不用 iCloud/CloudKit、推播、App Groups 等需要付費開發者帳號的功能。
 - 介面全部繁體中文。重量單位由設定頁的全域 kg／lbs 決定，資料一律存 kg（1 lb = 0.45359237 kg）。版面簡潔、字大，適合在健身房單手操作。
-- UI 風格參考 Habits First：深色底、大圓角卡片、綠色主色、細進度條、懸浮膠囊分頁列。
+- UI 風格參考 Habits First：大圓角卡片、細進度條、懸浮膠囊分頁列。顏色由主題決定（見「主題配色」），預設石墨橙。
 - 資料夾自動同步：新的 .swift 檔直接放進 App 資料夾即可。非必要不改 project.pbxproj，不動 Signing 設定。
   - 例外（已同意）：為了讀取 Apple Watch 運動，加了 HealthKit entitlement（`LiftLog.entitlements`）與健康資料讀取說明。
 
@@ -296,6 +296,26 @@ CHANGE_04 刪除了 15 個從沒練過的動作（前抱式深蹲、分腿蹲、
 - 重量單位 kg／lbs（全域）。
 - 打勾後自動開始休息計時。
 - 強度換算表的進位單位（槓鈴 kg／lbs、其他器材 kg／lbs）。
+- 主題（見下節）。
+
+### 9-1. 主題配色
+- 所有顏色集中在 `Theme/Theme.swift`，畫面只使用 token：
+  - background（頁面底色）、card（卡片與分區）、field（輸入框、未選取的 chip、長條底）、separator（分隔線、卡片外框）
+  - textPrimary、textSecondary
+  - accent（主要按鈕、選取狀態、圖表線條、分頁列）、onAccent（accent 上的文字）
+  - done（完成的組：整列底色 done 18%，打勾符號 done；60 天內、狀態良好的數字）
+  - warning（超過 60 天、MAX 標記）、danger（超過 180 天、刪除、錯誤）
+- 五個主題（background / card / field / separator / textPrimary / textSecondary / accent / onAccent / done / warning / danger）：
+  1. 石墨橙（深色）#111214 / #1B1C1F / #2A2B30 / #34363B / #F3F3F4 / #9C9DA3 / #FF8A3D / #111214 / #3FB97C / #F2C14E / #EF5350
+  2. 午夜藍（深色）#0B1220 / #141D30 / #1F2A40 / #2A3650 / #E8EDF6 / #8B97AD / #4C7DF0 / #FFFFFF / #2BB673 / #F3B63F / #F06262
+  3. 純黑（深色，適合 OLED）#000000 / #111111 / #1E1E1E / #2A2A2A / #FFFFFF / #8E8E93 / #E6E6E6 / #000000 / #34C759 / #FFCC00 / #FF453A
+  4. 暖砂（淺色）#F6F1EA / #FFFFFF / #EFE7DC / #E2D8CA / #2B2622 / #7D7368 / #C2602F / #FFFFFF / #3E8E5E / #B8860B / #C0392B
+  5. 冷灰（淺色）#F2F4F7 / #FFFFFF / #E9EDF2 / #DDE2E8 / #1A1F26 / #6B7480 / #2F6FEB / #FFFFFF / #1F9D63 / #C98A0B / #D64545
+- 設定頁「主題」：每個主題一張預覽卡片（一列已完成的組、一列未完成的組、選取中的 chip、主要按鈕、近 30 天長條），點一下立即套用。
+- 「跟隨系統外觀」開關：打開後分別選一個深色主題和一個淺色主題（預設午夜藍、冷灰），依系統深淺切換。
+- 設定存在 AppStorage：`theme.id`（預設石墨橙）、`theme.followSystem`、`theme.dark`、`theme.light`。
+- 依主題深淺設定 preferredColorScheme，讓鍵盤、sheet 等系統元件一致；跟隨系統時不指定。換主題時整個畫面重建。
+- 熱身組號用 accent，MAX 組號用 warning。
 
 ### 10. 備份
 - 設定頁「匯出 JSON」（ShareLink）與「從 JSON 匯入」（取代全部資料）。
