@@ -13,14 +13,16 @@ nonisolated enum Units {
 }
 
 extension WorkoutEntry {
-    /// 例如「58.54 kg · 5×5 · MAX」、「輔助 12 kg · 5×5」、「坡度 14 · 速度 4 · 30 分」
+    /// 例如「58.54 kg · 5×5 · MAX」、「輔助 12 kg · 5×5」、「坡度 12%・4.0 km/h・30 分」
     var summary: String {
         var parts: [String] = []
         switch exercise?.logType ?? .weight {
         case .cardio:
-            if let incline { parts.append("坡度 \(Units.number(incline))") }
-            if let speed { parts.append("速度 \(Units.number(speed))") }
-            if let minutes { parts.append("\(Units.number(minutes)) 分") }
+            var cardio: [String] = []
+            if let incline { cardio.append("坡度 \(Units.number(incline))%") }
+            if let speed { cardio.append("\(speed.formatted(.number.precision(.fractionLength(1)))) km/h") }
+            if let minutes { cardio.append("\(Units.number(minutes)) 分") }
+            return cardio.isEmpty ? "—" : cardio.joined(separator: "・")
         case .assisted:
             if let weightKg { parts.append(weightKg == 0 ? "自重" : "輔助 \(Units.number(weightKg)) kg") }
         case .weight:

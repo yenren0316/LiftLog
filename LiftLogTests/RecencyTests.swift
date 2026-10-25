@@ -82,21 +82,54 @@ struct RecencyTests {
         #expect(sorted([]).isEmpty)
     }
 
-    // MARK: trainingDaysByGroup
+    // MARK: trainingDays
 
     @Test func countsDistinctDaysWithinWindow() {
         let now = date(2026, 10, 25, 20)
-        let records: [(date: Date, group: MuscleGroup)] = [
-            (date(2026, 10, 25, 9), .chest),   // 今天
-            (date(2026, 10, 25, 9), .chest),   // 同一天第二個胸的動作：不重複計算
-            (date(2026, 10, 20), .chest),
-            (date(2026, 9, 26), .back),        // 第 30 天（含今天），算
-            (date(2026, 9, 25), .back),        // 第 31 天，不算
-            (date(2026, 10, 26), .quads),      // 未來，不算
+        let records: [(date: Date, key: ExerciseCategory)] = [
+            (date(2026, 10, 25, 9), .horizontalPush),   // 今天
+            (date(2026, 10, 25, 9), .horizontalPush),   // 同一天第二個同分類的動作：不重複計算
+            (date(2026, 10, 20), .horizontalPush),
+            (date(2026, 9, 26), .verticalPull),         // 第 30 天（含今天），算
+            (date(2026, 9, 25), .verticalPull),         // 第 31 天，不算
+            (date(2026, 10, 26), .kneeDominant),        // 未來，不算
         ]
-        let counts = Recency.trainingDaysByGroup(records, now: now, days: 30, calendar: calendar)
-        #expect(counts[.chest] == 2)
-        #expect(counts[.back] == 1)
-        #expect(counts[.quads] == nil)
+        let counts = Recency.trainingDays(records, now: now, days: 30, calendar: calendar)
+        #expect(counts[.horizontalPush] == 2)
+        #expect(counts[.verticalPull] == 1)
+        #expect(counts[.kneeDominant] == nil)
+    }
+
+    @Test func tagDaysCountEachTagSeparately() {
+        let now = date(2026, 10, 25)
+        let records: [(date: Date, key: ExerciseTag)] = [
+            (date(2026, 10, 25), .unilateral), (date(2026, 10, 25), .explosive),
+            (date(2026, 10, 25), .unilateral), (date(2026, 10, 1), .unilateral),
+        ]
+        let counts = Recency.trainingDays(records, now: now, calendar: calendar)
+        #expect(counts == [.unilateral: 2, .explosive: 1])
+    }
+
+    // MARK: sections
+
+    private struct Ex {
+        var name: String
+        var category: ExerciseCategory
+        var last: Date?
+    }
+
+    @Test func sectionsFollowCategoryOrderAndHideEmpty() {
+        let items = [
+            Ex(name: "跑步機", category: .cardio, last: nil),
+            Ex(name: "臥推", category: .horizontalPush, last: date(2026, 10, 20)),
+            Ex(name: "上斜臥推", category: .horizontalPush, last: date(2025, 1, 1)),
+            Ex(name: "背蹲舉", category: .kneeDominant, last: date(2026, 1, 1)),
+            Ex(name: "面拉", category: .accessory, last: date(2026, 10, 24)),
+        ]
+        let sections = Recency.sections(items, category: \.category, lastDate: \.last, name: \.name)
+        #expect(sections.map(\.category) == [.kneeDominant, .horizontalPush, .accessory, .cardio])
+        #expect(!sections.contains { $0.category == .unusualPosture })
+        // 同一區內最久沒做的在前
+        #expect(sections[1].items.map(\.name) == ["上斜臥推", "臥推"])
     }
 }

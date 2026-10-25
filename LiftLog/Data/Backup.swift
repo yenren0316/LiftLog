@@ -1,12 +1,15 @@
 import Foundation
 import SwiftData
 
-/// 備份檔與 seed.json 共用的格式
+/// 備份檔與 seed.json 共用的格式（version 2：紀錄以 exercise id 對應）
 nonisolated struct BackupFile: Codable {
     struct ExerciseRecord: Codable {
+        var id: UUID
         var name: String
-        var primaryGroup: String
-        var secondaryGroups: [String]
+        var category: String
+        var tags: [String]
+        var aliases: [String]
+        var englishName: String
         var equipment: String
         var logType: String
         var note: String
@@ -15,7 +18,7 @@ nonisolated struct BackupFile: Codable {
 
     struct EntryRecord: Codable {
         var date: Date
-        var exercise: String
+        var exerciseId: UUID
         var weightKg: Double?
         var sets: Int?
         var reps: Int?
@@ -56,14 +59,15 @@ enum BackupService {
         let entries = try context.fetch(FetchDescriptor<WorkoutEntry>(sortBy: [SortDescriptor(\.date)]))
         let bodyWeights = try context.fetch(FetchDescriptor<BodyWeight>(sortBy: [SortDescriptor(\.date)]))
         return BackupFile(
-            version: 1,
+            version: 2,
             exercises: exercises.map {
-                .init(name: $0.name, primaryGroup: $0.primaryGroupRaw, secondaryGroups: $0.secondaryGroupsRaw,
-                      equipment: $0.equipmentRaw, logType: $0.logTypeRaw, note: $0.note, isArchived: $0.isArchived)
+                .init(id: $0.id, name: $0.name, category: $0.categoryRaw, tags: $0.tagsRaw, aliases: $0.aliases,
+                      englishName: $0.englishName, equipment: $0.equipmentRaw, logType: $0.logTypeRaw,
+                      note: $0.note, isArchived: $0.isArchived)
             },
             entries: entries.compactMap { e in
-                guard let name = e.exercise?.name else { return nil }
-                return .init(date: e.date, exercise: name, weightKg: e.weightKg, sets: e.sets, reps: e.reps,
+                guard let id = e.exercise?.id else { return nil }
+                return .init(date: e.date, exerciseId: id, weightKg: e.weightKg, sets: e.sets, reps: e.reps,
                              isMax: e.isMax, incline: e.incline, speed: e.speed, minutes: e.minutes, note: e.note)
             },
             bodyWeights: bodyWeights.map { .init(date: $0.date, kg: $0.kg) }
@@ -78,22 +82,25 @@ enum BackupService {
         for bodyWeight in try context.fetch(FetchDescriptor<BodyWeight>()) { context.delete(bodyWeight) }
         try context.save()
 
-        var byName: [String: Exercise] = [:]
+        var byID: [UUID: Exercise] = [:]
         for r in file.exercises {
             let exercise = Exercise(
+                id: r.id,
                 name: r.name,
-                primaryGroup: MuscleGroup(rawValue: r.primaryGroup) ?? .core,
-                secondaryGroups: r.secondaryGroups.compactMap(MuscleGroup.init(rawValue:)),
+                category: ExerciseCategory(rawValue: r.category) ?? .accessory,
+                tags: r.tags.compactMap(ExerciseTag.init(rawValue:)),
+                aliases: r.aliases,
+                englishName: r.englishName,
                 equipment: Equipment(rawValue: r.equipment) ?? .other,
                 logType: LogType(rawValue: r.logType) ?? .weight,
                 note: r.note,
                 isArchived: r.isArchived
             )
             context.insert(exercise)
-            byName[r.name] = exercise
+            byID[r.id] = exercise
         }
         for r in file.entries {
-            guard let exercise = byName[r.exercise] else { continue }
+            guard let exercise = byID[r.exerciseId] else { continue }
             context.insert(WorkoutEntry(
                 date: r.date, exercise: exercise, weightKg: r.weightKg, sets: r.sets, reps: r.reps,
                 isMax: r.isMax, incline: r.incline, speed: r.speed, minutes: r.minutes, note: r.note

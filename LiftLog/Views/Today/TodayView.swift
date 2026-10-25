@@ -75,11 +75,7 @@ private struct TodayRow: View {
             HStack(alignment: .firstTextBaseline) {
                 Text(exercise.name).font(.title3.weight(.semibold))
                 Spacer()
-                Text(exercise.primaryGroup.title)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 8).padding(.vertical, 3)
-                    .background(Theme.field, in: .capsule)
+                Chip(text: exercise.category.title)
             }
             Text(entry.summary)
                 .font(.body.weight(.semibold).monospacedDigit())

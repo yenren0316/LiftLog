@@ -4,15 +4,18 @@ import SwiftData
 /// 新增（exercise 為 nil）或編輯動作
 struct ExerciseEditView: View {
     var exercise: Exercise?
-    var defaultGroup: MuscleGroup = .chest
+    var defaultCategory: ExerciseCategory = .kneeDominant
 
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @Query private var allExercises: [Exercise]
 
     @State private var name = ""
-    @State private var primaryGroup: MuscleGroup = .chest
-    @State private var secondaryGroups: Set<MuscleGroup> = []
+    @State private var category: ExerciseCategory = .kneeDominant
+    @State private var tags: Set<ExerciseTag> = []
+    @State private var aliases: [String] = []
+    @State private var newAlias = ""
+    @State private var englishName = ""
     @State private var equipment: Equipment = .barbell
     @State private var logType: LogType = .weight
     @State private var note = ""
@@ -33,22 +36,39 @@ struct ExerciseEditView: View {
                 Section {
                     TextField("動作名稱", text: $name)
                         .font(.title3)
+                    TextField("英文名（選填）", text: $englishName)
+                        .textInputAutocapitalization(.words)
                 } footer: {
                     if nameTaken { Text("已經有同名的動作").foregroundStyle(Theme.red) }
                 }
 
-                Section("部位") {
-                    Picker("主要部位", selection: $primaryGroup) {
-                        ForEach(MuscleGroup.allCases) { Text($0.title).tag($0) }
+                Section("分類") {
+                    Picker("動作分類", selection: $category) {
+                        ForEach(ExerciseCategory.allCases) { Text($0.fullTitle).tag($0) }
                     }
-                    ForEach(MuscleGroup.allCases.filter { $0 != primaryGroup }) { group in
-                        Toggle("次要：\(group.title)", isOn: Binding(
-                            get: { secondaryGroups.contains(group) },
+                    ForEach(ExerciseTag.allCases) { tag in
+                        Toggle(tag.title, isOn: Binding(
+                            get: { tags.contains(tag) },
                             set: { on in
-                                if on { secondaryGroups.insert(group) } else { secondaryGroups.remove(group) }
+                                if on { tags.insert(tag) } else { tags.remove(tag) }
                             }
                         ))
                     }
+                }
+
+                Section {
+                    ForEach(aliases, id: \.self) { Text($0) }
+                        .onDelete { aliases.remove(atOffsets: $0) }
+                    HStack {
+                        TextField("新增別名", text: $newAlias)
+                            .onSubmit(addAlias)
+                        Button("加入", action: addAlias)
+                            .disabled(newAlias.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                } header: {
+                    Text("別名")
+                } footer: {
+                    Text("匯入舊紀錄和搜尋時會比對別名。向左滑可刪除。")
                 }
 
                 Section("器材與紀錄方式") {
@@ -68,7 +88,7 @@ struct ExerciseEditView: View {
                     Section {
                         Toggle("封存", isOn: $isArchived)
                     } footer: {
-                        Text("封存後不會出現在「該練什麼」，歷史紀錄會保留。")
+                        Text("封存後不會出現在「該練什麼」，歷史紀錄會保留。合併與刪除請在動作庫長按該動作。")
                     }
                 }
             }
@@ -86,20 +106,28 @@ struct ExerciseEditView: View {
                 }
             }
             .onAppear(perform: load)
-            .onChange(of: primaryGroup) { _, new in secondaryGroups.remove(new) }
         }
+    }
+
+    private func addAlias() {
+        let alias = newAlias.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !alias.isEmpty, !aliases.contains(alias), alias != trimmedName else { return }
+        aliases.append(alias)
+        newAlias = ""
     }
 
     private func load() {
         guard !loaded else { return }
         loaded = true
         guard let exercise else {
-            primaryGroup = defaultGroup
+            category = defaultCategory
             return
         }
         name = exercise.name
-        primaryGroup = exercise.primaryGroup
-        secondaryGroups = Set(exercise.secondaryGroups)
+        category = exercise.category
+        tags = Set(exercise.tags)
+        aliases = exercise.aliases
+        englishName = exercise.englishName
         equipment = exercise.equipment
         logType = exercise.logType
         note = exercise.note
@@ -107,12 +135,14 @@ struct ExerciseEditView: View {
     }
 
     private func save() {
-        let target = exercise ?? Exercise(name: trimmedName, primaryGroup: primaryGroup, equipment: equipment)
+        addAlias()
+        let target = exercise ?? Exercise(name: trimmedName, category: category, equipment: equipment)
         if exercise == nil { context.insert(target) }
         target.name = trimmedName
-        target.primaryGroup = primaryGroup
-        // 依 enum 順序存，顯示時比較整齊
-        target.secondaryGroups = MuscleGroup.allCases.filter { secondaryGroups.contains($0) }
+        target.category = category
+        target.tags = Array(tags)
+        target.aliases = aliases
+        target.englishName = englishName.trimmingCharacters(in: .whitespacesAndNewlines)
         target.equipment = equipment
         target.logType = logType
         target.note = note.trimmingCharacters(in: .whitespacesAndNewlines)

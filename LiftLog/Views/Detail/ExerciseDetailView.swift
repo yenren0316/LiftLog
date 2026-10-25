@@ -52,9 +52,15 @@ private struct InfoCard: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Theme.yellow)
             }
-            row("主要部位", exercise.primaryGroup.title)
-            if !exercise.secondaryGroups.isEmpty {
-                row("次要部位", exercise.secondaryGroups.map(\.title).joined(separator: "、"))
+            row("分類", exercise.category.fullTitle)
+            if !exercise.tags.isEmpty {
+                row("標籤", exercise.tags.map(\.title).joined(separator: "、"))
+            }
+            if !exercise.englishName.isEmpty {
+                row("英文名", exercise.englishName)
+            }
+            if !exercise.aliases.isEmpty {
+                row("別名", exercise.aliases.joined(separator: "、"))
             }
             row("器材", exercise.equipment.title)
             row("紀錄類型", exercise.logType.title)
@@ -66,10 +72,10 @@ private struct InfoCard: View {
     }
 
     private func row(_ title: String, _ value: String) -> some View {
-        HStack {
+        HStack(alignment: .firstTextBaseline) {
             Text(title).foregroundStyle(.secondary)
-            Spacer()
-            Text(value).font(.body.weight(.semibold))
+            Spacer(minLength: 16)
+            Text(value).font(.body.weight(.semibold)).multilineTextAlignment(.trailing)
         }
     }
 }

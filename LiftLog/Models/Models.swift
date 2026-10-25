@@ -3,9 +3,13 @@ import SwiftData
 
 @Model
 final class Exercise {
-    @Attribute(.unique) var name: String
-    var primaryGroupRaw: String
-    var secondaryGroupsRaw: [String]
+    /// 不會變動的識別碼；改名不影響紀錄
+    @Attribute(.unique) var id: UUID
+    var name: String
+    var categoryRaw: String
+    var tagsRaw: [String]
+    var aliases: [String]
+    var englishName: String
     var equipmentRaw: String
     var logTypeRaw: String
     var note: String
@@ -15,31 +19,37 @@ final class Exercise {
     var entries: [WorkoutEntry] = []
 
     init(
+        id: UUID = UUID(),
         name: String,
-        primaryGroup: MuscleGroup,
-        secondaryGroups: [MuscleGroup] = [],
+        category: ExerciseCategory,
+        tags: [ExerciseTag] = [],
+        aliases: [String] = [],
+        englishName: String = "",
         equipment: Equipment,
         logType: LogType = .weight,
         note: String = "",
         isArchived: Bool = false
     ) {
+        self.id = id
         self.name = name
-        self.primaryGroupRaw = primaryGroup.rawValue
-        self.secondaryGroupsRaw = secondaryGroups.map(\.rawValue)
+        self.categoryRaw = category.rawValue
+        self.tagsRaw = tags.map(\.rawValue)
+        self.aliases = aliases
+        self.englishName = englishName
         self.equipmentRaw = equipment.rawValue
         self.logTypeRaw = logType.rawValue
         self.note = note
         self.isArchived = isArchived
     }
 
-    var primaryGroup: MuscleGroup {
-        get { MuscleGroup(rawValue: primaryGroupRaw) ?? .core }
-        set { primaryGroupRaw = newValue.rawValue }
+    var category: ExerciseCategory {
+        get { ExerciseCategory(rawValue: categoryRaw) ?? .accessory }
+        set { categoryRaw = newValue.rawValue }
     }
 
-    var secondaryGroups: [MuscleGroup] {
-        get { secondaryGroupsRaw.compactMap(MuscleGroup.init(rawValue:)) }
-        set { secondaryGroupsRaw = newValue.map(\.rawValue) }
+    var tags: [ExerciseTag] {
+        get { tagsRaw.compactMap(ExerciseTag.init(rawValue:)) }
+        set { tagsRaw = ExerciseTag.allCases.filter(newValue.contains).map(\.rawValue) }
     }
 
     var equipment: Equipment {
@@ -108,5 +118,18 @@ final class BodyWeight {
     init(date: Date, kg: Double) {
         self.date = date
         self.kg = kg
+    }
+}
+
+enum LiftLogStore {
+    static let schema = Schema([Exercise.self, WorkoutEntry.self, BodyWeight.self])
+
+    /// 第二版改用新的檔名，第一版的資料庫直接忽略，不做遷移
+    static func makeContainer() -> ModelContainer {
+        do {
+            return try ModelContainer(for: schema, configurations: ModelConfiguration("LiftLog2", schema: schema))
+        } catch {
+            fatalError("無法開啟資料庫：\(error)")
+        }
     }
 }

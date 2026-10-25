@@ -1,34 +1,57 @@
 import Foundation
 
-enum MuscleGroup: String, Codable, CaseIterable, Identifiable {
-    case chest, shoulders, back, arms, quads, posterior, core, power, cardio
+/// 怪獸訓練的動作分類，依此順序顯示
+nonisolated enum ExerciseCategory: String, Codable, CaseIterable, Identifiable {
+    case kneeDominant, hipDominant
+    case horizontalPush, horizontalPull, verticalPush, verticalPull
+    case rotation, loadedCarry, unusualPosture, accessory, cardio
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .chest: "胸"
-        case .shoulders: "肩"
-        case .back: "背"
-        case .arms: "手臂"
-        case .quads: "腿前側"
-        case .posterior: "臀腿後側"
-        case .core: "核心"
-        case .power: "爆發／全身"
+        case .kneeDominant: "下肢推"
+        case .hipDominant: "下肢拉"
+        case .horizontalPush: "上肢水平推"
+        case .horizontalPull: "上肢水平拉"
+        case .verticalPush: "上肢垂直推"
+        case .verticalPull: "上肢垂直拉"
+        case .rotation: "轉體"
+        case .loadedCarry: "負重行走"
+        case .unusualPosture: "違常姿勢"
+        case .accessory: "補強"
         case .cardio: "有氧"
         }
     }
 
     var subtitle: String? {
         switch self {
-        case .quads: "膝主導"
-        case .posterior: "髖主導"
+        case .kneeDominant: "膝主導"
+        case .hipDominant: "髖主導"
         default: nil
+        }
+    }
+
+    /// 選單用的完整名稱：下肢推（膝主導）
+    var fullTitle: String {
+        subtitle.map { "\(title)（\($0)）" } ?? title
+    }
+}
+
+nonisolated enum ExerciseTag: String, Codable, CaseIterable, Identifiable {
+    case unilateral, explosive
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .unilateral: "單邊"
+        case .explosive: "爆發"
         }
     }
 }
 
-enum Equipment: String, Codable, CaseIterable, Identifiable {
+nonisolated enum Equipment: String, Codable, CaseIterable, Identifiable {
     case barbell, dumbbell, kettlebell, machine, cable, bodyweight, other
 
     var id: String { rawValue }
@@ -55,7 +78,7 @@ enum Equipment: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-enum LogType: String, Codable, CaseIterable, Identifiable {
+nonisolated enum LogType: String, Codable, CaseIterable, Identifiable {
     case weight, assisted, cardio
 
     var id: String { rawValue }

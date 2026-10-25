@@ -113,3 +113,40 @@ extension Date {
         formatted(.dateTime.year().month(.twoDigits).day(.twoDigits))
     }
 }
+
+/// 「全部／單邊／爆發」膠囊篩選列
+struct TagFilterBar: View {
+    @Binding var selection: TagFilter
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(TagFilter.allCases) { filter in
+                let selected = filter == selection
+                Button { selection = filter } label: {
+                    Text(filter.title)
+                        .font(.headline)
+                        .foregroundStyle(selected ? .black : .primary)
+                        .padding(.horizontal, 18)
+                        .frame(minHeight: 40)
+                        .background(selected ? Theme.green : Theme.card, in: .capsule)
+                        .overlay(Capsule().stroke(Theme.cardBorder))
+                }
+                .buttonStyle(.plain)
+            }
+            Spacer(minLength: 0)
+        }
+    }
+}
+
+/// 小膠囊標籤（分類、tags）
+struct Chip: View {
+    var text: String
+
+    var body: some View {
+        Text(text)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 8).padding(.vertical, 3)
+            .background(Theme.field, in: .capsule)
+    }
+}

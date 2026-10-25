@@ -45,22 +45,36 @@ nonisolated enum Recency {
         }
     }
 
-    /// 最近 `days` 天內，每個部位有訓練的天數（同一天同部位做多個動作只算一次）
-    static func trainingDaysByGroup(
-        _ records: [(date: Date, group: MuscleGroup)],
+    /// 最近 `days` 天內，每個 key（分類、tag）有訓練的天數；同一天同 key 只算一次
+    static func trainingDays<Key: Hashable>(
+        _ records: [(date: Date, key: Key)],
         now: Date = .now,
         days: Int = 30,
         calendar: Calendar = .current
-    ) -> [MuscleGroup: Int] {
+    ) -> [Key: Int] {
         let today = calendar.startOfDay(for: now)
         guard let start = calendar.date(byAdding: .day, value: -(days - 1), to: today),
               let end = calendar.date(byAdding: .day, value: 1, to: today)
         else { return [:] }
 
-        var seen: [MuscleGroup: Set<Date>] = [:]
+        var seen: [Key: Set<Date>] = [:]
         for r in records where r.date >= start && r.date < end {
-            seen[r.group, default: []].insert(calendar.startOfDay(for: r.date))
+            seen[r.key, default: []].insert(calendar.startOfDay(for: r.date))
         }
         return seen.mapValues(\.count)
+    }
+
+    /// 依分類順序分區，沒有動作的分類不出現；每區內最久沒做的排前面
+    static func sections<T>(
+        _ items: [T],
+        category: (T) -> ExerciseCategory,
+        lastDate: (T) -> Date?,
+        name: (T) -> String
+    ) -> [(category: ExerciseCategory, items: [T])] {
+        let grouped = Dictionary(grouping: items, by: category)
+        return ExerciseCategory.allCases.compactMap { c in
+            guard let members = grouped[c], !members.isEmpty else { return nil }
+            return (c, sortedByNeglect(members, lastDate: lastDate, name: name))
+        }
     }
 }

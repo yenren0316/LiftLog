@@ -4,8 +4,10 @@ import SwiftData
 struct HomeView: View {
     @Query(filter: #Predicate<Exercise> { !$0.isArchived }, sort: \Exercise.name)
     private var exercises: [Exercise]
+    @Query private var allEntries: [WorkoutEntry]
 
     @State private var path = NavigationPath()
+    @State private var filter: TagFilter = .all
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -13,15 +15,22 @@ struct HomeView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
                         ScreenHeader(title: "該練什麼")
-                        GroupBarsCard(exercises: exercises) { group in
-                            withAnimation { proxy.scrollTo(group, anchor: .top) }
+                        ActivityGraph(entryDates: allEntries.map(\.date))
+                        CategoryBarsCard(exercises: exercises) { category in
+                            withAnimation { proxy.scrollTo(category, anchor: .top) }
                         }
-                        ForEach(MuscleGroup.allCases) { group in
-                            let items = exercises.filter { $0.primaryGroup == group }
-                            if !items.isEmpty {
-                                GroupSection(group: group, exercises: items)
-                                    .id(group)
-                            }
+                        TagFilterBar(selection: $filter)
+
+                        let visible = exercises.filter { $0.matches(filter) }
+                        let sections = Recency.sections(
+                            visible, category: \.category, lastDate: { $0.lastEntry?.date }, name: \.name
+                        )
+                        if sections.isEmpty {
+                            Text("沒有符合的動作").foregroundStyle(.secondary).card()
+                        }
+                        ForEach(sections, id: \.category) { section in
+                            CategorySection(category: section.category, exercises: section.items)
+                                .id(section.category)
                         }
                         StalenessLegend()
                     }
@@ -38,8 +47,7 @@ struct HomeView: View {
             #endif
         }
         #if DEBUG
-        // 開發用：啟動參數 -openExercise 槓鈴臥推 直接打開記錄頁
-        // -openDetail 槓鈴臥推 直接打開動作詳情
+        // 開發用：啟動參數 -openExercise 臥推 直接打開記錄頁；-openDetail 臥推 直接打開動作詳情
         .task {
             let defaults = UserDefaults.standard
             if let name = defaults.string(forKey: "openExercise"),
@@ -55,28 +63,30 @@ struct HomeView: View {
     }
 }
 
-/// 最近 30 天各部位訓練天數，點一下跳到該部位
-private struct GroupBarsCard: View {
+/// 最近 30 天各分類訓練天數，點一下跳到該分類；下方是單邊、爆發的天數
+private struct CategoryBarsCard: View {
     var exercises: [Exercise]
-    var onSelect: (MuscleGroup) -> Void
-
-    private var counts: [MuscleGroup: Int] {
-        let records = exercises.flatMap { ex in ex.entries.map { (date: $0.date, group: ex.primaryGroup) } }
-        return Recency.trainingDaysByGroup(records)
-    }
+    var onSelect: (ExerciseCategory) -> Void
 
     var body: some View {
-        let counts = counts
+        let entries = exercises.flatMap { ex in ex.entries.map { (entry: $0, exercise: ex) } }
+        let counts = Recency.trainingDays(entries.map { (date: $0.entry.date, key: $0.exercise.category) })
+        let tagCounts = Recency.trainingDays(entries.flatMap { pair in
+            pair.exercise.tags.map { (date: pair.entry.date, key: $0) }
+        })
+        // 沒有動作的分類（例如違常姿勢）不顯示
+        let categories = ExerciseCategory.allCases.filter { c in exercises.contains { $0.category == c } }
         let maxCount = max(counts.values.max() ?? 0, 1)
+
         VStack(alignment: .leading, spacing: 12) {
             Text("最近 30 天")
                 .font(.headline)
                 .foregroundStyle(.secondary)
-            ForEach(MuscleGroup.allCases) { group in
-                let count = counts[group] ?? 0
-                Button { onSelect(group) } label: {
+            ForEach(categories) { category in
+                let count = counts[category] ?? 0
+                Button { onSelect(category) } label: {
                     HStack(spacing: 12) {
-                        Text(group.title)
+                        Text(category.title)
                             .font(.body.weight(.semibold))
                             .frame(width: 96, alignment: .leading)
                         ThinBar(fraction: Double(count) / Double(maxCount), color: color(for: count))
@@ -88,6 +98,20 @@ private struct GroupBarsCard: View {
                     .contentShape(.rect)
                 }
                 .buttonStyle(.plain)
+            }
+            Divider().overlay(Theme.cardBorder)
+            HStack(spacing: 24) {
+                ForEach(ExerciseTag.allCases) { tag in
+                    let count = tagCounts[tag] ?? 0
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text(tag.title).font(.body.weight(.semibold))
+                        Text(String(count))
+                            .font(.title3.bold().monospacedDigit())
+                            .foregroundStyle(color(for: count))
+                        Text("天").font(.subheadline).foregroundStyle(.secondary)
+                    }
+                }
+                Spacer()
             }
         }
         .card()
@@ -102,22 +126,21 @@ private struct GroupBarsCard: View {
     }
 }
 
-private struct GroupSection: View {
-    var group: MuscleGroup
+private struct CategorySection: View {
+    var category: ExerciseCategory
     var exercises: [Exercise]
 
     var body: some View {
-        let sorted = Recency.sortedByNeglect(exercises, lastDate: { $0.lastEntry?.date }, name: \.name)
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(group.title).font(.title2.bold())
-                if let subtitle = group.subtitle {
+                Text(category.title).font(.title2.bold())
+                if let subtitle = category.subtitle {
                     Text(subtitle).font(.subheadline).foregroundStyle(.secondary)
                 }
             }
             .padding(.bottom, 8)
 
-            ForEach(Array(sorted.enumerated()), id: \.element.id) { index, exercise in
+            ForEach(Array(exercises.enumerated()), id: \.element.id) { index, exercise in
                 if index > 0 { Divider().overlay(Theme.cardBorder) }
                 NavigationLink(value: exercise) {
                     ExerciseRow(exercise: exercise)
@@ -139,9 +162,12 @@ struct ExerciseRow: View {
 
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(exercise.name)
-                    .font(.title3.weight(.semibold))
-                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    Text(exercise.name)
+                        .font(.title3.weight(.semibold))
+                        .lineLimit(1)
+                    ForEach(exercise.tags) { Chip(text: $0.title) }
+                }
                 if let last {
                     Text("\(last.date.shortDate) · \(last.summary)")
                         .font(.subheadline)
