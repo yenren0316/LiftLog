@@ -33,13 +33,22 @@ struct HomeView: View {
             .navigationDestination(for: Exercise.self) { exercise in
                 LogEntryView(exercise: exercise)
             }
+            #if DEBUG
+            .navigationDestination(for: DebugDetailRoute.self) { ExerciseDetailView(exercise: $0.exercise) }
+            #endif
         }
         #if DEBUG
         // 開發用：啟動參數 -openExercise 槓鈴臥推 直接打開記錄頁
+        // -openDetail 槓鈴臥推 直接打開動作詳情
         .task {
-            if let name = UserDefaults.standard.string(forKey: "openExercise"),
+            let defaults = UserDefaults.standard
+            if let name = defaults.string(forKey: "openExercise"),
                let exercise = exercises.first(where: { $0.name == name }) {
                 path.append(exercise)
+            }
+            if let name = defaults.string(forKey: "openDetail"),
+               let exercise = exercises.first(where: { $0.name == name }) {
+                path.append(DebugDetailRoute(exercise: exercise))
             }
         }
         #endif
@@ -179,3 +188,9 @@ private struct StalenessLegend: View {
         }
     }
 }
+
+#if DEBUG
+private struct DebugDetailRoute: Hashable {
+    var exercise: Exercise
+}
+#endif
