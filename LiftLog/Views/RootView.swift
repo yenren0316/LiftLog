@@ -71,6 +71,7 @@ struct RootView: View {
         .task {
             SeedImporter.importIfNeeded(into: context)
             GuideImporter.importIfNeeded(into: context)
+            LibraryAdditions.applyIfNeeded(into: context)
             #if DEBUG
             // 開發用：啟動參數 -startTab 1 直接切到該分頁
             tab = UserDefaults.standard.integer(forKey: "startTab")

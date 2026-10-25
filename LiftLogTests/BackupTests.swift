@@ -124,7 +124,7 @@ struct BackupTests {
         let url = try #require(Bundle.main.url(forResource: "seed", withExtension: "json"))
         let file = try BackupFile.decode(Data(contentsOf: url))
         let ids = Set(file.exercises.map(\.id))
-        #expect(file.exercises.count == 58)
+        #expect(file.exercises.count == 59)
         #expect(file.exercises.filter(\.isArchived).count == 16)
         #expect(file.sessions.count > 200)
         #expect(file.sessions.allSatisfy { s in s.items.allSatisfy { ids.contains($0.exerciseId) && !$0.sets.isEmpty } })

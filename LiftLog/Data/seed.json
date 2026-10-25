@@ -263,6 +263,21 @@
    "isArchived": false
   },
   {
+   "id": "D29D46A8-CE7D-5CFB-8D2C-B554EE13BB1C",
+   "name": "啞鈴上斜臥推",
+   "category": "horizontalPush",
+   "tags": [],
+   "aliases": [
+    "上斜啞鈴臥推",
+    "上斜啞鈴推舉"
+   ],
+   "englishName": "",
+   "equipment": "dumbbell",
+   "logType": "weight",
+   "note": "",
+   "isArchived": false
+  },
+  {
    "id": "424F7F3C-4B00-5CDC-B85C-AFF221C68DFC",
    "name": "地板啞鈴臥推",
    "category": "horizontalPush",

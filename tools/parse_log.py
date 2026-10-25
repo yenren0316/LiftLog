@@ -52,6 +52,7 @@ EXERCISES = [
     ex("上斜臥推", "horizontalPush", [], [], "barbell", "weight"),
     ex("地板臥推", "horizontalPush", [], [], "barbell", "weight"),
     ex("啞鈴臥推", "horizontalPush", [], [], "dumbbell", "weight"),
+    ex("啞鈴上斜臥推", "horizontalPush", [], ["上斜啞鈴臥推", "上斜啞鈴推舉"], "dumbbell", "weight"),
     ex("地板啞鈴臥推", "horizontalPush", [], [], "dumbbell", "weight"),
     # 上肢水平拉
     ex("爆發划船", "horizontalPull", [X], [], "barbell", "weight"),

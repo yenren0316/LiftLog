@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import LiftLog
 
-/// CHANGE_04 1-6：使用中的 42 個動作、分類與標籤
+/// CHANGE_04 1-6：使用中的動作、分類與標籤（42 個，之後加了啞鈴上斜臥推）
 @MainActor
 struct LibraryLayoutTests {
     private static let expected: [(ExerciseCategory, [(String, [ExerciseTag])])] = [
@@ -11,7 +11,8 @@ struct LibraryLayoutTests {
         (.hipDominant, [("傳統硬舉", []), ("六角槓硬舉", []), ("相撲硬舉", []), ("羅馬尼亞式硬舉", []),
                         ("單腳 RDL", [.unilateral]), ("臀推", []), ("壺鈴擺盪", [.explosive]),
                         ("單手抓舉", [.unilateral, .explosive])]),
-        (.horizontalPush, [("臥推", []), ("上斜臥推", []), ("地板臥推", []), ("啞鈴臥推", []), ("地板啞鈴臥推", [])]),
+        (.horizontalPush, [("臥推", []), ("上斜臥推", []), ("地板臥推", []), ("啞鈴臥推", []), ("啞鈴上斜臥推", []),
+                           ("地板啞鈴臥推", [])]),
         (.horizontalPull, [("爆發划船", [.explosive]), ("反式划船", []), ("坐姿 Cable 划船", [])]),
         (.verticalPush, [("肩推", []), ("坐姿槓鈴肩推", []), ("坐姿啞鈴肩推", []), ("雙槓撐", [])]),
         (.verticalPull, [("輔助引體向上", []), ("滑輪下拉", [])]),
@@ -29,7 +30,7 @@ struct LibraryLayoutTests {
 
     @Test func activeExercisesMatchTheList() throws {
         let active = try seed().exercises.filter { !$0.isArchived }
-        #expect(active.count == 42)
+        #expect(active.count == 43)
         let actual = Dictionary(uniqueKeysWithValues: active.map { ($0.name, $0) })
         for (category, list) in Self.expected {
             for (name, tags) in list {

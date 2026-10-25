@@ -204,25 +204,7 @@ enum BackupService {
 
         var byID: [UUID: Exercise] = [:]
         for r in file.exercises {
-            let exercise = Exercise(
-                id: r.id,
-                name: r.name,
-                category: ExerciseCategory(stored: r.category) ?? .accessory,
-                tags: r.tags.compactMap(ExerciseTag.init(rawValue:)),
-                aliases: r.aliases,
-                englishName: r.englishName,
-                equipment: Equipment(rawValue: r.equipment) ?? .other,
-                logType: LogType(rawValue: r.logType) ?? .weight,
-                note: r.note,
-                isArchived: r.isArchived,
-                restSeconds: r.restSeconds
-            )
-            exercise.guideCore = r.guideCore ?? ""
-            exercise.guideCues = r.guideCues ?? []
-            exercise.guideMistakes = r.guideMistakes ?? []
-            exercise.guideRegression = r.guideRegression ?? ""
-            exercise.guideProgression = r.guideProgression ?? ""
-            exercise.myNotes = r.myNotes ?? ""
+            let exercise = makeExercise(r)
             context.insert(exercise)
             byID[r.id] = exercise
         }
@@ -251,19 +233,81 @@ enum BackupService {
         }
         try context.save()
     }
+
+    static func makeExercise(_ r: BackupFile.ExerciseRecord) -> Exercise {
+        let exercise = Exercise(
+            id: r.id,
+            name: r.name,
+            category: ExerciseCategory(stored: r.category) ?? .accessory,
+            tags: r.tags.compactMap(ExerciseTag.init(rawValue:)),
+            aliases: r.aliases,
+            englishName: r.englishName,
+            equipment: Equipment(rawValue: r.equipment) ?? .other,
+            logType: LogType(rawValue: r.logType) ?? .weight,
+            note: r.note,
+            isArchived: r.isArchived,
+            restSeconds: r.restSeconds
+        )
+        exercise.guideCore = r.guideCore ?? ""
+        exercise.guideCues = r.guideCues ?? []
+        exercise.guideMistakes = r.guideMistakes ?? []
+        exercise.guideRegression = r.guideRegression ?? ""
+        exercise.guideProgression = r.guideProgression ?? ""
+        exercise.myNotes = r.myNotes ?? ""
+        return exercise
+    }
 }
 
 enum SeedImporter {
     /// 資料庫沒有任何動作時，匯入 bundle 裡的 seed.json（v2 格式，匯入時轉成訓練）
     static func importIfNeeded(into context: ModelContext) {
         do {
-            guard try context.fetchCount(FetchDescriptor<Exercise>()) == 0,
-                  let url = Bundle.main.url(forResource: "seed", withExtension: "json")
-            else { return }
-            try BackupService.restore(BackupFile.decode(Data(contentsOf: url)), into: context)
+            guard try context.fetchCount(FetchDescriptor<Exercise>()) == 0, let seed = try bundled() else { return }
+            try BackupService.restore(seed, into: context)
         } catch {
             print("Seed import failed: \(error)")
         }
+    }
+
+    static func bundled() throws -> BackupFile? {
+        guard let url = Bundle.main.url(forResource: "seed", withExtension: "json") else { return nil }
+        return try BackupFile.decode(Data(contentsOf: url))
+    }
+}
+
+/// 之後才加進動作庫的預設動作。已經有資料的 App 不會再匯入 seed，所以啟動時從 seed.json 補進來。
+/// 名稱或別名已經存在就略過；每一批只補一次，使用者之後刪掉也不會再出現。
+enum LibraryAdditions {
+    static let names = ["啞鈴上斜臥推"]
+    private static let appliedKey = "libraryAdditions.v1"
+
+    static func applyIfNeeded(into context: ModelContext, defaults: UserDefaults = .standard) {
+        guard !defaults.bool(forKey: appliedKey),
+              let seed = try? SeedImporter.bundled(),
+              let guides = GuideImporter.bundled()
+        else { return }
+        do {
+            try apply(names, from: seed.exercises, guides: guides, into: context)
+            defaults.set(true, forKey: appliedKey)
+        } catch {
+            print("Library additions failed: \(error)")
+        }
+    }
+
+    @discardableResult
+    static func apply(_ names: [String], from records: [BackupFile.ExerciseRecord],
+                      guides: [String: GuideImporter.Guide], into context: ModelContext) throws -> [Exercise] {
+        let existing = try context.fetch(FetchDescriptor<Exercise>())
+        let ids = Set(existing.map(\.id))
+        let taken = Set(existing.flatMap { [$0.name] + $0.aliases })
+        let added = records
+            .filter { names.contains($0.name) && !ids.contains($0.id) }
+            .filter { r in ([r.name] + r.aliases).allSatisfy { !taken.contains($0) } }
+            .map(BackupService.makeExercise)
+        for exercise in added { context.insert(exercise) }
+        GuideImporter.apply(guides, to: added)
+        try context.save()
+        return added
     }
 }
 
@@ -282,15 +326,20 @@ enum GuideImporter {
     /// 之後的編輯存在資料庫，不會被覆蓋。
     static func importIfNeeded(into context: ModelContext, defaults: UserDefaults = .standard) {
         guard !defaults.bool(forKey: importedKey),
-              let url = Bundle.main.url(forResource: "ExerciseGuides", withExtension: "json"),
-              let data = try? Data(contentsOf: url),
-              let guides = try? JSONDecoder().decode([String: Guide].self, from: data),
+              let guides = bundled(),
               let exercises = try? context.fetch(FetchDescriptor<Exercise>()),
               !exercises.isEmpty
         else { return }
         apply(guides, to: exercises)
         try? context.save()
         defaults.set(true, forKey: importedKey)
+    }
+
+    static func bundled() -> [String: Guide]? {
+        guard let url = Bundle.main.url(forResource: "ExerciseGuides", withExtension: "json"),
+              let data = try? Data(contentsOf: url)
+        else { return nil }
+        return try? JSONDecoder().decode([String: Guide].self, from: data)
     }
 
     static func apply(_ guides: [String: Guide], to exercises: [Exercise]) {
