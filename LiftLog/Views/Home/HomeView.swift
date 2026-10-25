@@ -13,9 +13,11 @@ struct HomeView: View {
 
     @State private var path = NavigationPath()
     @State private var filter: TagFilter = .all
-    @State private var isSelecting = false
-    /// 依點選順序，開始訓練時照這個順序排
-    @State private var selection: [Exercise] = []
+    @State private var planRequest: PlanRequest?
+    /// 有進行中的訓練時，按「＋」先問要繼續還是結束
+    @State private var pendingPlan: PlanRequest?
+    /// 建立菜單後，等 sheet 關掉再展開訓練中畫面
+    @State private var startedFromPlan = false
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -23,18 +25,8 @@ struct HomeView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
                         ScreenHeader(title: "該練什麼") {
-                            Button(isSelecting ? "取消" : "選擇") {
-                                withAnimation {
-                                    isSelecting.toggle()
-                                    selection = []
-                                }
-                            }
-                            .font(.headline)
-                            .padding(.horizontal, 18)
-                            .frame(minHeight: 44)
-                            .background(Theme.card, in: .capsule)
-                            .overlay(Capsule().stroke(Theme.cardBorder))
-                            .buttonStyle(.plain)
+                            CircleIconButton(systemName: "plus") { openPlan(nil) }
+                                .accessibilityLabel("建立菜單")
                         }
                         ActivityGraph(days: trainingDays)
                         CategoryBarsCard(exercises: allExercises) { category in
@@ -53,9 +45,6 @@ struct HomeView: View {
                             CategorySection(
                                 category: section.category,
                                 exercises: section.items,
-                                isSelecting: isSelecting,
-                                selection: selection,
-                                onTap: toggle,
                                 onShowDetail: { path.append($0) }
                             )
                             .id(section.category)
@@ -66,21 +55,6 @@ struct HomeView: View {
                 }
             }
             .screenBackground()
-            .safeAreaInset(edge: .bottom) {
-                if isSelecting && !selection.isEmpty {
-                    Button(action: startWorkout) {
-                        Text("開始訓練（\(selection.count) 個動作）")
-                            .font(.title3.bold())
-                            .foregroundStyle(.black)
-                            .frame(maxWidth: .infinity, minHeight: 60)
-                            .background(Theme.green, in: .capsule)
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 8)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
-            }
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: Exercise.self) { exercise in
                 ExerciseDetailView(exercise: exercise)
@@ -88,6 +62,31 @@ struct HomeView: View {
             #if DEBUG
             .navigationDestination(for: DebugDetailRoute.self) { ExerciseDetailView(exercise: $0.exercise) }
             #endif
+        }
+        .sheet(item: $planRequest, onDismiss: {
+            if startedFromPlan {
+                startedFromPlan = false
+                coordinator.isExpanded = true
+            }
+        }) { request in
+            PlanFlowView(initialAnswers: request.answers) { startedFromPlan = true }
+        }
+        .confirmationDialog(
+            "已經有進行中的訓練",
+            isPresented: Binding(get: { pendingPlan != nil }, set: { if !$0 { pendingPlan = nil } }),
+            titleVisibility: .visible,
+            presenting: pendingPlan
+        ) { request in
+            Button("繼續目前訓練") { coordinator.isExpanded = true }
+            Button("結束並建立新菜單", role: .destructive) {
+                if let session = WorkoutActions.activeSession(in: context) {
+                    WorkoutActions.finish(session, choice: .deleteIncomplete, in: context)
+                }
+                planRequest = request
+            }
+            Button("取消", role: .cancel) {}
+        } message: { _ in
+            Text("結束目前的訓練時，沒打勾的組會被刪除。")
         }
         #if DEBUG
         // 開發用：啟動參數 -openExercise 臥推 直接打開記錄頁；-openDetail 臥推 直接打開動作詳情
@@ -101,6 +100,8 @@ struct HomeView: View {
                let exercise = exercises.first(where: { $0.name == name }) {
                 path.append(DebugDetailRoute(exercise: exercise))
             }
+            // -openPlan YES 直接打開建立菜單
+            if defaults.bool(forKey: "openPlan") { planRequest = PlanRequest() }
         }
         #endif
     }
@@ -119,23 +120,13 @@ extension HomeView {
 }
 
 extension HomeView {
-    /// 點一個動作就進入選擇模式並選起它；再點一次取消選取
-    private func toggle(_ exercise: Exercise) {
-        withAnimation(.snappy) {
-            isSelecting = true
-            if let i = selection.firstIndex(where: { $0 === exercise }) {
-                selection.remove(at: i)
-            } else {
-                selection.append(exercise)
-            }
-        }
-    }
-
-    private func startWorkout() {
-        coordinator.requestStart(selection, context: context)
-        withAnimation {
-            isSelecting = false
-            selection = []
+    /// 打開建立菜單；有進行中的訓練時先問
+    private func openPlan(_ answers: PlanAnswers?) {
+        let request = PlanRequest(answers: answers)
+        if WorkoutActions.activeSession(in: context) != nil {
+            pendingPlan = request
+        } else {
+            planRequest = request
         }
     }
 }
@@ -221,9 +212,6 @@ private struct CategoryBarsCard: View {
 private struct CategorySection: View {
     var category: ExerciseCategory
     var exercises: [Exercise]
-    var isSelecting: Bool
-    var selection: [Exercise]
-    var onTap: (Exercise) -> Void
     var onShowDetail: (Exercise) -> Void
 
     @State private var showUntrained = false
@@ -273,24 +261,11 @@ private struct CategorySection: View {
         .card()
     }
 
-    @ViewBuilder
     private func row(_ exercise: Exercise) -> some View {
-                let selected = selection.contains { $0 === exercise }
-                Button { onTap(exercise) } label: {
-                    HStack(spacing: 12) {
-                        if isSelecting {
-                            Image(systemName: selected ? "checkmark.circle.fill" : "circle")
-                                .font(.title2)
-                                .foregroundStyle(selected ? Theme.green : .secondary)
-                                .transition(.move(edge: .leading).combined(with: .opacity))
-                        }
-                        ExerciseRow(exercise: exercise)
-                    }
-                }
-                .buttonStyle(.plain)
-                .contextMenu {
-                    Button("動作詳情", systemImage: "chart.xyaxis.line") { onShowDetail(exercise) }
-                }
+        Button { onShowDetail(exercise) } label: {
+            ExerciseRow(exercise: exercise)
+        }
+        .buttonStyle(.plain)
     }
 }
 
