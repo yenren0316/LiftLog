@@ -17,6 +17,14 @@ final class Exercise {
     /// 自訂休息秒數；nil 代表依分類的預設值
     var restSeconds: Int?
 
+    // 說明分頁（第一次啟動從 ExerciseGuides.json 匯入，之後可編輯）
+    var guideCore: String = ""
+    var guideCues: [String] = []
+    var guideMistakes: [String] = []
+    var guideRegression: String = ""
+    var guideProgression: String = ""
+    var myNotes: String = ""
+
     @Relationship(deleteRule: .cascade, inverse: \SessionExercise.exercise)
     var sessionItems: [SessionExercise] = []
 

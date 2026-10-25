@@ -15,6 +15,12 @@ nonisolated struct BackupFile: Codable {
         var note: String
         var isArchived: Bool
         var restSeconds: Int?
+        var guideCore: String?
+        var guideCues: [String]?
+        var guideMistakes: [String]?
+        var guideRegression: String?
+        var guideProgression: String?
+        var myNotes: String?
     }
 
     struct SetRecordData: Codable {
@@ -159,7 +165,9 @@ enum BackupService {
             exercises: exercises.map {
                 .init(id: $0.id, name: $0.name, category: $0.categoryRaw, tags: $0.tagsRaw, aliases: $0.aliases,
                       englishName: $0.englishName, equipment: $0.equipmentRaw, logType: $0.logTypeRaw,
-                      note: $0.note, isArchived: $0.isArchived, restSeconds: $0.restSeconds)
+                      note: $0.note, isArchived: $0.isArchived, restSeconds: $0.restSeconds,
+                      guideCore: $0.guideCore, guideCues: $0.guideCues, guideMistakes: $0.guideMistakes,
+                      guideRegression: $0.guideRegression, guideProgression: $0.guideProgression, myNotes: $0.myNotes)
             },
             sessions: sessions.map { s in
                 .init(id: s.id, startedAt: s.startedAt, endedAt: s.endedAt, title: s.title, note: s.note, hasTime: s.hasTime,
@@ -201,6 +209,12 @@ enum BackupService {
                 isArchived: r.isArchived,
                 restSeconds: r.restSeconds
             )
+            exercise.guideCore = r.guideCore ?? ""
+            exercise.guideCues = r.guideCues ?? []
+            exercise.guideMistakes = r.guideMistakes ?? []
+            exercise.guideRegression = r.guideRegression ?? ""
+            exercise.guideProgression = r.guideProgression ?? ""
+            exercise.myNotes = r.myNotes ?? ""
             context.insert(exercise)
             byID[r.id] = exercise
         }
@@ -238,6 +252,44 @@ enum SeedImporter {
             try BackupService.restore(BackupFile.decode(Data(contentsOf: url)), into: context)
         } catch {
             print("Seed import failed: \(error)")
+        }
+    }
+}
+
+enum GuideImporter {
+    nonisolated struct Guide: Decodable {
+        var core: String
+        var cues: [String]
+        var mistakes: [String]
+        var regression: String
+        var progression: String
+    }
+
+    private static let importedKey = "guidesImported.v1"
+
+    /// 第一次啟動時把 bundle 的 ExerciseGuides.json 填進還沒有說明的動作（依名稱或別名對應）。
+    /// 之後的編輯存在資料庫，不會被覆蓋。
+    static func importIfNeeded(into context: ModelContext, defaults: UserDefaults = .standard) {
+        guard !defaults.bool(forKey: importedKey),
+              let url = Bundle.main.url(forResource: "ExerciseGuides", withExtension: "json"),
+              let data = try? Data(contentsOf: url),
+              let guides = try? JSONDecoder().decode([String: Guide].self, from: data),
+              let exercises = try? context.fetch(FetchDescriptor<Exercise>()),
+              !exercises.isEmpty
+        else { return }
+        apply(guides, to: exercises)
+        try? context.save()
+        defaults.set(true, forKey: importedKey)
+    }
+
+    static func apply(_ guides: [String: Guide], to exercises: [Exercise]) {
+        for exercise in exercises where exercise.guideCore.isEmpty && exercise.guideCues.isEmpty {
+            guard let guide = ([exercise.name] + exercise.aliases).lazy.compactMap({ guides[$0] }).first else { continue }
+            exercise.guideCore = guide.core
+            exercise.guideCues = guide.cues
+            exercise.guideMistakes = guide.mistakes
+            exercise.guideRegression = guide.regression
+            exercise.guideProgression = guide.progression
         }
     }
 }
