@@ -217,10 +217,12 @@ final class BodyWeight {
 enum LiftLogStore {
     static let schema = Schema([Exercise.self, WorkoutSession.self, SessionExercise.self, SetRecord.self, BodyWeight.self])
 
-    /// CHANGE_04 動作庫重整，改用新的檔名重新匯入（手機上還沒有資料），舊的資料庫直接忽略
+    /// CHANGE_04 動作庫重整，改用新的檔名重新匯入（手機上還沒有資料），舊的資料庫直接忽略。
+    /// groupContainer 固定為 .none：App 有 App Group 權限後，預設（.automatic）會改用群組容器裡的新資料庫，
+    /// 資料庫要留在 App 自己的位置（小工具只讀 App Group 裡的快照）
     static func makeContainer() -> ModelContainer {
         do {
-            return try ModelContainer(for: schema, configurations: ModelConfiguration("LiftLog4", schema: schema))
+            return try ModelContainer(for: schema, configurations: ModelConfiguration("LiftLog4", schema: schema, groupContainer: .none))
         } catch {
             fatalError("無法開啟資料庫：\(error)")
         }
