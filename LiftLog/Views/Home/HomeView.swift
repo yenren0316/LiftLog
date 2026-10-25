@@ -6,15 +6,34 @@ struct HomeView: View {
     private var exercises: [Exercise]
     @Query private var allSets: [SetRecord]
 
+    @Environment(\.modelContext) private var context
+    @Environment(WorkoutCoordinator.self) private var coordinator
+
     @State private var path = NavigationPath()
     @State private var filter: TagFilter = .all
+    @State private var isSelecting = false
+    /// 依點選順序，開始訓練時照這個順序排
+    @State private var selection: [Exercise] = []
 
     var body: some View {
         NavigationStack(path: $path) {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
-                        ScreenHeader(title: "該練什麼")
+                        ScreenHeader(title: "該練什麼") {
+                            Button(isSelecting ? "取消" : "選擇") {
+                                withAnimation {
+                                    isSelecting.toggle()
+                                    selection = []
+                                }
+                            }
+                            .font(.headline)
+                            .padding(.horizontal, 18)
+                            .frame(minHeight: 44)
+                            .background(Theme.card, in: .capsule)
+                            .overlay(Capsule().stroke(Theme.cardBorder))
+                            .buttonStyle(.plain)
+                        }
                         ActivityGraph(days: trainingDays)
                         CategoryBarsCard(exercises: exercises) { category in
                             withAnimation { proxy.scrollTo(category, anchor: .top) }
@@ -29,8 +48,15 @@ struct HomeView: View {
                             Text("沒有符合的動作").foregroundStyle(.secondary).card()
                         }
                         ForEach(sections, id: \.category) { section in
-                            CategorySection(category: section.category, exercises: section.items)
-                                .id(section.category)
+                            CategorySection(
+                                category: section.category,
+                                exercises: section.items,
+                                isSelecting: isSelecting,
+                                selection: selection,
+                                onTap: toggle,
+                                onShowDetail: { path.append($0) }
+                            )
+                            .id(section.category)
                         }
                         StalenessLegend()
                     }
@@ -38,6 +64,21 @@ struct HomeView: View {
                 }
             }
             .screenBackground()
+            .safeAreaInset(edge: .bottom) {
+                if isSelecting && !selection.isEmpty {
+                    Button(action: startWorkout) {
+                        Text("開始訓練（\(selection.count) 個動作）")
+                            .font(.title3.bold())
+                            .foregroundStyle(.black)
+                            .frame(maxWidth: .infinity, minHeight: 60)
+                            .background(Theme.green, in: .capsule)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: Exercise.self) { exercise in
                 ExerciseDetailView(exercise: exercise)
@@ -72,6 +113,28 @@ extension HomeView {
             exercisesByDay[Calendar.current.startOfDay(for: date), default: []].insert(item.persistentModelID)
         }
         return exercisesByDay.mapValues(\.count)
+    }
+}
+
+extension HomeView {
+    /// 點一個動作就進入選擇模式並選起它；再點一次取消選取
+    private func toggle(_ exercise: Exercise) {
+        withAnimation(.snappy) {
+            isSelecting = true
+            if let i = selection.firstIndex(where: { $0 === exercise }) {
+                selection.remove(at: i)
+            } else {
+                selection.append(exercise)
+            }
+        }
+    }
+
+    private func startWorkout() {
+        coordinator.requestStart(selection, context: context)
+        withAnimation {
+            isSelecting = false
+            selection = []
+        }
     }
 }
 
@@ -156,6 +219,10 @@ private struct CategoryBarsCard: View {
 private struct CategorySection: View {
     var category: ExerciseCategory
     var exercises: [Exercise]
+    var isSelecting: Bool
+    var selection: [Exercise]
+    var onTap: (Exercise) -> Void
+    var onShowDetail: (Exercise) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -169,10 +236,22 @@ private struct CategorySection: View {
 
             ForEach(Array(exercises.enumerated()), id: \.element.id) { index, exercise in
                 if index > 0 { Divider().overlay(Theme.cardBorder) }
-                NavigationLink(value: exercise) {
-                    ExerciseRow(exercise: exercise)
+                let selected = selection.contains { $0 === exercise }
+                Button { onTap(exercise) } label: {
+                    HStack(spacing: 12) {
+                        if isSelecting {
+                            Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                                .font(.title2)
+                                .foregroundStyle(selected ? Theme.green : .secondary)
+                                .transition(.move(edge: .leading).combined(with: .opacity))
+                        }
+                        ExerciseRow(exercise: exercise)
+                    }
                 }
                 .buttonStyle(.plain)
+                .contextMenu {
+                    Button("動作詳情", systemImage: "chart.xyaxis.line") { onShowDetail(exercise) }
+                }
             }
         }
         .card()
