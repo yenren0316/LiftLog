@@ -4,20 +4,21 @@ import SwiftData
 struct RootView: View {
     @Environment(\.modelContext) private var context
     @State private var coordinator = WorkoutCoordinator()
+    @State private var tab = 0
     @Query(filter: #Predicate<WorkoutSession> { $0.endedAt == nil }) private var active: [WorkoutSession]
 
     var body: some View {
-        TabView {
-            Tab("該練什麼", systemImage: "dumbbell.fill") {
+        TabView(selection: $tab) {
+            Tab("該練什麼", systemImage: "dumbbell.fill", value: 0) {
                 HomeView().workoutMiniBar()
             }
-            Tab("訓練", systemImage: "figure.strengthtraining.traditional") {
+            Tab("訓練", systemImage: "figure.strengthtraining.traditional", value: 1) {
                 SessionsView().workoutMiniBar()
             }
-            Tab("動作庫", systemImage: "list.bullet.rectangle") {
+            Tab("動作庫", systemImage: "list.bullet.rectangle", value: 2) {
                 LibraryView().workoutMiniBar()
             }
-            Tab("設定", systemImage: "gearshape.fill") {
+            Tab("設定", systemImage: "gearshape.fill", value: 3) {
                 SettingsView().workoutMiniBar()
             }
         }
@@ -51,6 +52,8 @@ struct RootView: View {
         .task {
             SeedImporter.importIfNeeded(into: context)
             #if DEBUG
+            // 開發用：啟動參數 -startTab 1 直接切到該分頁
+            tab = UserDefaults.standard.integer(forKey: "startTab")
             // 開發用：啟動參數 -demoWorkout YES 開一個示範訓練
             if UserDefaults.standard.bool(forKey: "demoWorkout"), active.isEmpty {
                 let names = ["臥推", "輔助引體向上", "跑步機"]
