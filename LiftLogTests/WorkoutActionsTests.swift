@@ -33,7 +33,7 @@ struct WorkoutActionsTests {
         let session = WorkoutActions.start(with: [bench, row], in: context)
         #expect(session.title == "臥推＋爆發划船")
         #expect(session.orderedItems[0].sets.count == 3)   // 照最近一次
-        #expect(session.orderedItems[1].sets.count == 1)   // 沒有歷史 → 一組
+        #expect(session.orderedItems[1].sets.count == 5)   // 沒有歷史 → 依角色（拉 5 組）
         #expect(bench.lastSets(excluding: session).map(\.weightKg) == [40, 42.6, 42.6])
 
         // 重複加入同一個動作：回傳既有卡片
@@ -69,7 +69,7 @@ struct WorkoutActionsTests {
         let session = WorkoutActions.start(with: [bench], in: context)
         WorkoutActions.addSet(to: session.orderedItems[0], in: context)
         #expect(WorkoutActions.finish(session, choice: .completeAll, in: context))
-        #expect(session.orderedItems[0].sets.count == 2)
+        #expect(session.orderedItems[0].sets.count == 6)   // 推 5 組＋新增 1 組
         #expect(session.orderedItems[0].sets.allSatisfy { $0.isCompleted && $0.completedAt != nil })
     }
 
@@ -125,5 +125,81 @@ struct WorkoutActionsTests {
         #expect(session.orderedItems.map(\.role) == [.push, .accessory])
         #expect(WorkoutActions.finish(session, choice: .completeAll, in: context))
         #expect(session.region == .upper)
+    }
+
+    @Test func defaultSetsByRoleWhenNoHistory() throws {
+        let context = try makeContext()
+        let cases: [(Exercise, Int)] = [
+            (Exercise(name: "深蹲", category: .kneeDominant, equipment: .barbell), 5),
+            (Exercise(name: "壺鈴擺盪", category: .hipDominant, tags: [.explosive], equipment: .kettlebell), 5),
+            (Exercise(name: "臥推", category: .horizontalPush, equipment: .barbell), 5),
+            (Exercise(name: "滑輪下拉", category: .verticalPull, equipment: .cable), 5),
+            (Exercise(name: "側蹲", category: .kneeDominant, tags: [.unilateral], equipment: .dumbbell), 3),
+            (Exercise(name: "腹前推", category: .core, equipment: .cable), 3),
+            (Exercise(name: "面拉", category: .accessory, equipment: .cable), 3),
+            (Exercise(name: "跑步機", category: .cardio, equipment: .other, logType: .cardio), 1),
+        ]
+        cases.forEach { context.insert($0.0) }
+        let session = WorkoutActions.start(with: cases.map(\.0), in: context)
+        #expect(session.orderedItems.map(\.sets.count) == cases.map(\.1))
+        // 有上一次紀錄就照上次的組數，不看角色
+        let lunge = cases[4].0
+        history(lunge, sets: [(10, 8), (10, 8), (10, 8), (10, 8)], daysAgo: 3, in: context)
+        WorkoutActions.discard(session, in: context)
+        let next = WorkoutActions.start(with: [lunge], in: context)
+        #expect(next.orderedItems[0].sets.count == 4)
+    }
+
+    @Test func restSecondsByRoleUnlessExerciseOverrides() throws {
+        let context = try makeContext()
+        let squat = Exercise(name: "深蹲", category: .kneeDominant, equipment: .barbell)
+        let lunge = Exercise(name: "側蹲", category: .kneeDominant, tags: [.unilateral], equipment: .dumbbell)
+        let core = Exercise(name: "腹前推", category: .core, equipment: .cable)
+        let curl = Exercise(name: "二頭彎舉", category: .accessory, equipment: .dumbbell)
+        let custom = Exercise(name: "臥推", category: .horizontalPush, equipment: .barbell, restSeconds: 120)
+        [squat, lunge, core, curl, custom].forEach(context.insert)
+        let session = WorkoutActions.start(with: [squat, lunge, core, curl, custom], in: context)
+        #expect(session.orderedItems.map(\.restSeconds) == [180, 90, 90, 60, 120])
+        // 同一個動作放在不同角色的位置，休息跟著角色
+        let item = session.orderedItems[0]
+        item.role = .accessory
+        #expect(item.restSeconds == 60)
+    }
+
+    @Test func replaceKeepsRoleOrTakesPushOrPull() throws {
+        let context = try makeContext()
+        let squat = Exercise(name: "深蹲", category: .kneeDominant, equipment: .barbell)
+        let bench = Exercise(name: "臥推", category: .horizontalPush, equipment: .barbell)
+        let row = Exercise(name: "坐姿 Cable 划船", category: .horizontalPull, equipment: .cable)
+        let front = Exercise(name: "前蹲舉", category: .kneeDominant, equipment: .barbell)
+        [squat, bench, row, front].forEach(context.insert)
+        let session = WorkoutActions.start(with: [squat, bench], roles: [.main, .push], region: .full,
+                                           modeID: "full2", in: context)
+        let pushItem = session.orderedItems[1]
+        #expect(Slot(role: pushItem.role, modeID: session.modeID) == .pushOrPull)
+        #expect(Slot(role: .push, modeID: "upper2") == .push)
+        #expect(Slot(role: .main, modeID: nil) == .main)
+        WorkoutActions.replace(pushItem, with: row, role: .pull, in: context)
+        #expect(pushItem.role == .pull && session.title == "深蹲＋坐姿 Cable 划船")
+        WorkoutActions.replace(session.orderedItems[0], with: front, in: context)
+        #expect(session.orderedItems[0].role == .main)
+    }
+
+    @Test func repeatCarriesRolesRegionAndMode() throws {
+        let context = try makeContext()
+        let squat = Exercise(name: "深蹲", category: .kneeDominant, equipment: .barbell)
+        let curl = Exercise(name: "二頭彎舉", category: .accessory, equipment: .dumbbell)
+        [squat, curl].forEach(context.insert)
+        // 把補強動作放在核心的位置，再做一次時照原本的位置
+        let session = WorkoutActions.start(with: [curl, squat], roles: [.core, .main], region: .lower,
+                                           modeID: "lower3B", in: context)
+        let request = StartRequest(exercises: session.orderedItems.compactMap(\.exercise),
+                                   roles: session.orderedItems.map(\.role), region: session.region, modeID: session.modeID)
+        WorkoutActions.discard(session, in: context)
+        let again = WorkoutActions.start(with: request.exercises, roles: request.roles, region: request.region,
+                                         modeID: request.modeID, in: context)
+        #expect(again.orderedItems.map { $0.exercise?.name } == ["二頭彎舉", "深蹲"])
+        #expect(again.orderedItems.map(\.role) == [.core, .main])
+        #expect(again.region == .lower && again.modeID == "lower3B")
     }
 }

@@ -91,7 +91,7 @@ struct ExerciseEditView: View {
                 } header: {
                     Text("休息時間")
                 } footer: {
-                    Text("不自訂時依分類：\(RestDefaults.seconds(for: category)) 秒")
+                    Text("不自訂時依訓練中的角色：主項、爆發、推、拉 180 秒；單邊、核心 90 秒；補強 60 秒")
                 }
 
                 Section("備註") {
@@ -147,7 +147,7 @@ struct ExerciseEditView: View {
         note = exercise.note
         isArchived = exercise.isArchived
         customRest = exercise.restSeconds != nil
-        restSeconds = exercise.restSeconds ?? RestDefaults.seconds(for: exercise.category)
+        restSeconds = exercise.restSeconds ?? exercise.defaultRole.restSeconds
     }
 
     private func save() {

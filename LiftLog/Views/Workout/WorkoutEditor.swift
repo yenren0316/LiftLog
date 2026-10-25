@@ -72,23 +72,28 @@ struct WorkoutEditor<Header: View>: View {
         }
         .screenBackground()
         .toolbar { keyboardToolbar }
+        #if DEBUG
+        // 開發用：-openAddExercise YES 打開新增動作、-openReplace YES 打開第一個動作的換動作
+        .task {
+            let defaults = UserDefaults.standard
+            guard defaults.bool(forKey: "openAddExercise") || defaults.bool(forKey: "openReplace") else { return }
+            // 等全螢幕畫面出現後再開 sheet
+            try? await Task.sleep(for: .seconds(1))
+            if defaults.bool(forKey: "openAddExercise") { addingExercise = true }
+            if defaults.bool(forKey: "openReplace") { replacing = session.orderedItems.first }
+        }
+        #endif
         .sheet(isPresented: $addingExercise) {
-            ExercisePickerView(
-                title: "新增動作",
-                alreadyAdded: Set(session.items.compactMap { $0.exercise?.persistentModelID })
-            ) { exercise in
-                let item = WorkoutActions.add(exercise, to: session, in: context)
-                scrollTarget = item.id
+            AddExercisesSheet(alreadyAdded: Set(session.items.compactMap { $0.exercise?.id })) { exercises in
+                // 角色依動作判定
+                let items = exercises.map { WorkoutActions.add($0, to: session, in: context) }
+                scrollTarget = items.last?.id
             }
         }
         .sheet(item: $replacing) { item in
-            ExercisePickerView(title: "換動作", category: item.exercise?.category, excluding: item.exercise) { exercise in
-                if let existing = session.items.first(where: { $0.exercise === exercise }) {
-                    scrollTarget = existing.id
-                } else {
-                    clearDrafts(item)
-                    WorkoutActions.replace(item, with: exercise, in: context)
-                }
+            ReplaceExerciseSheet(item: item) { exercise, role in
+                clearDrafts(item)
+                WorkoutActions.replace(item, with: exercise, role: role, in: context)
             }
         }
         .sheet(item: $healthImportItem) { item in
@@ -132,7 +137,9 @@ struct WorkoutEditor<Header: View>: View {
                 Button { detailExercise = exercise } label: {
                     HStack(spacing: 6) {
                         Text(exercise.name).font(.title3.bold()).foregroundStyle(Theme.green)
-                        ForEach(exercise.tags) { Chip(text: $0.title) }
+                        RoleBadge(role: item.role)
+                        // 和角色同名的標籤不重複顯示
+                        ForEach(exercise.tags.filter { $0.title != item.role.title }) { Chip(text: $0.title) }
                     }
                 }
                 .buttonStyle(.plain)
@@ -140,6 +147,10 @@ struct WorkoutEditor<Header: View>: View {
                 cardMenu(item, exercise: exercise)
             }
             .id(item.id)
+
+            Text(item.role.shortGuide)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
 
             if !item.note.isEmpty {
                 Text(item.note).font(.subheadline).foregroundStyle(.secondary)
@@ -371,5 +382,18 @@ struct WorkoutEditor<Header: View>: View {
 
     private func isPresented<T>(_ binding: Binding<T?>) -> Binding<Bool> {
         Binding(get: { binding.wrappedValue != nil }, set: { if !$0 { binding.wrappedValue = nil } })
+    }
+}
+
+/// 動作卡片標題旁的角色標記
+struct RoleBadge: View {
+    var role: Role
+
+    var body: some View {
+        Text(role.title)
+            .font(.caption.weight(.bold))
+            .foregroundStyle(Theme.green)
+            .padding(.horizontal, 8).padding(.vertical, 3)
+            .overlay(Capsule().stroke(Theme.green, lineWidth: 1))
     }
 }

@@ -1,13 +1,21 @@
 import SwiftUI
 import SwiftData
 
+/// 開始訓練的內容；「再做一次」會帶入原本的角色、部位與模式
+struct StartRequest {
+    var exercises: [Exercise]
+    var roles: [Role]?
+    var region: Region = .unspecified
+    var modeID: String?
+}
+
 /// 管理進行中訓練的顯示（全螢幕／縮小橫條）與開始訓練時的衝突處理
 @Observable
 final class WorkoutCoordinator {
     /// 全螢幕顯示訓練中畫面
     var isExpanded = false
     /// 已有進行中的訓練時，等待使用者選擇「加入」或「結束並開始新的」
-    var pendingStart: [Exercise]?
+    var pendingStart: StartRequest?
     /// 剛完成的訓練摘要；有值時全螢幕畫面顯示摘要
     var summary: WorkoutSummary?
     /// 完成時沒有任何已完成的組，整次訓練已刪除
@@ -15,18 +23,27 @@ final class WorkoutCoordinator {
 
     /// 開始訓練的唯一入口：沒有進行中的訓練就直接開始；有的話先問
     func requestStart(_ exercises: [Exercise], context: ModelContext) {
+        requestStart(StartRequest(exercises: exercises), context: context)
+    }
+
+    func requestStart(_ request: StartRequest, context: ModelContext) {
         if WorkoutActions.activeSession(in: context) != nil {
-            pendingStart = exercises
+            pendingStart = request
         } else {
-            WorkoutActions.start(with: exercises, in: context)
-            isExpanded = true
+            start(request, context: context)
         }
     }
 
+    private func start(_ request: StartRequest, context: ModelContext) {
+        WorkoutActions.start(with: request.exercises, roles: request.roles, region: request.region,
+                             modeID: request.modeID, in: context)
+        isExpanded = true
+    }
+
     func addToCurrent(context: ModelContext) {
-        guard let exercises = pendingStart, let session = WorkoutActions.activeSession(in: context) else { return }
-        for exercise in exercises {
-            _ = WorkoutActions.add(exercise, to: session, in: context)
+        guard let request = pendingStart, let session = WorkoutActions.activeSession(in: context) else { return }
+        for (index, exercise) in request.exercises.enumerated() {
+            _ = WorkoutActions.add(exercise, to: session, role: request.roles?[index], in: context)
         }
         pendingStart = nil
         isExpanded = true
@@ -34,13 +51,12 @@ final class WorkoutCoordinator {
 
     /// 結束目前的訓練（刪掉未完成的組）並開始新的
     func finishCurrentAndStartNew(context: ModelContext) {
-        guard let exercises = pendingStart else { return }
+        guard let request = pendingStart else { return }
         if let session = WorkoutActions.activeSession(in: context) {
             WorkoutActions.finish(session, choice: .deleteIncomplete, in: context)
         }
         pendingStart = nil
-        WorkoutActions.start(with: exercises, in: context)
-        isExpanded = true
+        start(request, context: context)
     }
 }
 

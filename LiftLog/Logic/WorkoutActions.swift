@@ -23,8 +23,8 @@ enum WorkoutActions {
         return session
     }
 
-    /// 加入動作；已經在這次訓練裡就直接回傳那張卡片。
-    /// 組數照上次紀錄（至少一組），讓「上一次」欄可以逐組對應
+    /// 加入動作；已經在這次訓練裡就直接回傳那張卡片。role 為 nil 時依動作判定。
+    /// 組數照上次紀錄，讓「上一次」欄可以逐組對應；沒有上次紀錄時依角色
     static func add(_ exercise: Exercise, to session: WorkoutSession, role: Role? = nil, in context: ModelContext,
                     updateTitle: Bool = true) -> SessionExercise {
         if let existing = session.items.first(where: { $0.exercise === exercise }) {
@@ -34,7 +34,8 @@ enum WorkoutActions {
         let item = SessionExercise(session: session, exercise: exercise, order: (session.items.map(\.order).max() ?? -1) + 1,
                                    role: role)
         context.insert(item)
-        let count = max(1, exercise.lastSets(excluding: session).count)
+        let last = exercise.lastSets(excluding: session)
+        let count = last.isEmpty ? item.role.defaultSets : last.count
         for i in 0..<count {
             context.insert(SetRecord(sessionExercise: item, order: i, kind: kindForNewSet(exercise, index: i, session: session)))
         }
@@ -61,10 +62,12 @@ enum WorkoutActions {
         save(context)
     }
 
-    static func replace(_ item: SessionExercise, with exercise: Exercise, in context: ModelContext) {
+    /// 換動作；role 為 nil 時保留原本的角色（位置不變）
+    static func replace(_ item: SessionExercise, with exercise: Exercise, role: Role? = nil, in context: ModelContext) {
         guard let session = item.session else { return }
         let before = names(session)
         item.exercise = exercise
+        if let role { item.role = role }
         refreshTitle(session, before: before)
         save(context)
     }

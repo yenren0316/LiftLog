@@ -363,39 +363,53 @@ private struct SlotCard: View {
     }
 
     private func row(_ candidate: PlanCandidate, isFirst: Bool) -> some View {
-        let selected = state.selected?.id == candidate.id
-        return Button { onPick(candidate.id) } label: {
-            HStack(spacing: 12) {
-                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+        Button { onPick(candidate.id) } label: {
+            CandidateRow(candidate: candidate, isSelected: state.selected?.id == candidate.id,
+                         suggestion: isFirst ? .some(state.candidates.reason) : nil)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// 候選動作的一列：單選圈、名稱、標籤、「新」、建議與原因、幾天沒做（建立菜單與換動作共用）
+struct CandidateRow: View {
+    var candidate: PlanCandidate
+    var isSelected: Bool?
+    /// 有值代表是建議的那一個；內層是原因
+    var suggestion: String??
+
+    var body: some View {
+        HStack(spacing: 12) {
+            if let isSelected {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .font(.title2)
-                    .foregroundStyle(selected ? Theme.green : .secondary)
-                VStack(alignment: .leading, spacing: 4) {
+                    .foregroundStyle(isSelected ? Theme.green : .secondary)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Text(candidate.exercise.name)
+                        .font(.title3.weight(.semibold))
+                        .lineLimit(1)
+                    ForEach(candidate.exercise.tags) { Chip(text: $0.title) }
+                    if candidate.isNew { AccentChip(text: "新") }
+                }
+                if let suggestion {
                     HStack(spacing: 6) {
-                        Text(candidate.exercise.name)
-                            .font(.title3.weight(.semibold))
-                            .lineLimit(1)
-                        ForEach(candidate.exercise.tags) { Chip(text: $0.title) }
-                        if candidate.isNew { AccentChip(text: "新") }
-                    }
-                    if isFirst {
-                        HStack(spacing: 6) {
-                            AccentChip(text: "建議")
-                            if let reason = state.candidates.reason {
-                                Text(reason).font(.subheadline).foregroundStyle(Theme.green)
-                            }
+                        AccentChip(text: "建議")
+                        if let reason = suggestion {
+                            Text(reason).font(.subheadline).foregroundStyle(Theme.green)
                         }
                     }
                 }
-                Spacer(minLength: 8)
-                if let days = candidate.daysSince {
-                    Text(days == 0 ? "今天" : "\(String(days)) 天")
-                        .font(.headline.monospacedDigit())
-                        .foregroundStyle(Recency.staleness(days: days).color)
-                }
             }
-            .padding(.vertical, 10)
-            .contentShape(.rect)
+            Spacer(minLength: 8)
+            if let days = candidate.daysSince {
+                Text(days == 0 ? "今天" : "\(String(days)) 天")
+                    .font(.headline.monospacedDigit())
+                    .foregroundStyle(Recency.staleness(days: days).color)
+            }
         }
-        .buttonStyle(.plain)
+        .padding(.vertical, 10)
+        .contentShape(.rect)
     }
 }

@@ -35,7 +35,7 @@ struct WorkoutView: View {
                     Button("縮小", systemImage: "chevron.down") { coordinator.isExpanded = false }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    RestTimerMenu(defaultSeconds: session.orderedItems.last?.exercise?.effectiveRestSeconds ?? 90)
+                    RestTimerMenu(defaultSeconds: session.orderedItems.last?.restSeconds ?? 90)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
@@ -99,8 +99,8 @@ struct WorkoutView: View {
 
     /// 打勾後自動開始休息倒數（設定頁可關閉）
     private func setCompleted(_ item: SessionExercise) {
-        guard autoRestTimer, let exercise = item.exercise else { return }
-        restTimer.start(seconds: exercise.effectiveRestSeconds)
+        guard autoRestTimer else { return }
+        restTimer.start(seconds: item.restSeconds)
     }
 
     private func finish(_ choice: SetLogic.IncompleteChoice) {

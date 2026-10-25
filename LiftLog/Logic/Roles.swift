@@ -109,6 +109,11 @@ extension SessionExercise {
         get { Role(rawValue: roleRaw) ?? exercise?.defaultRole ?? .accessory }
         set { roleRaw = newValue.rawValue }
     }
+
+    /// 休息秒數：動作有個別設定時以個別設定為準，否則依角色
+    var restSeconds: Int {
+        exercise?.restSeconds ?? role.restSeconds
+    }
 }
 
 extension WorkoutSession {

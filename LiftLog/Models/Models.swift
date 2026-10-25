@@ -14,7 +14,7 @@ final class Exercise {
     var logTypeRaw: String
     var note: String
     var isArchived: Bool
-    /// 自訂休息秒數；nil 代表依分類的預設值
+    /// 自訂休息秒數；nil 代表依這次訓練的角色決定
     var restSeconds: Int?
 
     // 說明分頁（第一次啟動從 ExerciseGuides.json 匯入，之後可編輯）
@@ -72,10 +72,6 @@ final class Exercise {
     var logType: LogType {
         get { LogType(rawValue: logTypeRaw) ?? .weight }
         set { logTypeRaw = newValue.rawValue }
-    }
-
-    var effectiveRestSeconds: Int {
-        restSeconds ?? RestDefaults.seconds(for: category)
     }
 }
 

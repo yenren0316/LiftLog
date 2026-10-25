@@ -128,13 +128,3 @@ nonisolated enum SetKind: String, Codable, CaseIterable, Identifiable {
         }
     }
 }
-
-nonisolated enum RestDefaults {
-    /// 上下肢推拉六類 180 秒，其他 90 秒
-    static func seconds(for category: ExerciseCategory) -> Int {
-        switch category {
-        case .kneeDominant, .hipDominant, .horizontalPush, .horizontalPull, .verticalPush, .verticalPull: 180
-        default: 90
-        }
-    }
-}

@@ -105,10 +105,11 @@ struct SetLogicTests {
         #expect(SessionTitle.automatic(["A", "B", "C", "D"]) == "A＋B 等 4 項")
     }
 
-    @Test func restDefaults() {
-        #expect(RestDefaults.seconds(for: .horizontalPush) == 180)
-        #expect(RestDefaults.seconds(for: .hipDominant) == 180)
-        #expect(RestDefaults.seconds(for: .accessory) == 90)
-        #expect(RestDefaults.seconds(for: .cardio) == 90)
+    @Test func restAndSetsByRole() {
+        #expect([Role.main, .explosive, .push, .pull].map(\.restSeconds) == [180, 180, 180, 180])
+        #expect([Role.unilateral, .core].map(\.restSeconds) == [90, 90])
+        #expect(Role.accessory.restSeconds == 60)
+        #expect([Role.main, .explosive, .push, .pull].map(\.defaultSets) == [5, 5, 5, 5])
+        #expect([Role.unilateral, .core, .accessory, .cardio].map(\.defaultSets) == [3, 3, 3, 1])
     }
 }

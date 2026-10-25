@@ -139,6 +139,24 @@ nonisolated enum Slot: String, Hashable, Sendable {
         }
     }
 
+    /// 訓練中換動作用：依卡片的角色找回位置；模式裡有「推或拉」時推、拉都算那個位置
+    init(role: Role, modeID: String?) {
+        if role == .push || role == .pull, PlanModes.mode(id: modeID)?.slots.contains(.pushOrPull) == true {
+            self = .pushOrPull
+            return
+        }
+        switch role {
+        case .explosive: self = .explosive
+        case .main: self = .main
+        case .unilateral: self = .unilateral
+        case .push: self = .push
+        case .pull: self = .pull
+        case .core: self = .core
+        case .accessory: self = .accessory
+        case .cardio: self = .cardio
+        }
+    }
+
     func role(for exercise: PlanExercise) -> Role {
         self == .pushOrPull ? exercise.role : role
     }
@@ -171,6 +189,14 @@ nonisolated enum PlanModes {
                           PlanMode(id: "full3B", variant: "B", slots: [.explosive, .main, .pushOrPull])]
         default: []
         }
+    }
+
+    static let all: [PlanMode] = [Region.lower, .upper, .full].flatMap { region in
+        (1...3).flatMap { modes(region: region, count: $0) }
+    }
+
+    static func mode(id: String?) -> PlanMode? {
+        all.first { $0.id == id }
     }
 
     /// A、B 中不同的角色，近 30 天出現在比較少次訓練的那個模式；次數相同時 A
