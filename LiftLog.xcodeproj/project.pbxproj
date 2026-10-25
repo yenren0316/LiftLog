@@ -6,7 +6,20 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		93EE809B308E0D6D00B53D29 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 93EE809A308E0D6C00B53D29 /* WidgetKit.framework */; };
+		93EE809D308E0D6D00B53D29 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 93EE809C308E0D6D00B53D29 /* SwiftUI.framework */; };
+		93EE80AC308E0D6F00B53D29 /* LiftLogWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 93EE8098308E0D6C00B53D29 /* LiftLogWidgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
+		93EE80AA308E0D6F00B53D29 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A10000000000000000000009 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 93EE8097308E0D6C00B53D29;
+			remoteInfo = LiftLogWidgetsExtension;
+		};
 		B10000000000000000000007 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = A10000000000000000000009 /* Project object */;
@@ -16,14 +29,65 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		93EE80B1308E0D6F00B53D29 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				93EE80AC308E0D6F00B53D29 /* LiftLogWidgetsExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		93EE8098308E0D6C00B53D29 /* LiftLogWidgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LiftLogWidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		93EE809A308E0D6C00B53D29 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		93EE809C308E0D6D00B53D29 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		93EE80B4308E106900B53D29 /* LiftLogWidgetsExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = LiftLogWidgetsExtension.entitlements; sourceTree = "<group>"; };
 		A10000000000000000000001 /* LiftLog.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LiftLog.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B10000000000000000000001 /* LiftLogTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LiftLogTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		93EE80AD308E0D6F00B53D29 /* Exceptions for "LiftLogWidgets" folder in "LiftLogWidgetsExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 93EE8097308E0D6C00B53D29 /* LiftLogWidgetsExtension */;
+		};
+		93EE80B3308E0DB600B53D29 /* Exceptions for "LiftLog" folder in "LiftLog" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = A10000000000000000000006 /* LiftLog */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		93EE809E308E0D6D00B53D29 /* LiftLogWidgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				93EE80AD308E0D6F00B53D29 /* Exceptions for "LiftLogWidgets" folder in "LiftLogWidgetsExtension" target */,
+			);
+			path = LiftLogWidgets;
+			sourceTree = "<group>";
+		};
+		93EE80B5308E109F00B53D29 /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Shared;
+			sourceTree = "<group>";
+		};
 		A10000000000000000000002 /* LiftLog */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				93EE80B3308E0DB600B53D29 /* Exceptions for "LiftLog" folder in "LiftLog" target */,
+			);
 			path = LiftLog;
 			sourceTree = "<group>";
 		};
@@ -35,6 +99,15 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		93EE8095308E0D6C00B53D29 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				93EE809D308E0D6D00B53D29 /* SwiftUI.framework in Frameworks */,
+				93EE809B308E0D6D00B53D29 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A10000000000000000000003 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -52,11 +125,24 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		93EE8099308E0D6C00B53D29 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				93EE809A308E0D6C00B53D29 /* WidgetKit.framework */,
+				93EE809C308E0D6D00B53D29 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		A10000000000000000000004 = {
 			isa = PBXGroup;
 			children = (
+				93EE80B4308E106900B53D29 /* LiftLogWidgetsExtension.entitlements */,
+				93EE80B5308E109F00B53D29 /* Shared */,
 				A10000000000000000000002 /* LiftLog */,
 				B10000000000000000000002 /* LiftLogTests */,
+				93EE809E308E0D6D00B53D29 /* LiftLogWidgets */,
+				93EE8099308E0D6C00B53D29 /* Frameworks */,
 				A10000000000000000000005 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -66,6 +152,7 @@
 			children = (
 				A10000000000000000000001 /* LiftLog.app */,
 				B10000000000000000000001 /* LiftLogTests.xctest */,
+				93EE8098308E0D6C00B53D29 /* LiftLogWidgetsExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -73,6 +160,29 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		93EE8097308E0D6C00B53D29 /* LiftLogWidgetsExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 93EE80AE308E0D6F00B53D29 /* Build configuration list for PBXNativeTarget "LiftLogWidgetsExtension" */;
+			buildPhases = (
+				93EE8094308E0D6C00B53D29 /* Sources */,
+				93EE8095308E0D6C00B53D29 /* Frameworks */,
+				93EE8096308E0D6C00B53D29 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				93EE809E308E0D6D00B53D29 /* LiftLogWidgets */,
+				93EE80B5308E109F00B53D29 /* Shared */,
+			);
+			name = LiftLogWidgetsExtension;
+			packageProductDependencies = (
+			);
+			productName = LiftLogWidgetsExtension;
+			productReference = 93EE8098308E0D6C00B53D29 /* LiftLogWidgetsExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		A10000000000000000000006 /* LiftLog */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = A1000000000000000000000B /* Build configuration list for PBXNativeTarget "LiftLog" */;
@@ -80,12 +190,15 @@
 				A10000000000000000000007 /* Sources */,
 				A10000000000000000000003 /* Frameworks */,
 				A10000000000000000000008 /* Resources */,
+				93EE80B1308E0D6F00B53D29 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				93EE80AB308E0D6F00B53D29 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
+				93EE80B5308E109F00B53D29 /* Shared */,
 				A10000000000000000000002 /* LiftLog */,
 			);
 			name = LiftLog;
@@ -121,9 +234,12 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2700;
+				LastSwiftUpdateCheck = 2710;
 				LastUpgradeCheck = 2700;
 				TargetAttributes = {
+					93EE8097308E0D6C00B53D29 = {
+						CreatedOnToolsVersion = 27.1;
+					};
 					A10000000000000000000006 = {
 						CreatedOnToolsVersion = 27.1;
 					};
@@ -150,11 +266,19 @@
 			targets = (
 				A10000000000000000000006 /* LiftLog */,
 				B10000000000000000000006 /* LiftLogTests */,
+				93EE8097308E0D6C00B53D29 /* LiftLogWidgetsExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		93EE8096308E0D6C00B53D29 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A10000000000000000000008 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -172,6 +296,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		93EE8094308E0D6C00B53D29 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A10000000000000000000007 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -189,6 +320,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		93EE80AB308E0D6F00B53D29 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 93EE8097308E0D6C00B53D29 /* LiftLogWidgetsExtension */;
+			targetProxy = 93EE80AA308E0D6F00B53D29 /* PBXContainerItemProxy */;
+		};
 		B10000000000000000000008 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = A10000000000000000000006 /* LiftLog */;
@@ -197,6 +333,140 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		93EE80AF308E0D6F00B53D29 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_ENTITLEMENTS = LiftLogWidgetsExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = LiftLogWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = LiftLogWidgets;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.aaronhou.LiftLog.LiftLogWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		93EE80B0308E0D6F00B53D29 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_ENTITLEMENTS = LiftLogWidgetsExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = LiftLogWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = LiftLogWidgets;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.aaronhou.LiftLog.LiftLogWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		A1000000000000000000000C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -256,8 +526,10 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = LiftLog/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = LiftLog;
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "讀取健身 App／Apple Watch 記錄的室內步行與跑步，帶入跑步機的時間與速度。";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -269,6 +541,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.aaronhou.LiftLog;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -289,8 +562,10 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = LiftLog/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = LiftLog;
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "讀取健身 App／Apple Watch 記錄的室內步行與跑步，帶入跑步機的時間與速度。";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -302,6 +577,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.aaronhou.LiftLog;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -353,6 +629,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		93EE80AE308E0D6F00B53D29 /* Build configuration list for PBXNativeTarget "LiftLogWidgetsExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				93EE80AF308E0D6F00B53D29 /* Debug */,
+				93EE80B0308E0D6F00B53D29 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		A1000000000000000000000A /* Build configuration list for PBXProject "LiftLog" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
