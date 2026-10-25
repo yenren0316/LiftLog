@@ -318,6 +318,14 @@ CHANGE_04 刪除了 15 個從沒練過的動作（前抱式深蹲、分腿蹲、
 - 依主題深淺設定 preferredColorScheme，讓鍵盤、sheet 等系統元件一致；跟隨系統時不指定。換主題時整個畫面重建。
 - 熱身組號用 accent，MAX 組號用 warning。
 
+### 9-2. App icon
+- 斜放 45° 的啞鈴，午夜藍配色（底 #0B1220、啞鈴 #4C7DF0），扁平、沒有文字。
+- `AppIcon.appiconset` 三種外觀，都是 1024×1024 PNG：
+  - 一般（Any）：午夜藍底，沒有 alpha 通道。
+  - 深色（Dark）：透明底，系統墊上自己的深色背景。
+  - 單色（Tinted）：透明底、白色灰階圖，系統依使用者選的顏色上色。
+- 由 `tools/icon_concepts/make_appicon.py` 產生（SVG 轉 PNG 用同資料夾的 `render.swift`，只用 macOS 內建的 AppKit）。其他候選版本在 `tools/icon_concepts/` 的 `dumbbell/`、`kettlebell/` 與概念 A–C。
+
 ### 10. 備份
 - 設定頁「匯出 JSON」（ShareLink）與「從 JSON 匯入」（取代全部資料）。
 - 格式 version 4：exercises（含說明與我的筆記）、sessions（含 region、modeID、items 與 sets；item 含 role）、bodyWeights。
