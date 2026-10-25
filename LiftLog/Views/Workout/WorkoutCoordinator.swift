@@ -8,6 +8,10 @@ final class WorkoutCoordinator {
     var isExpanded = false
     /// 已有進行中的訓練時，等待使用者選擇「加入」或「結束並開始新的」
     var pendingStart: [Exercise]?
+    /// 剛完成的訓練摘要；有值時全螢幕畫面顯示摘要
+    var summary: WorkoutSummary?
+    /// 完成時沒有任何已完成的組，整次訓練已刪除
+    var showEmptyFinishNotice = false
 
     /// 開始訓練的唯一入口：沒有進行中的訓練就直接開始；有的話先問
     func requestStart(_ exercises: [Exercise], context: ModelContext) {

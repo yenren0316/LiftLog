@@ -23,14 +23,29 @@ struct RootView: View {
         }
         .environment(coordinator)
         .fullScreenCover(isPresented: Binding(
-            get: { coordinator.isExpanded && active.first != nil },
+            get: { coordinator.isExpanded && (active.first != nil || coordinator.summary != nil) },
             set: { coordinator.isExpanded = $0 }
         )) {
-            if let session = active.first {
-                WorkoutView(session: session)
-                    .environment(coordinator)
-                    .preferredColorScheme(.dark)
+            Group {
+                if let summary = coordinator.summary {
+                    WorkoutSummaryView(summary: summary) {
+                        coordinator.isExpanded = false
+                        coordinator.summary = nil
+                    }
+                } else if let session = active.first {
+                    WorkoutView(session: session)
+                }
             }
+            .environment(coordinator)
+            .preferredColorScheme(.dark)
+        }
+        .alert("沒有完成任何一組", isPresented: Binding(
+            get: { coordinator.showEmptyFinishNotice },
+            set: { coordinator.showEmptyFinishNotice = $0 }
+        )) {
+            Button("好") {}
+        } message: {
+            Text("這次訓練沒有打勾的組，已經刪除。")
         }
         .workoutStartConflictDialog(coordinator, context: context)
         .task {

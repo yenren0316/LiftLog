@@ -81,7 +81,11 @@ struct WorkoutView: View {
     }
 
     private func finish(_ choice: SetLogic.IncompleteChoice) {
-        coordinator.isExpanded = false
-        WorkoutActions.finish(session, choice: choice, in: context)
+        if WorkoutActions.finish(session, choice: choice, in: context) {
+            coordinator.summary = WorkoutSummary(session: session)
+        } else {
+            coordinator.isExpanded = false
+            coordinator.showEmptyFinishNotice = true
+        }
     }
 }
