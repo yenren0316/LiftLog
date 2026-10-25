@@ -9,12 +9,15 @@ enum WorkoutActions {
     }
 
     /// 開始新訓練。呼叫前要先確認沒有進行中的訓練。
+    /// 從建立菜單流程來的會帶 region、modeID 與每個位置的角色；其他入口的 region 在完成時依動作推算
     @discardableResult
-    static func start(with exercises: [Exercise], in context: ModelContext) -> WorkoutSession {
-        let session = WorkoutSession(startedAt: .now, title: SessionTitle.automatic(exercises.map(\.name)))
+    static func start(with exercises: [Exercise], roles: [Role]? = nil, region: Region = .unspecified,
+                      modeID: String? = nil, in context: ModelContext) -> WorkoutSession {
+        let session = WorkoutSession(startedAt: .now, title: SessionTitle.automatic(exercises.map(\.name)),
+                                     region: region, modeID: modeID)
         context.insert(session)
-        for exercise in exercises {
-            _ = add(exercise, to: session, in: context, updateTitle: false)
+        for (index, exercise) in exercises.enumerated() {
+            _ = add(exercise, to: session, role: roles?[index], in: context, updateTitle: false)
         }
         save(context)
         return session
@@ -22,13 +25,14 @@ enum WorkoutActions {
 
     /// 加入動作；已經在這次訓練裡就直接回傳那張卡片。
     /// 組數照上次紀錄（至少一組），讓「上一次」欄可以逐組對應
-    static func add(_ exercise: Exercise, to session: WorkoutSession, in context: ModelContext,
+    static func add(_ exercise: Exercise, to session: WorkoutSession, role: Role? = nil, in context: ModelContext,
                     updateTitle: Bool = true) -> SessionExercise {
         if let existing = session.items.first(where: { $0.exercise === exercise }) {
             return existing
         }
         let before = names(session)
-        let item = SessionExercise(session: session, exercise: exercise, order: (session.items.map(\.order).max() ?? -1) + 1)
+        let item = SessionExercise(session: session, exercise: exercise, order: (session.items.map(\.order).max() ?? -1) + 1,
+                                   role: role)
         context.insert(item)
         let count = max(1, exercise.lastSets(excluding: session).count)
         for i in 0..<count {
@@ -119,6 +123,9 @@ enum WorkoutActions {
             return false
         }
         for (i, item) in remaining.enumerated() { item.order = i }
+        if session.modeID == nil {
+            session.region = Region.infer(remaining.compactMap { $0.exercise?.category })
+        }
         session.endedAt = now
         save(context)
         return true

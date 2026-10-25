@@ -96,4 +96,34 @@ struct WorkoutActionsTests {
         WorkoutActions.remove(session.orderedItems[1], in: context)
         #expect(session.title == "推日")
     }
+
+    @Test func rolesAndRegionFromPlanAreKept() throws {
+        let context = try makeContext()
+        let squat = Exercise(name: "深蹲", category: .kneeDominant, equipment: .barbell)
+        let bench = Exercise(name: "臥推", category: .horizontalPush, equipment: .barbell)
+        context.insert(squat)
+        context.insert(bench)
+        let session = WorkoutActions.start(with: [squat, bench], roles: [.main, .push], region: .full,
+                                           modeID: "full2", in: context)
+        #expect(session.orderedItems.map(\.role) == [.main, .push])
+        let item = session.orderedItems[1]
+        WorkoutActions.remove(item, in: context)
+        session.orderedItems[0].sets.forEach { $0.isCompleted = true }
+        #expect(WorkoutActions.finish(session, choice: .deleteIncomplete, in: context))
+        // 從流程建立的訓練，部位以使用者選的為準
+        #expect(session.region == .full && session.modeID == "full2")
+    }
+
+    @Test func freeSessionsInferRegionWhenFinished() throws {
+        let context = try makeContext()
+        let bench = Exercise(name: "臥推", category: .horizontalPush, equipment: .barbell)
+        let curl = Exercise(name: "二頭彎舉", category: .accessory, equipment: .dumbbell)
+        context.insert(bench)
+        context.insert(curl)
+        let session = WorkoutActions.start(with: [bench, curl], in: context)
+        #expect(session.region == .unspecified)
+        #expect(session.orderedItems.map(\.role) == [.push, .accessory])
+        #expect(WorkoutActions.finish(session, choice: .completeAll, in: context))
+        #expect(session.region == .upper)
+    }
 }

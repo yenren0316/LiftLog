@@ -89,17 +89,24 @@ final class WorkoutSession {
     var note: String
     /// 從舊紀錄匯入的訓練沒有時間資訊，不顯示時長
     var hasTime: Bool
+    /// 上半身／下半身／全身／未指定（Region）
+    var regionRaw: String = "unspecified"
+    /// 建立菜單時選的組合模式，例如 lower3A；不是從流程建立的為 nil
+    var modeID: String?
 
     @Relationship(deleteRule: .cascade, inverse: \SessionExercise.session)
     var items: [SessionExercise] = []
 
-    init(id: UUID = UUID(), startedAt: Date, endedAt: Date? = nil, title: String = "", note: String = "", hasTime: Bool = true) {
+    init(id: UUID = UUID(), startedAt: Date, endedAt: Date? = nil, title: String = "", note: String = "", hasTime: Bool = true,
+         region: Region = .unspecified, modeID: String? = nil) {
         self.id = id
         self.startedAt = startedAt
         self.endedAt = endedAt
         self.title = title
         self.note = note
         self.hasTime = hasTime
+        self.regionRaw = region.rawValue
+        self.modeID = modeID
     }
 
     var isActive: Bool { endedAt == nil }
@@ -116,16 +123,19 @@ final class SessionExercise {
     var exercise: Exercise?
     var order: Int
     var note: String
+    /// 這次訓練裡的角色（Role）；空字串代表依動作推算
+    var roleRaw: String = ""
 
     @Relationship(deleteRule: .cascade, inverse: \SetRecord.sessionExercise)
     var sets: [SetRecord] = []
 
-    init(id: UUID = UUID(), session: WorkoutSession?, exercise: Exercise?, order: Int, note: String = "") {
+    init(id: UUID = UUID(), session: WorkoutSession?, exercise: Exercise?, order: Int, note: String = "", role: Role? = nil) {
         self.id = id
         self.session = session
         self.exercise = exercise
         self.order = order
         self.note = note
+        self.roleRaw = (role ?? exercise?.defaultRole)?.rawValue ?? ""
     }
 
     var orderedSets: [SetRecord] {

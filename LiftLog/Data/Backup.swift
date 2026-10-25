@@ -1,7 +1,8 @@
 import Foundation
 import SwiftData
 
-/// 備份檔格式（version 3：訓練 → 動作 → 組）。匯入時也能讀 version 2（seed.json 也是 v2）。
+/// 備份檔格式（version 4：訓練 → 動作 → 組，加上 role、region、modeID）。
+/// 匯入時也能讀 version 3（沒有那三個欄位）與 version 2（seed.json 也是 v2），缺的欄位依動作推算。
 nonisolated struct BackupFile: Codable {
     struct ExerciseRecord: Codable {
         var id: UUID
@@ -43,6 +44,8 @@ nonisolated struct BackupFile: Codable {
         var exerciseId: UUID
         var order: Int
         var note: String
+        /// v4 新增；舊版本為 nil，匯入時依動作推算
+        var role: String?
         var sets: [SetRecordData]
     }
 
@@ -53,6 +56,9 @@ nonisolated struct BackupFile: Codable {
         var title: String
         var note: String
         var hasTime: Bool
+        /// v4 新增；舊版本為 nil，匯入時依動作推算
+        var region: String?
+        var modeID: String?
         var items: [ItemRecord]
     }
 
@@ -61,7 +67,7 @@ nonisolated struct BackupFile: Codable {
         var kg: Double
     }
 
-    static let currentVersion = 3
+    static let currentVersion = 4
 
     var version: Int
     var exercises: [ExerciseRecord]
@@ -73,7 +79,7 @@ nonisolated struct BackupFile: Codable {
         decoder.dateDecodingStrategy = .iso8601
         let version = try decoder.decode(VersionProbe.self, from: data).version
         switch version {
-        case 3:
+        case 3, 4:
             return try decoder.decode(BackupFile.self, from: data)
         case 2:
             return try decoder.decode(V2.self, from: data).upgraded()
@@ -126,9 +132,9 @@ nonisolated struct BackupFile: Codable {
                 SessionRecord(
                     id: UUID(), startedAt: plan.startedAt, endedAt: plan.startedAt,
                     title: SessionTitle.automatic(plan.items.compactMap { names[$0.exerciseID] }),
-                    note: "", hasTime: false,
+                    note: "", hasTime: false, region: nil, modeID: nil,
                     items: plan.items.enumerated().map { index, item in
-                        ItemRecord(id: UUID(), exerciseId: item.exerciseID, order: index, note: item.note,
+                        ItemRecord(id: UUID(), exerciseId: item.exerciseID, order: index, note: item.note, role: nil,
                                    sets: item.sets.enumerated().map { order, s in
                                        SetRecordData(id: UUID(), order: order, kind: s.values.kind.rawValue,
                                                      weightKg: s.values.weightKg, reps: s.values.reps,
@@ -171,9 +177,11 @@ enum BackupService {
             },
             sessions: sessions.map { s in
                 .init(id: s.id, startedAt: s.startedAt, endedAt: s.endedAt, title: s.title, note: s.note, hasTime: s.hasTime,
+                      region: s.regionRaw, modeID: s.modeID,
                       items: s.orderedItems.compactMap { item in
                           guard let exerciseId = item.exercise?.id else { return nil }
                           return .init(id: item.id, exerciseId: exerciseId, order: item.order, note: item.note,
+                                       role: item.role.rawValue,
                                        sets: item.orderedSets.map { r in
                                            .init(id: r.id, order: r.order, kind: r.kindRaw, weightKg: r.weightKg, reps: r.reps,
                                                  incline: r.incline, speed: r.speed, minutes: r.minutes, seconds: r.seconds,
@@ -219,12 +227,15 @@ enum BackupService {
             byID[r.id] = exercise
         }
         for s in file.sessions {
+            let exercises = s.items.compactMap { byID[$0.exerciseId] }
+            let region = s.region.flatMap(Region.init(rawValue:)) ?? Region.infer(exercises.map(\.category))
             let session = WorkoutSession(id: s.id, startedAt: s.startedAt, endedAt: s.endedAt, title: s.title,
-                                         note: s.note, hasTime: s.hasTime)
+                                         note: s.note, hasTime: s.hasTime, region: region, modeID: s.modeID)
             context.insert(session)
             for i in s.items {
                 guard let exercise = byID[i.exerciseId] else { continue }
-                let item = SessionExercise(id: i.id, session: session, exercise: exercise, order: i.order, note: i.note)
+                let item = SessionExercise(id: i.id, session: session, exercise: exercise, order: i.order, note: i.note,
+                                           role: i.role.flatMap(Role.init(rawValue:)) ?? exercise.defaultRole)
                 context.insert(item)
                 for r in i.sets {
                     context.insert(SetRecord(

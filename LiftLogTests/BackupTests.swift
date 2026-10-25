@@ -21,10 +21,11 @@ struct BackupTests {
         source.insert(pullUp)
         source.insert(treadmill)
         let start = Date(timeIntervalSince1970: 1_790_000_000)
-        let session = WorkoutSession(startedAt: start, endedAt: start.addingTimeInterval(3600), title: "拉＋有氧", note: "累")
+        let session = WorkoutSession(startedAt: start, endedAt: start.addingTimeInterval(3600), title: "拉＋有氧", note: "累",
+                                     region: .upper, modeID: "upper1")
         source.insert(session)
         let pullItem = SessionExercise(session: session, exercise: pullUp, order: 0, note: "一邊")
-        let runItem = SessionExercise(session: session, exercise: treadmill, order: 1)
+        let runItem = SessionExercise(session: session, exercise: treadmill, order: 1, role: .accessory)
         source.insert(pullItem)
         source.insert(runItem)
         source.insert(SetRecord(sessionExercise: pullItem, order: 0, kind: .warmup, weightKg: 20, reps: 5, isCompleted: true, completedAt: start))
@@ -55,6 +56,8 @@ struct BackupTests {
         #expect(pullSets.map(\.kind) == [.warmup, .max])
         #expect(pullSets[1].weightKg == 13.75 && pullSets[1].reps == 5)
         #expect(restoredSession.orderedItems[0].note == "一邊")
+        #expect(restoredSession.region == .upper && restoredSession.modeID == "upper1")
+        #expect(restoredSession.orderedItems.map(\.roleRaw) == ["pull", "accessory"])
         #expect(restoredSession.orderedItems[1].orderedSets[0].healthWorkoutID == watch)
         #expect(try target.fetch(FetchDescriptor<BodyWeight>()).map(\.kg) == [70.8])
     }
@@ -72,12 +75,49 @@ struct BackupTests {
          "bodyWeights":[]}
         """
         let file = try BackupFile.decode(Data(json.utf8))
-        #expect(file.version == 3)
+        #expect(file.version == 4)
         #expect(file.sessions.count == 2)
         #expect(file.sessions.allSatisfy { !$0.hasTime && $0.endedAt == $0.startedAt })
         #expect(file.sessions[0].title == "臥推")
         #expect(file.sessions[0].items[0].sets.count == 5)
         #expect(file.sessions[1].items[0].sets.map(\.kind) == ["max"])
+    }
+
+    @Test func version3BackupsInferRoleAndRegion() throws {
+        let squat = UUID(), lunge = UUID(), row = UUID(), plank = UUID()
+        func ex(_ id: UUID, _ name: String, _ category: String, _ tags: String = "") -> String {
+            """
+            {"id":"\(id.uuidString)","name":"\(name)","category":"\(category)","tags":[\(tags)],"aliases":[],
+             "englishName":"","equipment":"barbell","logType":"weight","note":"","isArchived":false}
+            """
+        }
+        func item(_ id: UUID, _ order: Int) -> String {
+            """
+            {"id":"\(UUID().uuidString)","exerciseId":"\(id.uuidString)","order":\(order),"note":"","sets":[]}
+            """
+        }
+        func session(_ items: String) -> String {
+            """
+            {"id":"\(UUID().uuidString)","startedAt":"2026-06-24T12:00:00+08:00","endedAt":"2026-06-24T12:00:00+08:00",
+             "title":"","note":"","hasTime":false,"items":[\(items)]}
+            """
+        }
+        let json = """
+        {"version":3,
+         "exercises":[\(ex(squat, "深蹲", "kneeDominant")),\(ex(lunge, "側蹲", "kneeDominant", "\"unilateral\"")),
+                      \(ex(row, "坐姿 Cable 划船", "horizontalPull")),\(ex(plank, "六角槓原地踏步", "loadedCarry"))],
+         "sessions":[\(session(item(squat, 0) + "," + item(lunge, 1) + "," + item(plank, 2))),
+                     \(session(item(squat, 0) + "," + item(row, 1))),
+                     \(session(item(plank, 0)))],
+         "bodyWeights":[]}
+        """
+        let context = try makeContext()
+        try BackupService.restore(BackupFile.decode(Data(json.utf8)), into: context)
+        let sessions = try context.fetch(FetchDescriptor<WorkoutSession>()).sorted { $0.items.count > $1.items.count }
+        #expect(sessions.map(\.region) == [.lower, .full, .unspecified])
+        #expect(sessions[0].orderedItems.map(\.roleRaw) == ["main", "unilateral", "core"])
+        #expect(sessions[1].orderedItems.map(\.roleRaw) == ["main", "pull"])
+        #expect(sessions.allSatisfy { $0.modeID == nil })
     }
 
     @Test func bundledSeedConvertsToSessions() throws {
