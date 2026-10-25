@@ -10,7 +10,7 @@ struct RootView: View {
                 HomeView()
             }
             Tab("今日", systemImage: "calendar") {
-                PlaceholderScreen(title: "今日")
+                TodayView()
             }
             Tab("動作庫", systemImage: "list.bullet.rectangle") {
                 PlaceholderScreen(title: "動作庫")
