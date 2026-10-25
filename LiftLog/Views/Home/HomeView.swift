@@ -34,6 +34,15 @@ struct HomeView: View {
                 LogEntryView(exercise: exercise)
             }
         }
+        #if DEBUG
+        // 開發用：啟動參數 -openExercise 槓鈴臥推 直接打開記錄頁
+        .task {
+            if let name = UserDefaults.standard.string(forKey: "openExercise"),
+               let exercise = exercises.first(where: { $0.name == name }) {
+                path.append(exercise)
+            }
+        }
+        #endif
     }
 }
 
