@@ -91,6 +91,26 @@ struct WidgetSnapshotTests {
         #expect(WidgetSnapshot.palette(for: nil, isDark: false) == AppTheme.coolGray.palette)
     }
 
+    @Test func statusAndLink() {
+        var snapshot = WidgetSnapshot.make(history: PlanHistory([]), activeStartedAt: nil, theme: ThemeSettings())
+        #expect(snapshot.status(at: date(25), calendar: calendar) == .neverTrained)
+        #expect(snapshot.link == .new)
+        snapshot.lastSessionDate = date(23)
+        #expect(snapshot.status(at: date(25), calendar: calendar) == .trained(days: 2))
+        snapshot.isInProgress = true
+        snapshot.startedAt = date(25, 18)
+        #expect(snapshot.status(at: date(25, 18, 30), calendar: calendar) == .inProgress(startedAt: date(25, 18)))
+        #expect(snapshot.link == .workout)
+    }
+
+    @Test func timelineHasSevenMidnights() {
+        let now = date(25, 18, 7)
+        let dates = WidgetSnapshot.timelineDates(from: now, calendar: calendar)
+        #expect(dates.count == 8)
+        #expect(dates.first == now)
+        #expect(Array(dates.dropFirst()) == (26...31).map { date($0, 0) } + [calendar.date(from: DateComponents(year: 2026, month: 11, day: 1))!])
+    }
+
     @Test func storeWritesOnlyWhenChanged() throws {
         let defaults = try #require(UserDefaults(suiteName: "WidgetSnapshotTests.\(UUID().uuidString)"))
         var snapshot = WidgetSnapshot.make(history: PlanHistory([]), activeStartedAt: nil, theme: ThemeSettings())

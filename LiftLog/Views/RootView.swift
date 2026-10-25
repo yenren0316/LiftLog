@@ -18,6 +18,19 @@ struct RootView: View {
     }
 
     var body: some View {
+        #if DEBUG
+        // 開發用：-widgetGallery small｜lock｜live 顯示小工具和即時動態的預覽
+        if let page = UserDefaults.standard.string(forKey: "widgetGallery") {
+            WidgetGalleryView(page: page).preferredColorScheme(themeSettings.colorScheme)
+        } else {
+            content
+        }
+        #else
+        content
+        #endif
+    }
+
+    private var content: some View {
         // 換主題時重建畫面，讓所有 token 重新取色
         tabs
             .id(themeSettings.key)

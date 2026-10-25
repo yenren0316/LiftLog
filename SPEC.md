@@ -364,6 +364,15 @@ CHANGE_04 刪除了 15 個從沒練過的動作（前抱式深蹲、分腿蹲、
 - 網址（onOpenURL）、控制項和 App Shortcut 的 intent 都交給 `DeepLinkRouter`，由 RootView 依當下有沒有進行中的訓練導向。建立菜單由首頁開啟；如果完成摘要的全螢幕畫面還開著，先關掉再開。
 - 開發用：啟動參數 `-openURL liftlog://new` 走同一套導向（`simctl openurl` 會先跳出系統確認視窗）；`-discardActive YES` 捨棄進行中的訓練。
 
+#### 11-3. 小型小工具「上次訓練」
+- 主畫面和左側的「今天」畫面都能放（systemSmall）。小工具 kind `LastWorkoutWidget`。
+- 一般狀態：「上次訓練」→ 大字「2 天前」（今天練過顯示「今天」）→「上半身・10/23」（部位未指定時只有日期）→ 最下方「今天建議：下半身」。
+- 從來沒有紀錄：「還沒有紀錄」和「開始第一次訓練」。
+- 有進行中的訓練：「訓練中」和經過時間（`Text(startedAt, style: .timer)`，系統自己跳秒），點一下開啟 `liftlog://workout`。其他狀態點一下開啟 `liftlog://new`。
+- timeline：現在一筆，加上之後 7 天每天午夜各一筆，天數自己往上加，不需要 App 喚醒；用完（`.atEnd`）再讀一次快照。
+- 外觀：用快照裡的主題 token，跟隨系統時依小工具的深淺選深色或淺色主題；讀不到快照時深色用石墨橙、淺色用冷灰。背景用 `containerBackground`。主要數字加 `widgetAccentable`，支援著色和透明模式。
+- 畫面在 `Shared/LastWorkoutViews.swift`，小工具和 App 的開發用預覽頁（啟動參數 `-widgetGallery small`）共用。
+
 ## 初始資料
 - `tools/parse_log.py` 解析 `tools/workout_log.txt`，產生 `LiftLog/Data/seed.json`、`tools/unmatched.txt` 與 `tools/unit_review.txt`。
 - App 第一次啟動且資料庫為空時自動匯入 seed.json（v2，匯入時轉成訓練）。
