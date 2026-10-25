@@ -16,25 +16,10 @@ struct RootView: View {
                 LibraryView()
             }
             Tab("設定", systemImage: "gearshape.fill") {
-                PlaceholderScreen(title: "設定")
+                SettingsView()
             }
         }
         .task { SeedImporter.importIfNeeded(into: context) }
-    }
-}
-
-private struct PlaceholderScreen: View {
-    var title: String
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                ScreenHeader(title: title)
-                Text("施工中").foregroundStyle(.secondary).card()
-            }
-            .padding(16)
-        }
-        .screenBackground()
     }
 }
 

@@ -72,9 +72,11 @@ enum BackupService {
 
     /// 清空現有資料後寫入備份內容
     static func restore(_ file: BackupFile, into context: ModelContext) throws {
-        try context.delete(model: WorkoutEntry.self)
-        try context.delete(model: Exercise.self)
-        try context.delete(model: BodyWeight.self)
+        // 逐筆刪除：批次刪除只作用在已存檔的資料，尚未存檔的新物件會殘留
+        for entry in try context.fetch(FetchDescriptor<WorkoutEntry>()) { context.delete(entry) }
+        for exercise in try context.fetch(FetchDescriptor<Exercise>()) { context.delete(exercise) }
+        for bodyWeight in try context.fetch(FetchDescriptor<BodyWeight>()) { context.delete(bodyWeight) }
+        try context.save()
 
         var byName: [String: Exercise] = [:]
         for r in file.exercises {
