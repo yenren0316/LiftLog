@@ -199,7 +199,7 @@ enum BackupService {
             let exercise = Exercise(
                 id: r.id,
                 name: r.name,
-                category: ExerciseCategory(rawValue: r.category) ?? .accessory,
+                category: ExerciseCategory(stored: r.category) ?? .accessory,
                 tags: r.tags.compactMap(ExerciseTag.init(rawValue:)),
                 aliases: r.aliases,
                 englishName: r.englishName,
@@ -265,7 +265,7 @@ enum GuideImporter {
         var progression: String
     }
 
-    private static let importedKey = "guidesImported.v1"
+    private static let importedKey = "guidesImported.v2"
 
     /// 第一次啟動時把 bundle 的 ExerciseGuides.json 填進還沒有說明的動作（依名稱或別名對應）。
     /// 之後的編輯存在資料庫，不會被覆蓋。

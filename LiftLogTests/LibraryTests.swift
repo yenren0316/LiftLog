@@ -19,11 +19,11 @@ struct LibraryTests {
             Item(name: "滑輪下拉", equipment: .cable, count: 30),
             Item(name: "單手抓舉", tags: [.unilateral, .explosive], equipment: .dumbbell, count: 5),
             Item(name: "後腳抬高蹲", tags: [.unilateral], equipment: .dumbbell, count: 3),
-            Item(name: "背蹲舉", count: 20),
-            Item(name: "壺鈴原地起跳", tags: [.explosive], equipment: .kettlebell, count: 1),
+            Item(name: "深蹲", count: 20),
+            Item(name: "負重原地起跳", tags: [.explosive], equipment: .kettlebell, count: 1),
             Item(name: "前蹲舉", count: 0),
         ]
-        #expect(order(items) == ["背蹲舉", "前蹲舉", "後腳抬高蹲", "單手抓舉", "壺鈴原地起跳", "滑輪下拉"])
+        #expect(order(items) == ["深蹲", "前蹲舉", "後腳抬高蹲", "單手抓舉", "負重原地起跳", "滑輪下拉"])
     }
 
     @Test func explosiveWinsOverUnilateral() {

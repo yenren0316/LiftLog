@@ -2,15 +2,27 @@
  "version": 2,
  "exercises": [
   {
-   "id": "CF7CE1CF-ADC9-5F44-A9D1-CE551E1F0DCA",
-   "name": "背蹲舉",
+   "id": "F5C7B1CC-8B0E-5352-9D8F-0A2DE7B89B39",
+   "name": "深蹲",
    "category": "kneeDominant",
    "tags": [],
    "aliases": [
-    "深蹲",
-    "槓鈴深蹲",
-    "高背深蹲"
+    "背蹲舉",
+    "高背深蹲",
+    "槓鈴深蹲"
    ],
+   "englishName": "",
+   "equipment": "barbell",
+   "logType": "weight",
+   "note": "",
+   "isArchived": false
+  },
+  {
+   "id": "3C1EA460-BA04-5043-BD5C-408016D54ABE",
+   "name": "前蹲舉",
+   "category": "kneeDominant",
+   "tags": [],
+   "aliases": [],
    "englishName": "",
    "equipment": "barbell",
    "logType": "weight",
@@ -67,102 +79,19 @@
    "isArchived": false
   },
   {
-   "id": "C5FFC3AF-5AB4-5600-B3B7-3FEEA5253D05",
-   "name": "六角槓階梯上下",
-   "category": "kneeDominant",
-   "tags": [
-    "unilateral"
-   ],
-   "aliases": [],
-   "englishName": "",
-   "equipment": "barbell",
-   "logType": "weight",
-   "note": "",
-   "isArchived": false
-  },
-  {
-   "id": "EBA141A5-3A66-56D0-BB93-488137740105",
-   "name": "壺鈴原地起跳",
+   "id": "0C4B3E36-FE2F-5470-8B65-A8E94E2BC8C4",
+   "name": "負重原地起跳",
    "category": "kneeDominant",
    "tags": [
     "explosive"
    ],
-   "aliases": [],
+   "aliases": [
+    "壺鈴原地起跳"
+   ],
    "englishName": "",
    "equipment": "kettlebell",
    "logType": "weight",
-   "note": "",
-   "isArchived": false
-  },
-  {
-   "id": "3C1EA460-BA04-5043-BD5C-408016D54ABE",
-   "name": "前蹲舉",
-   "category": "kneeDominant",
-   "tags": [],
-   "aliases": [],
-   "englishName": "",
-   "equipment": "barbell",
-   "logType": "weight",
-   "note": "",
-   "isArchived": false
-  },
-  {
-   "id": "F04C8FD7-11A4-58ED-92EE-74D9324BFE6E",
-   "name": "前抱式深蹲",
-   "category": "kneeDominant",
-   "tags": [],
-   "aliases": [
-    "高腳杯深蹲",
-    "抱蹲"
-   ],
-   "englishName": "",
-   "equipment": "dumbbell",
-   "logType": "weight",
-   "note": "",
-   "isArchived": false
-  },
-  {
-   "id": "F571B760-1CF4-58EF-ACFC-FAD20224FC53",
-   "name": "分腿蹲",
-   "category": "kneeDominant",
-   "tags": [
-    "unilateral"
-   ],
-   "aliases": [],
-   "englishName": "",
-   "equipment": "dumbbell",
-   "logType": "weight",
-   "note": "",
-   "isArchived": false
-  },
-  {
-   "id": "51FBA059-2700-5407-A474-8EB76533E1CC",
-   "name": "單腳深蹲",
-   "category": "kneeDominant",
-   "tags": [
-    "unilateral"
-   ],
-   "aliases": [],
-   "englishName": "",
-   "equipment": "bodyweight",
-   "logType": "bodyweight",
-   "note": "",
-   "isArchived": false
-  },
-  {
-   "id": "18CBAD70-7520-5C7E-8E8C-82EC6FBC8C96",
-   "name": "跳箱",
-   "category": "kneeDominant",
-   "tags": [
-    "explosive"
-   ],
-   "aliases": [
-    "箱上跳"
-   ],
-   "englishName": "",
-   "equipment": "box",
-   "logType": "bodyweight",
-   "note": "",
+   "note": "啞鈴或壺鈴都可以，記單顆重量；用啞鈴時可在備註寫「啞鈴」",
    "isArchived": false
   },
   {
@@ -266,37 +195,6 @@
    "isArchived": false
   },
   {
-   "id": "7608998E-1E54-5CD9-9801-FD31FD570FF3",
-   "name": "單手壺鈴擺盪",
-   "category": "hipDominant",
-   "tags": [
-    "unilateral",
-    "explosive"
-   ],
-   "aliases": [],
-   "englishName": "",
-   "equipment": "kettlebell",
-   "logType": "weight",
-   "note": "",
-   "isArchived": false
-  },
-  {
-   "id": "316C3BA7-D22C-52B8-AA73-D27C62F47AFD",
-   "name": "彈力繩壺鈴擺盪",
-   "category": "hipDominant",
-   "tags": [
-    "explosive"
-   ],
-   "aliases": [
-    "彈力繩盪壺鈴"
-   ],
-   "englishName": "",
-   "equipment": "kettlebell",
-   "logType": "weight",
-   "note": "",
-   "isArchived": false
-  },
-  {
    "id": "11BBD12E-71BC-5226-B8E0-DA2BC158C107",
    "name": "單手抓舉",
    "category": "hipDominant",
@@ -308,47 +206,6 @@
     "單手啞鈴抓舉",
     "啞鈴抓舉"
    ],
-   "englishName": "",
-   "equipment": "dumbbell",
-   "logType": "weight",
-   "note": "",
-   "isArchived": false
-  },
-  {
-   "id": "4E1A490F-406B-55AB-8D73-A4021C6E2B68",
-   "name": "拋沙包",
-   "category": "hipDominant",
-   "tags": [
-    "explosive"
-   ],
-   "aliases": [],
-   "englishName": "",
-   "equipment": "other",
-   "logType": "weight",
-   "note": "",
-   "isArchived": false
-  },
-  {
-   "id": "B0B55799-8A9F-5A44-BA5C-267DF066D5B0",
-   "name": "早安運動",
-   "category": "hipDominant",
-   "tags": [],
-   "aliases": [],
-   "englishName": "",
-   "equipment": "barbell",
-   "logType": "weight",
-   "note": "",
-   "isArchived": false
-  },
-  {
-   "id": "B6777FB2-6233-5AC8-8933-6247F180AEBE",
-   "name": "單手分腿抓舉",
-   "category": "hipDominant",
-   "tags": [
-    "unilateral",
-    "explosive"
-   ],
-   "aliases": [],
    "englishName": "",
    "equipment": "dumbbell",
    "logType": "weight",
@@ -418,46 +275,6 @@
    "isArchived": false
   },
   {
-   "id": "50DCCECC-FC86-506D-A9C5-6E8E3211BAB4",
-   "name": "單手啞鈴臥推",
-   "category": "horizontalPush",
-   "tags": [
-    "unilateral"
-   ],
-   "aliases": [
-    "半椅單手臥推"
-   ],
-   "englishName": "",
-   "equipment": "dumbbell",
-   "logType": "weight",
-   "note": "",
-   "isArchived": false
-  },
-  {
-   "id": "1CE9F207-419E-560A-8A59-6B91A228C7B7",
-   "name": "滾木槓臥推",
-   "category": "horizontalPush",
-   "tags": [],
-   "aliases": [],
-   "englishName": "",
-   "equipment": "barbell",
-   "logType": "weight",
-   "note": "",
-   "isArchived": false
-  },
-  {
-   "id": "B0DA80C6-61A0-5FB1-97BD-EEF1BB89895D",
-   "name": "伏地挺身",
-   "category": "horizontalPush",
-   "tags": [],
-   "aliases": [],
-   "englishName": "",
-   "equipment": "bodyweight",
-   "logType": "bodyweight",
-   "note": "",
-   "isArchived": false
-  },
-  {
    "id": "32FC6DD5-C620-58EC-8CF6-31B08229B7E5",
    "name": "爆發划船",
    "category": "horizontalPull",
@@ -486,37 +303,6 @@
    "isArchived": false
   },
   {
-   "id": "B04AE399-F5E9-5B92-9A38-21E825E4D470",
-   "name": "棒式划船",
-   "category": "horizontalPull",
-   "tags": [
-    "unilateral"
-   ],
-   "aliases": [
-    "棒式啞鈴划船",
-    "棒式壺鈴划船"
-   ],
-   "englishName": "",
-   "equipment": "dumbbell",
-   "logType": "weight",
-   "note": "",
-   "isArchived": false
-  },
-  {
-   "id": "507C72F2-8367-5D59-ABDA-8E7AC648A53D",
-   "name": "單邊地雷管划船",
-   "category": "horizontalPull",
-   "tags": [
-    "unilateral"
-   ],
-   "aliases": [],
-   "englishName": "",
-   "equipment": "barbell",
-   "logType": "weight",
-   "note": "",
-   "isArchived": false
-  },
-  {
    "id": "3D24E71D-0433-5ABF-9DC3-37B485A730A1",
    "name": "坐姿 Cable 划船",
    "category": "horizontalPull",
@@ -528,36 +314,6 @@
    ],
    "englishName": "",
    "equipment": "cable",
-   "logType": "weight",
-   "note": "",
-   "isArchived": false
-  },
-  {
-   "id": "9CCEE6E5-32D6-50AA-83A5-42883B3BA76D",
-   "name": "屈體划船",
-   "category": "horizontalPull",
-   "tags": [],
-   "aliases": [
-    "曲體划船"
-   ],
-   "englishName": "",
-   "equipment": "barbell",
-   "logType": "weight",
-   "note": "",
-   "isArchived": false
-  },
-  {
-   "id": "73A893D8-F81D-5340-932D-0373BCC7878E",
-   "name": "單手啞鈴划船",
-   "category": "horizontalPull",
-   "tags": [
-    "unilateral"
-   ],
-   "aliases": [
-    "單邊划船"
-   ],
-   "englishName": "",
-   "equipment": "dumbbell",
    "logType": "weight",
    "note": "",
    "isArchived": false
@@ -605,20 +361,6 @@
    "isArchived": false
   },
   {
-   "id": "D66E16C2-F24C-5F40-B5F2-5EA34F4A6D62",
-   "name": "窄跪姿單手啞鈴肩推",
-   "category": "verticalPush",
-   "tags": [
-    "unilateral"
-   ],
-   "aliases": [],
-   "englishName": "",
-   "equipment": "dumbbell",
-   "logType": "weight",
-   "note": "",
-   "isArchived": false
-  },
-  {
    "id": "194554BD-2086-5975-843B-CBE8FB8DF75B",
    "name": "雙槓撐",
    "category": "verticalPush",
@@ -629,22 +371,6 @@
    "englishName": "",
    "equipment": "bodyweight",
    "logType": "assisted",
-   "note": "",
-   "isArchived": false
-  },
-  {
-   "id": "6F8711A2-9A14-5E5A-AB95-D2FC739D8C7B",
-   "name": "爆發上推",
-   "category": "verticalPush",
-   "tags": [
-    "explosive"
-   ],
-   "aliases": [
-    "Push Press"
-   ],
-   "englishName": "",
-   "equipment": "barbell",
-   "logType": "weight",
    "note": "",
    "isArchived": false
   },
@@ -665,21 +391,6 @@
    "isArchived": false
   },
   {
-   "id": "A1B410B5-2693-5743-A9D6-2C51A3C51961",
-   "name": "仰臥拉舉",
-   "category": "verticalPull",
-   "tags": [],
-   "aliases": [
-    "Pull over",
-    "啞鈴仰臥拉舉"
-   ],
-   "englishName": "",
-   "equipment": "dumbbell",
-   "logType": "weight",
-   "note": "",
-   "isArchived": false
-  },
-  {
    "id": "D1E6445B-24CE-5E58-A4E6-E48FFCAE8168",
    "name": "滑輪下拉",
    "category": "verticalPull",
@@ -696,7 +407,7 @@
   {
    "id": "527D1C30-364E-56BF-B891-DD1963325836",
    "name": "腹前推",
-   "category": "rotation",
+   "category": "core",
    "tags": [],
    "aliases": [],
    "englishName": "",
@@ -708,7 +419,7 @@
   {
    "id": "9078951A-5CE4-580A-AA68-6D074FD10664",
    "name": "地雷管抗旋轉",
-   "category": "rotation",
+   "category": "core",
    "tags": [],
    "aliases": [],
    "englishName": "",
@@ -720,7 +431,7 @@
   {
    "id": "B7BF3D8B-340E-5B62-9011-957CF5052FAA",
    "name": "坐姿分腿壺鈴三點搬移",
-   "category": "rotation",
+   "category": "core",
    "tags": [],
    "aliases": [],
    "englishName": "",
@@ -730,37 +441,13 @@
    "isArchived": false
   },
   {
-   "id": "E6FCB8EB-DF14-5763-A5CE-8D5657C8B0C3",
-   "name": "攪拌式",
-   "category": "rotation",
-   "tags": [],
-   "aliases": [],
-   "englishName": "",
-   "equipment": "ball",
-   "logType": "timed",
-   "note": "",
-   "isArchived": false
-  },
-  {
-   "id": "3412B4DC-49F7-5475-9002-33EFBF67F2B0",
-   "name": "單手硬舉原地踏步",
-   "category": "loadedCarry",
-   "tags": [
-    "unilateral"
-   ],
-   "aliases": [],
-   "englishName": "",
-   "equipment": "barbell",
-   "logType": "weight",
-   "note": "",
-   "isArchived": false
-  },
-  {
    "id": "B4CF8516-50FB-54B9-9843-FB490BCD88E2",
    "name": "六角槓原地踏步",
-   "category": "loadedCarry",
+   "category": "core",
    "tags": [],
-   "aliases": [],
+   "aliases": [
+    "六角槓階梯上下"
+   ],
    "englishName": "",
    "equipment": "barbell",
    "logType": "weight",
@@ -768,63 +455,71 @@
    "isArchived": false
   },
   {
-   "id": "8F35DF95-8A20-5C8A-8C2E-AA5D7DCFE663",
-   "name": "農夫走路",
-   "category": "loadedCarry",
+   "id": "A1B410B5-2693-5743-A9D6-2C51A3C51961",
+   "name": "仰臥拉舉",
+   "category": "core",
    "tags": [],
-   "aliases": [],
+   "aliases": [
+    "Pull over",
+    "啞鈴仰臥拉舉"
+   ],
    "englishName": "",
    "equipment": "dumbbell",
-   "logType": "timed",
+   "logType": "weight",
    "note": "",
    "isArchived": false
   },
   {
-   "id": "49EA10DE-F90E-53A2-9558-EB3D97A34FB0",
-   "name": "單手負重行走",
-   "category": "loadedCarry",
+   "id": "50DCCECC-FC86-506D-A9C5-6E8E3211BAB4",
+   "name": "單手啞鈴臥推",
+   "category": "core",
+   "tags": [],
+   "aliases": [
+    "半椅單手臥推"
+   ],
+   "englishName": "",
+   "equipment": "dumbbell",
+   "logType": "weight",
+   "note": "",
+   "isArchived": false
+  },
+  {
+   "id": "B04AE399-F5E9-5B92-9A38-21E825E4D470",
+   "name": "棒式划船",
+   "category": "core",
+   "tags": [],
+   "aliases": [
+    "棒式啞鈴划船",
+    "棒式壺鈴划船"
+   ],
+   "englishName": "",
+   "equipment": "dumbbell",
+   "logType": "weight",
+   "note": "",
+   "isArchived": false
+  },
+  {
+   "id": "D66E16C2-F24C-5F40-B5F2-5EA34F4A6D62",
+   "name": "窄跪姿單手啞鈴肩推",
+   "category": "core",
+   "tags": [],
+   "aliases": [],
+   "englishName": "",
+   "equipment": "dumbbell",
+   "logType": "weight",
+   "note": "",
+   "isArchived": false
+  },
+  {
+   "id": "7608998E-1E54-5CD9-9801-FD31FD570FF3",
+   "name": "單手壺鈴擺盪",
+   "category": "core",
    "tags": [
-    "unilateral"
+    "explosive"
    ],
    "aliases": [],
    "englishName": "",
-   "equipment": "dumbbell",
-   "logType": "timed",
-   "note": "",
-   "isArchived": false
-  },
-  {
-   "id": "D0B1D51C-CDBF-58FB-B551-53AA6D37448C",
-   "name": "熊爬",
-   "category": "unusualPosture",
-   "tags": [],
-   "aliases": [],
-   "englishName": "",
-   "equipment": "bodyweight",
-   "logType": "timed",
-   "note": "",
-   "isArchived": false
-  },
-  {
-   "id": "D5F6AD0C-2B23-5BC2-896F-0DA9311F0AFB",
-   "name": "懸吊",
-   "category": "unusualPosture",
-   "tags": [],
-   "aliases": [],
-   "englishName": "",
-   "equipment": "bar",
-   "logType": "timed",
-   "note": "",
-   "isArchived": false
-  },
-  {
-   "id": "679F067C-F322-5D7E-AE25-67271665CB86",
-   "name": "腹肌滾輪",
-   "category": "accessory",
-   "tags": [],
-   "aliases": [],
-   "englishName": "",
-   "equipment": "other",
+   "equipment": "kettlebell",
    "logType": "weight",
    "note": "",
    "isArchived": false
@@ -894,6 +589,84 @@
    "logType": "cardio",
    "note": "",
    "isArchived": false
+  },
+  {
+   "id": "1CE9F207-419E-560A-8A59-6B91A228C7B7",
+   "name": "滾木槓臥推",
+   "category": "horizontalPush",
+   "tags": [],
+   "aliases": [],
+   "englishName": "",
+   "equipment": "barbell",
+   "logType": "weight",
+   "note": "",
+   "isArchived": true
+  },
+  {
+   "id": "507C72F2-8367-5D59-ABDA-8E7AC648A53D",
+   "name": "單邊地雷管划船",
+   "category": "core",
+   "tags": [],
+   "aliases": [],
+   "englishName": "",
+   "equipment": "barbell",
+   "logType": "weight",
+   "note": "",
+   "isArchived": true
+  },
+  {
+   "id": "679F067C-F322-5D7E-AE25-67271665CB86",
+   "name": "腹肌滾輪",
+   "category": "core",
+   "tags": [],
+   "aliases": [],
+   "englishName": "",
+   "equipment": "other",
+   "logType": "weight",
+   "note": "",
+   "isArchived": true
+  },
+  {
+   "id": "3412B4DC-49F7-5475-9002-33EFBF67F2B0",
+   "name": "單手硬舉原地踏步",
+   "category": "core",
+   "tags": [],
+   "aliases": [],
+   "englishName": "",
+   "equipment": "barbell",
+   "logType": "weight",
+   "note": "",
+   "isArchived": true
+  },
+  {
+   "id": "316C3BA7-D22C-52B8-AA73-D27C62F47AFD",
+   "name": "彈力繩壺鈴擺盪",
+   "category": "hipDominant",
+   "tags": [
+    "explosive"
+   ],
+   "aliases": [
+    "彈力繩盪壺鈴"
+   ],
+   "englishName": "",
+   "equipment": "kettlebell",
+   "logType": "weight",
+   "note": "",
+   "isArchived": true
+  },
+  {
+   "id": "4E1A490F-406B-55AB-8D73-A4021C6E2B68",
+   "name": "拋沙包",
+   "category": "hipDominant",
+   "tags": [
+    "explosive"
+   ],
+   "aliases": [],
+   "englishName": "",
+   "equipment": "other",
+   "logType": "weight",
+   "note": "",
+   "isArchived": true
   },
   {
    "id": "5340EB2A-4507-5543-B5B1-92FDEA641369",
@@ -970,30 +743,6 @@
    "isArchived": true
   },
   {
-   "id": "A5C6FBA8-5D79-55EB-A169-A88DD02D983D",
-   "name": "肩推機",
-   "category": "verticalPush",
-   "tags": [],
-   "aliases": [],
-   "englishName": "",
-   "equipment": "machine",
-   "logType": "weight",
-   "note": "",
-   "isArchived": true
-  },
-  {
-   "id": "D39B3002-0325-5F91-A8E7-DA0453523F5C",
-   "name": "垂直舉肩訓練機",
-   "category": "accessory",
-   "tags": [],
-   "aliases": [],
-   "englishName": "",
-   "equipment": "machine",
-   "logType": "weight",
-   "note": "",
-   "isArchived": true
-  },
-  {
    "id": "F7D352C9-96A1-5A05-8AFA-6C1DC298F9D9",
    "name": "背部訓練機",
    "category": "horizontalPull",
@@ -1006,9 +755,33 @@
    "isArchived": true
   },
   {
+   "id": "A5C6FBA8-5D79-55EB-A169-A88DD02D983D",
+   "name": "肩推機",
+   "category": "verticalPush",
+   "tags": [],
+   "aliases": [],
+   "englishName": "",
+   "equipment": "machine",
+   "logType": "weight",
+   "note": "",
+   "isArchived": true
+  },
+  {
    "id": "AEBF68EC-BDF6-5652-9E16-72D0BDA5F6A2",
    "name": "背部下拉訓練機",
    "category": "verticalPull",
+   "tags": [],
+   "aliases": [],
+   "englishName": "",
+   "equipment": "machine",
+   "logType": "weight",
+   "note": "",
+   "isArchived": true
+  },
+  {
+   "id": "D39B3002-0325-5F91-A8E7-DA0453523F5C",
+   "name": "垂直舉肩訓練機",
+   "category": "accessory",
    "tags": [],
    "aliases": [],
    "englishName": "",
@@ -1065,7 +838,7 @@
    "minutes": null,
    "note": "",
    "date": "2022-10-19T12:00:00+08:00",
-   "exerciseId": "CF7CE1CF-ADC9-5F44-A9D1-CE551E1F0DCA"
+   "exerciseId": "F5C7B1CC-8B0E-5352-9D8F-0A2DE7B89B39"
   },
   {
    "weightKg": 20.0,
@@ -1329,7 +1102,7 @@
    "minutes": null,
    "note": "(65lbs+5kg一邊)",
    "date": "2023-11-13T12:00:00+08:00",
-   "exerciseId": "CF7CE1CF-ADC9-5F44-A9D1-CE551E1F0DCA"
+   "exerciseId": "F5C7B1CC-8B0E-5352-9D8F-0A2DE7B89B39"
   },
   {
    "weightKg": 20.0,
@@ -1485,7 +1258,7 @@
    "minutes": null,
    "note": "",
    "date": "2023-11-28T12:01:00+08:00",
-   "exerciseId": "EBA141A5-3A66-56D0-BB93-488137740105"
+   "exerciseId": "0C4B3E36-FE2F-5470-8B65-A8E94E2BC8C4"
   },
   {
    "weightKg": 14.0,
@@ -1545,7 +1318,7 @@
    "minutes": null,
    "note": "(80lbs一邊)",
    "date": "2023-12-04T12:00:00+08:00",
-   "exerciseId": "CF7CE1CF-ADC9-5F44-A9D1-CE551E1F0DCA"
+   "exerciseId": "F5C7B1CC-8B0E-5352-9D8F-0A2DE7B89B39"
   },
   {
    "weightKg": 20.0,
@@ -1653,7 +1426,7 @@
    "minutes": null,
    "note": "(80lbs + 1.25kg一邊)",
    "date": "2023-12-13T12:00:00+08:00",
-   "exerciseId": "CF7CE1CF-ADC9-5F44-A9D1-CE551E1F0DCA"
+   "exerciseId": "F5C7B1CC-8B0E-5352-9D8F-0A2DE7B89B39"
   },
   {
    "weightKg": 24.0,
@@ -1905,7 +1678,7 @@
    "minutes": null,
    "note": "(80lbs 一邊) 不夠下去 不標準",
    "date": "2024-08-27T12:00:00+08:00",
-   "exerciseId": "CF7CE1CF-ADC9-5F44-A9D1-CE551E1F0DCA"
+   "exerciseId": "F5C7B1CC-8B0E-5352-9D8F-0A2DE7B89B39"
   },
   {
    "weightKg": 101.64,
@@ -1977,7 +1750,7 @@
    "minutes": null,
    "note": "",
    "date": "2024-09-06T12:00:00+08:00",
-   "exerciseId": "CF7CE1CF-ADC9-5F44-A9D1-CE551E1F0DCA"
+   "exerciseId": "F5C7B1CC-8B0E-5352-9D8F-0A2DE7B89B39"
   },
   {
    "weightKg": 120.0,
@@ -2071,9 +1844,9 @@
    "incline": null,
    "speed": null,
    "minutes": null,
-   "note": "",
+   "note": "階梯上下",
    "date": "2024-09-13T12:02:00+08:00",
-   "exerciseId": "C5FFC3AF-5AB4-5600-B3B7-3FEEA5253D05"
+   "exerciseId": "B4CF8516-50FB-54B9-9843-FB490BCD88E2"
   },
   {
    "weightKg": 105.0,
@@ -2193,7 +1966,7 @@
    "minutes": null,
    "note": "",
    "date": "2024-09-29T12:00:00+08:00",
-   "exerciseId": "CF7CE1CF-ADC9-5F44-A9D1-CE551E1F0DCA"
+   "exerciseId": "F5C7B1CC-8B0E-5352-9D8F-0A2DE7B89B39"
   },
   {
    "weightKg": 15.0,
@@ -2445,7 +2218,7 @@
    "minutes": null,
    "note": "",
    "date": "2024-10-20T12:00:00+08:00",
-   "exerciseId": "CF7CE1CF-ADC9-5F44-A9D1-CE551E1F0DCA"
+   "exerciseId": "F5C7B1CC-8B0E-5352-9D8F-0A2DE7B89B39"
   },
   {
    "weightKg": 120.0,
@@ -2613,7 +2386,7 @@
    "minutes": null,
    "note": "",
    "date": "2024-11-08T12:00:00+08:00",
-   "exerciseId": "CF7CE1CF-ADC9-5F44-A9D1-CE551E1F0DCA"
+   "exerciseId": "F5C7B1CC-8B0E-5352-9D8F-0A2DE7B89B39"
   },
   {
    "weightKg": 20.0,
@@ -2697,7 +2470,7 @@
    "minutes": null,
    "note": "",
    "date": "2024-12-01T12:00:00+08:00",
-   "exerciseId": "CF7CE1CF-ADC9-5F44-A9D1-CE551E1F0DCA"
+   "exerciseId": "F5C7B1CC-8B0E-5352-9D8F-0A2DE7B89B39"
   },
   {
    "weightKg": 110.0,
@@ -2805,7 +2578,7 @@
    "minutes": null,
    "note": "",
    "date": "2024-12-13T12:00:00+08:00",
-   "exerciseId": "CF7CE1CF-ADC9-5F44-A9D1-CE551E1F0DCA"
+   "exerciseId": "F5C7B1CC-8B0E-5352-9D8F-0A2DE7B89B39"
   },
   {
    "weightKg": 30.0,
@@ -2961,7 +2734,7 @@
    "minutes": null,
    "note": "",
    "date": "2025-01-01T12:00:00+08:00",
-   "exerciseId": "CF7CE1CF-ADC9-5F44-A9D1-CE551E1F0DCA"
+   "exerciseId": "F5C7B1CC-8B0E-5352-9D8F-0A2DE7B89B39"
   },
   {
    "weightKg": 20.0,
@@ -3093,7 +2866,7 @@
    "minutes": null,
    "note": "",
    "date": "2025-01-07T12:00:00+08:00",
-   "exerciseId": "CF7CE1CF-ADC9-5F44-A9D1-CE551E1F0DCA"
+   "exerciseId": "F5C7B1CC-8B0E-5352-9D8F-0A2DE7B89B39"
   },
   {
    "weightKg": 13.61,
@@ -3321,7 +3094,7 @@
    "minutes": null,
    "note": "",
    "date": "2025-01-28T12:00:00+08:00",
-   "exerciseId": "CF7CE1CF-ADC9-5F44-A9D1-CE551E1F0DCA"
+   "exerciseId": "F5C7B1CC-8B0E-5352-9D8F-0A2DE7B89B39"
   },
   {
    "weightKg": 160.0,
@@ -3537,7 +3310,7 @@
    "minutes": null,
    "note": "",
    "date": "2025-03-13T12:00:00+08:00",
-   "exerciseId": "CF7CE1CF-ADC9-5F44-A9D1-CE551E1F0DCA"
+   "exerciseId": "F5C7B1CC-8B0E-5352-9D8F-0A2DE7B89B39"
   },
   {
    "weightKg": 24.0,
@@ -3717,7 +3490,7 @@
    "minutes": null,
    "note": "",
    "date": "2025-03-28T12:00:00+08:00",
-   "exerciseId": "CF7CE1CF-ADC9-5F44-A9D1-CE551E1F0DCA"
+   "exerciseId": "F5C7B1CC-8B0E-5352-9D8F-0A2DE7B89B39"
   },
   {
    "weightKg": 24.0,
@@ -3957,7 +3730,7 @@
    "minutes": null,
    "note": "",
    "date": "2025-04-24T12:00:00+08:00",
-   "exerciseId": "CF7CE1CF-ADC9-5F44-A9D1-CE551E1F0DCA"
+   "exerciseId": "F5C7B1CC-8B0E-5352-9D8F-0A2DE7B89B39"
   },
   {
    "weightKg": 24.0,
@@ -4125,7 +3898,7 @@
    "minutes": null,
    "note": "",
    "date": "2025-05-18T12:00:00+08:00",
-   "exerciseId": "CF7CE1CF-ADC9-5F44-A9D1-CE551E1F0DCA"
+   "exerciseId": "F5C7B1CC-8B0E-5352-9D8F-0A2DE7B89B39"
   },
   {
    "weightKg": 28.0,
@@ -4353,7 +4126,7 @@
    "minutes": null,
    "note": "",
    "date": "2025-06-12T12:00:00+08:00",
-   "exerciseId": "CF7CE1CF-ADC9-5F44-A9D1-CE551E1F0DCA"
+   "exerciseId": "F5C7B1CC-8B0E-5352-9D8F-0A2DE7B89B39"
   },
   {
    "weightKg": 28.0,
@@ -4617,7 +4390,7 @@
    "minutes": null,
    "note": "",
    "date": "2025-07-25T12:00:00+08:00",
-   "exerciseId": "CF7CE1CF-ADC9-5F44-A9D1-CE551E1F0DCA"
+   "exerciseId": "F5C7B1CC-8B0E-5352-9D8F-0A2DE7B89B39"
   },
   {
    "weightKg": 9.07,
@@ -5349,7 +5122,7 @@
    "minutes": null,
    "note": "",
    "date": "2025-12-28T12:01:00+08:00",
-   "exerciseId": "CF7CE1CF-ADC9-5F44-A9D1-CE551E1F0DCA"
+   "exerciseId": "F5C7B1CC-8B0E-5352-9D8F-0A2DE7B89B39"
   },
   {
    "weightKg": null,

@@ -123,12 +123,12 @@ struct RecencyTests {
             Ex(name: "跑步機", category: .cardio, last: nil),
             Ex(name: "臥推", category: .horizontalPush, last: date(2026, 10, 20)),
             Ex(name: "上斜臥推", category: .horizontalPush, last: date(2025, 1, 1)),
-            Ex(name: "背蹲舉", category: .kneeDominant, last: date(2026, 1, 1)),
+            Ex(name: "深蹲", category: .kneeDominant, last: date(2026, 1, 1)),
             Ex(name: "面拉", category: .accessory, last: date(2026, 10, 24)),
         ]
         let sections = Recency.sections(items, category: \.category, lastDate: \.last, name: \.name)
         #expect(sections.map(\.category) == [.kneeDominant, .horizontalPush, .accessory, .cardio])
-        #expect(!sections.contains { $0.category == .unusualPosture })
+        #expect(!sections.contains { $0.category == .core })
         // 同一區內最久沒做的在前
         #expect(sections[1].items.map(\.name) == ["上斜臥推", "臥推"])
     }

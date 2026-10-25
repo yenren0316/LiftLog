@@ -34,7 +34,7 @@ class TreadmillTests(unittest.TestCase):
 
 class NameMappingTests(unittest.TestCase):
     def test_renamed_exercises(self):
-        self.assertEqual(one("深蹲 100kg MAX")["exercise"], "背蹲舉")
+        self.assertEqual(one("深蹲 100kg MAX")["exercise"], "深蹲")
         self.assertEqual(one("臥推 60.8kg MAX")["exercise"], "臥推")
         self.assertEqual(one("槓鈴臥推 42.6 5x5")["exercise"], "臥推")
         self.assertEqual(one("肩推 30kg 3x8")["exercise"], "肩推")

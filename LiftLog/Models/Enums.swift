@@ -4,9 +4,20 @@ import Foundation
 nonisolated enum ExerciseCategory: String, Codable, CaseIterable, Identifiable {
     case kneeDominant, hipDominant
     case horizontalPush, horizontalPull, verticalPush, verticalPull
-    case rotation, loadedCarry, unusualPosture, accessory, cardio
+    case core, accessory, cardio
 
     var id: String { rawValue }
+
+    /// 讀資料庫或舊備份用：CHANGE_04 前的轉體、負重行走、違常姿勢都併入核心
+    init?(stored raw: String) {
+        switch raw {
+        case "rotation", "loadedCarry", "unusualPosture": self = .core
+        default: self.init(rawValue: raw)
+        }
+    }
+
+    var isLower: Bool { self == .kneeDominant || self == .hipDominant }
+    var isUpper: Bool { [.horizontalPush, .horizontalPull, .verticalPush, .verticalPull].contains(self) }
 
     var title: String {
         switch self {
@@ -16,9 +27,7 @@ nonisolated enum ExerciseCategory: String, Codable, CaseIterable, Identifiable {
         case .horizontalPull: "上肢水平拉"
         case .verticalPush: "上肢垂直推"
         case .verticalPull: "上肢垂直拉"
-        case .rotation: "轉體"
-        case .loadedCarry: "負重行走"
-        case .unusualPosture: "違常姿勢"
+        case .core: "核心"
         case .accessory: "補強"
         case .cardio: "有氧"
         }

@@ -55,7 +55,7 @@ final class Exercise {
     }
 
     var category: ExerciseCategory {
-        get { ExerciseCategory(rawValue: categoryRaw) ?? .accessory }
+        get { ExerciseCategory(stored: categoryRaw) ?? .accessory }
         set { categoryRaw = newValue.rawValue }
     }
 
@@ -211,10 +211,10 @@ final class BodyWeight {
 enum LiftLogStore {
     static let schema = Schema([Exercise.self, WorkoutSession.self, SessionExercise.self, SetRecord.self, BodyWeight.self])
 
-    /// CHANGE_02 改用新的檔名（手機上還沒有資料），舊的資料庫直接忽略
+    /// CHANGE_04 動作庫重整，改用新的檔名重新匯入（手機上還沒有資料），舊的資料庫直接忽略
     static func makeContainer() -> ModelContainer {
         do {
-            return try ModelContainer(for: schema, configurations: ModelConfiguration("LiftLog3", schema: schema))
+            return try ModelContainer(for: schema, configurations: ModelConfiguration("LiftLog4", schema: schema))
         } catch {
             fatalError("無法開啟資料庫：\(error)")
         }

@@ -7,7 +7,7 @@ struct ExerciseListsTests {
     private let bench = Exercise(name: "臥推", category: .horizontalPush, aliases: ["槓鈴臥推"], equipment: .barbell)
     private let chestMachine = Exercise(name: "胸推訓練機", category: .horizontalPush, equipment: .machine, isArchived: true)
     private let pushUp = Exercise(name: "伏地挺身", category: .horizontalPush, equipment: .bodyweight, logType: .bodyweight)
-    private let squat = Exercise(name: "背蹲舉", category: .kneeDominant, equipment: .barbell)
+    private let squat = Exercise(name: "深蹲", category: .kneeDominant, equipment: .barbell)
 
     private var all: [Exercise] { [bench, chestMachine, pushUp, squat] }
 
@@ -20,7 +20,7 @@ struct ExerciseListsTests {
 
     @Test func archivedNeverInPicker() {
         let add = ExerciseLists.picker(all, category: nil, excluding: nil, query: "").map(\.name)
-        #expect(Set(add) == ["臥推", "伏地挺身", "背蹲舉"])
+        #expect(Set(add) == ["臥推", "伏地挺身", "深蹲"])
         let replace = ExerciseLists.picker(all, category: .horizontalPush, excluding: bench, query: "").map(\.name)
         #expect(replace == ["伏地挺身"])
         // 搜尋比對別名
@@ -29,9 +29,9 @@ struct ExerciseListsTests {
 
     @Test func untrainedLastInPickerSections() {
         struct Item { var name: String; var last: Date? }
-        let items = [Item(name: "前蹲舉", last: nil), Item(name: "背蹲舉", last: .now), Item(name: "側蹲", last: .distantPast)]
+        let items = [Item(name: "前蹲舉", last: nil), Item(name: "深蹲", last: .now), Item(name: "側蹲", last: .distantPast)]
         let pickerOrder = Recency.sortedByNeglect(items, lastDate: \.last, name: \.name, untrainedLast: true).map(\.name)
-        #expect(pickerOrder == ["側蹲", "背蹲舉", "前蹲舉"])
+        #expect(pickerOrder == ["側蹲", "深蹲", "前蹲舉"])
         let defaultOrder = Recency.sortedByNeglect(items, lastDate: \.last, name: \.name).map(\.name)
         #expect(defaultOrder.first == "前蹲舉")
     }

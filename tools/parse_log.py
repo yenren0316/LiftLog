@@ -22,26 +22,22 @@ ID_NAMESPACE = uuid.UUID("6f1d3c52-8a4e-4b7a-9c1e-2f5b7d9e0a11")
 
 
 # ---------------------------------------------------------------- 動作庫
-def ex(name, category, tags, aliases, equipment, log_type, archived=False):
+def ex(name, category, tags, aliases, equipment, log_type, archived=False, note=""):
     return dict(name=name, category=category, tags=tags, aliases=aliases,
-                equipment=equipment, logType=log_type, archived=archived)
+                equipment=equipment, logType=log_type, archived=archived, note=note)
 
 
 U, X = "unilateral", "explosive"
 
 EXERCISES = [
     # 下肢推（膝主導）
-    ex("背蹲舉", "kneeDominant", [], ["深蹲", "槓鈴深蹲", "高背深蹲"], "barbell", "weight"),
+    ex("深蹲", "kneeDominant", [], ["背蹲舉", "高背深蹲", "槓鈴深蹲"], "barbell", "weight"),
+    ex("前蹲舉", "kneeDominant", [], [], "barbell", "weight"),
     ex("後腳抬高蹲", "kneeDominant", [U], ["保加利亞分腿蹲", "保加利亞蹲", "槓鈴保加利亞蹲", "槓鈴保加利亞分腿蹲"], "dumbbell", "weight"),
     ex("高背槓分腿蹲", "kneeDominant", [U], [], "barbell", "weight"),
     ex("側蹲", "kneeDominant", [U], ["地震側蹲"], "dumbbell", "weight"),
-    ex("六角槓階梯上下", "kneeDominant", [U], [], "barbell", "weight"),
-    ex("壺鈴原地起跳", "kneeDominant", [X], [], "kettlebell", "weight"),
-    ex("前蹲舉", "kneeDominant", [], [], "barbell", "weight"),
-    ex("前抱式深蹲", "kneeDominant", [], ["高腳杯深蹲", "抱蹲"], "dumbbell", "weight"),
-    ex("分腿蹲", "kneeDominant", [U], [], "dumbbell", "weight"),
-    ex("單腳深蹲", "kneeDominant", [U], [], "bodyweight", "bodyweight"),
-    ex("跳箱", "kneeDominant", [X], ["箱上跳"], "box", "bodyweight"),
+    ex("負重原地起跳", "kneeDominant", [X], ["壺鈴原地起跳"], "kettlebell", "weight",
+       note="啞鈴或壺鈴都可以，記單顆重量；用啞鈴時可在備註寫「啞鈴」"),
     # 下肢拉（髖主導）
     ex("傳統硬舉", "hipDominant", [], ["硬舉"], "barbell", "weight"),
     ex("六角槓硬舉", "hipDominant", [], [], "barbell", "weight"),
@@ -50,72 +46,60 @@ EXERCISES = [
     ex("單腳 RDL", "hipDominant", [U], ["單腳羅馬尼亞式硬舉", "單腳啞鈴 RDL", "單側 RDL"], "dumbbell", "weight"),
     ex("臀推", "hipDominant", [], [], "barbell", "weight"),
     ex("壺鈴擺盪", "hipDominant", [X], ["盪壺鈴", "雙手壺鈴擺盪"], "kettlebell", "weight"),
-    ex("單手壺鈴擺盪", "hipDominant", [U, X], [], "kettlebell", "weight"),
-    ex("彈力繩壺鈴擺盪", "hipDominant", [X], ["彈力繩盪壺鈴"], "kettlebell", "weight"),
     ex("單手抓舉", "hipDominant", [U, X], ["單手啞鈴抓舉", "啞鈴抓舉"], "dumbbell", "weight"),
-    ex("拋沙包", "hipDominant", [X], [], "other", "weight"),
-    ex("早安運動", "hipDominant", [], [], "barbell", "weight"),
-    ex("單手分腿抓舉", "hipDominant", [U, X], [], "dumbbell", "weight"),
     # 上肢水平推
     ex("臥推", "horizontalPush", [], ["槓鈴臥推"], "barbell", "weight"),
     ex("上斜臥推", "horizontalPush", [], [], "barbell", "weight"),
     ex("地板臥推", "horizontalPush", [], [], "barbell", "weight"),
     ex("啞鈴臥推", "horizontalPush", [], [], "dumbbell", "weight"),
     ex("地板啞鈴臥推", "horizontalPush", [], [], "dumbbell", "weight"),
-    ex("單手啞鈴臥推", "horizontalPush", [U], ["半椅單手臥推"], "dumbbell", "weight"),
-    ex("滾木槓臥推", "horizontalPush", [], [], "barbell", "weight"),
-    ex("伏地挺身", "horizontalPush", [], [], "bodyweight", "bodyweight"),
     # 上肢水平拉
     ex("爆發划船", "horizontalPull", [X], [], "barbell", "weight"),
     ex("反式划船", "horizontalPull", [], ["反式滑船"], "bodyweight", "bodyweight"),
-    ex("棒式划船", "horizontalPull", [U], ["棒式啞鈴划船", "棒式壺鈴划船"], "dumbbell", "weight"),
-    ex("單邊地雷管划船", "horizontalPull", [U], [], "barbell", "weight"),
     ex("坐姿 Cable 划船", "horizontalPull", [], ["坐姿划船", "Cable 划船", "坐姿cable划船"], "cable", "weight"),
-    ex("屈體划船", "horizontalPull", [], ["曲體划船"], "barbell", "weight"),
-    ex("單手啞鈴划船", "horizontalPull", [U], ["單邊划船"], "dumbbell", "weight"),
     # 上肢垂直推
     ex("肩推", "verticalPush", [], ["站姿槓鈴肩推", "槓鈴肩推"], "barbell", "weight"),
     ex("坐姿槓鈴肩推", "verticalPush", [], [], "barbell", "weight"),
     ex("坐姿啞鈴肩推", "verticalPush", [], ["啞鈴肩推", "坐姿肩推"], "dumbbell", "weight"),
-    ex("窄跪姿單手啞鈴肩推", "verticalPush", [U], [], "dumbbell", "weight"),
     ex("雙槓撐", "verticalPush", [], ["雙槓撐輔助"], "bodyweight", "assisted"),
-    ex("爆發上推", "verticalPush", [X], ["Push Press"], "barbell", "weight"),
     # 上肢垂直拉
     ex("輔助引體向上", "verticalPull", [], ["引體向上輔助", "引體向上", "自重引體向上"], "bodyweight", "assisted"),
-    ex("仰臥拉舉", "verticalPull", [], ["Pull over", "啞鈴仰臥拉舉"], "dumbbell", "weight"),
     ex("滑輪下拉", "verticalPull", [], ["Cable 滑輪下拉"], "cable", "weight"),
-    # 轉體
-    ex("腹前推", "rotation", [], [], "cable", "weight"),
-    ex("地雷管抗旋轉", "rotation", [], [], "barbell", "weight"),
-    ex("坐姿分腿壺鈴三點搬移", "rotation", [], [], "kettlebell", "weight"),
-    ex("攪拌式", "rotation", [], [], "ball", "timed"),
-    # 負重行走
-    ex("單手硬舉原地踏步", "loadedCarry", [U], [], "barbell", "weight"),
-    ex("六角槓原地踏步", "loadedCarry", [], [], "barbell", "weight"),
-    ex("農夫走路", "loadedCarry", [], [], "dumbbell", "timed"),
-    ex("單手負重行走", "loadedCarry", [U], [], "dumbbell", "timed"),
-    # 違常姿勢
-    ex("熊爬", "unusualPosture", [], [], "bodyweight", "timed"),
-    ex("懸吊", "unusualPosture", [], [], "bar", "timed"),
+    # 核心
+    ex("腹前推", "core", [], [], "cable", "weight"),
+    ex("地雷管抗旋轉", "core", [], [], "barbell", "weight"),
+    ex("坐姿分腿壺鈴三點搬移", "core", [], [], "kettlebell", "weight"),
+    ex("六角槓原地踏步", "core", [], ["六角槓階梯上下"], "barbell", "weight"),
+    ex("仰臥拉舉", "core", [], ["Pull over", "啞鈴仰臥拉舉"], "dumbbell", "weight"),
+    ex("單手啞鈴臥推", "core", [], ["半椅單手臥推"], "dumbbell", "weight"),
+    ex("棒式划船", "core", [], ["棒式啞鈴划船", "棒式壺鈴划船"], "dumbbell", "weight"),
+    ex("窄跪姿單手啞鈴肩推", "core", [], [], "dumbbell", "weight"),
+    ex("單手壺鈴擺盪", "core", [X], [], "kettlebell", "weight"),
     # 補強
-    ex("腹肌滾輪", "accessory", [], [], "other", "weight"),
     ex("三頭肌滑輪下拉", "accessory", [], ["三頭下拉", "三頭滑輪下拉"], "cable", "weight"),
     ex("二頭彎舉", "accessory", [], [], "dumbbell", "weight"),
     ex("面拉", "accessory", [], [], "cable", "weight"),
     ex("YTW", "accessory", [], [], "dumbbell", "weight"),
     # 有氧
     ex("跑步機", "cardio", [], ["室內步行", "跑步"], "other", "cardio"),
-    # 固定軌道的機台：封存（不出現在預設清單，歷史保留）
+    # 封存：不出現在預設清單，歷史保留
+    ex("滾木槓臥推", "horizontalPush", [], [], "barbell", "weight", archived=True),
+    ex("單邊地雷管划船", "core", [], [], "barbell", "weight", archived=True),
+    ex("腹肌滾輪", "core", [], [], "other", "weight", archived=True),
+    ex("單手硬舉原地踏步", "core", [], [], "barbell", "weight", archived=True),
+    ex("彈力繩壺鈴擺盪", "hipDominant", [X], ["彈力繩盪壺鈴"], "kettlebell", "weight", archived=True),
+    ex("拋沙包", "hipDominant", [X], [], "other", "weight", archived=True),
+    # 固定軌道的機台
     ex("腿推機", "kneeDominant", [], [], "machine", "weight", archived=True),
     ex("深蹲訓練機", "kneeDominant", [], [], "machine", "weight", archived=True),
     ex("超級深蹲訓練架", "kneeDominant", [], [], "machine", "weight", archived=True),
     ex("腿部伸張機", "kneeDominant", [], [], "machine", "weight", archived=True),
     ex("臥姿腿彎舉機", "hipDominant", [], ["臥姿腿部彎曲機"], "machine", "weight", archived=True),
     ex("胸推訓練機", "horizontalPush", [], [], "machine", "weight", archived=True),
-    ex("肩推機", "verticalPush", [], [], "machine", "weight", archived=True),
-    ex("垂直舉肩訓練機", "accessory", [], [], "machine", "weight", archived=True),
     ex("背部訓練機", "horizontalPull", [], [], "machine", "weight", archived=True),
+    ex("肩推機", "verticalPush", [], [], "machine", "weight", archived=True),
     ex("背部下拉訓練機", "verticalPull", [], [], "machine", "weight", archived=True),
+    ex("垂直舉肩訓練機", "accessory", [], [], "machine", "weight", archived=True),
 ]
 EX_BY_NAME = {e["name"]: e for e in EXERCISES}
 
@@ -129,6 +113,7 @@ VARIANT_NOTES = {
     "Cable 滑輪下拉": "Cable",
     "單腳啞鈴 RDL": "啞鈴",
     "跑步": "跑步",
+    "六角槓階梯上下": "階梯上下",
 }
 
 
@@ -425,7 +410,7 @@ def main():
         version=2,
         exercises=[dict(id=exercise_id(e["name"]), name=e["name"], category=e["category"], tags=e["tags"],
                         aliases=e["aliases"], englishName="", equipment=e["equipment"], logType=e["logType"],
-                        note="", isArchived=e["archived"])
+                        note=e["note"], isArchived=e["archived"])
                    for e in EXERCISES],
         entries=entries,
         bodyWeights=body_weights,
