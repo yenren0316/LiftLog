@@ -52,7 +52,7 @@ nonisolated enum ExerciseTag: String, Codable, CaseIterable, Identifiable {
 }
 
 nonisolated enum Equipment: String, Codable, CaseIterable, Identifiable {
-    case barbell, dumbbell, kettlebell, machine, cable, bodyweight, other
+    case barbell, dumbbell, kettlebell, machine, cable, bodyweight, box, ball, bar, other
 
     var id: String { rawValue }
 
@@ -64,6 +64,9 @@ nonisolated enum Equipment: String, Codable, CaseIterable, Identifiable {
         case .machine: "機械"
         case .cable: "Cable"
         case .bodyweight: "自重"
+        case .box: "跳箱"
+        case .ball: "抗力球"
+        case .bar: "單槓"
         case .other: "其他"
         }
     }
@@ -79,7 +82,7 @@ nonisolated enum Equipment: String, Codable, CaseIterable, Identifiable {
 }
 
 nonisolated enum LogType: String, Codable, CaseIterable, Identifiable {
-    case weight, assisted, cardio
+    case weight, assisted, bodyweight, timed, cardio
 
     var id: String { rawValue }
 
@@ -87,6 +90,8 @@ nonisolated enum LogType: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .weight: "重量 × 次 × 組"
         case .assisted: "輔助重量"
+        case .bodyweight: "自重次數（負重選填）"
+        case .timed: "計時（秒）"
         case .cardio: "有氧"
         }
     }

@@ -8,6 +8,7 @@ nonisolated struct SetValues: Equatable, Sendable {
     var incline: Double?
     var speed: Double?
     var minutes: Double?
+    var seconds: Double?
     var isCompleted = false
     var completedAt: Date?
 }
@@ -33,7 +34,13 @@ nonisolated enum SetLogic {
         v.incline = entered.incline ?? placeholder?.incline
         v.speed = entered.speed ?? placeholder?.speed
         v.minutes = entered.minutes ?? placeholder?.minutes
+        v.seconds = entered.seconds ?? placeholder?.seconds
         return v
+    }
+
+    /// timed 型的負重是否必填（農夫走路這類負重行走）
+    static func timedRequiresLoad(_ equipment: Equipment) -> Bool {
+        [.dumbbell, .kettlebell, .barbell].contains(equipment)
     }
 
     /// 打勾需要的欄位是否齊全；不齊全時該列晃動、不標記完成
@@ -44,8 +51,12 @@ nonisolated enum SetLogic {
         case .assisted:
             return v.weightKg != nil && v.reps != nil
         case .weight:
-            // 自重動作（反式划船等）不一定有重量
+            // 自重器材的動作不一定有重量
             return v.reps != nil && (v.weightKg != nil || equipment == .bodyweight)
+        case .bodyweight:
+            return v.reps != nil
+        case .timed:
+            return v.seconds != nil && (v.weightKg != nil || !timedRequiresLoad(equipment))
         }
     }
 
@@ -75,33 +86,43 @@ nonisolated enum SetLogic {
         }
     }
 
-    // MARK: 新紀錄
+    // MARK: 新紀錄與趨勢
 
-    /// 計算新紀錄用的組：已完成的正式組或 MAX 組，不含熱身
-    static func countsForRecord(_ s: SetValues) -> Bool {
-        s.isCompleted && s.kind != .warmup && s.weightKg != nil
+    /// 一組的成績（越大越好，assisted 例外）：
+    /// weight／assisted 用重量；bodyweight 用次數；timed 有負重用負重、沒有用秒數
+    static func metric(_ s: SetValues, logType: LogType, loaded: Bool) -> Double? {
+        switch logType {
+        case .weight, .assisted: s.weightKg
+        case .bodyweight: s.reps.map(Double.init)
+        case .timed: loaded ? s.weightKg : s.seconds
+        case .cardio: nil
+        }
     }
 
-    /// 這次訓練的最佳值（weight 型取最重，assisted 型取輔助最少）
+    /// 計算紀錄用的組：已完成的正式組或 MAX 組，不含熱身
+    static func countsForRecord(_ s: SetValues) -> Bool {
+        s.isCompleted && s.kind != .warmup
+    }
+
+    static func lowerIsBetter(_ logType: LogType) -> Bool {
+        logType == .assisted
+    }
+
+    /// 最佳值：weight 取最重，assisted 取輔助最少，bodyweight 取最多次，timed 取最重負重或最長秒數
     static func best(_ sets: [SetValues], logType: LogType) -> Double? {
-        let weights = sets.filter(countsForRecord).compactMap(\.weightKg)
-        switch logType {
-        case .weight: return weights.max()
-        case .assisted: return weights.min()
-        case .cardio: return nil
-        }
+        let counted = sets.filter(countsForRecord)
+        let loaded = counted.contains { $0.weightKg != nil }
+        let values = counted.compactMap { metric($0, logType: logType, loaded: loaded) }
+        return lowerIsBetter(logType) ? values.min() : values.max()
     }
 
     /// 新紀錄：這次的最佳值超越以往所有紀錄。沒有歷史紀錄時不算新紀錄。
     static func isNewRecord(session: [SetValues], history: [SetValues], logType: LogType) -> Bool {
-        guard let now = best(session, logType: logType),
+        guard logType != .cardio,
+              let now = best(session, logType: logType),
               let before = best(history, logType: logType)
         else { return false }
-        switch logType {
-        case .weight: return now > before
-        case .assisted: return now < before
-        case .cardio: return false
-        }
+        return lowerIsBetter(logType) ? now < before : now > before
     }
 
     // MARK: 幾天前
@@ -118,7 +139,7 @@ nonisolated enum SetFormat {
     /// - 每組不同：「60×5、65×3、70×1 (MAX)」
     /// - 跑步機：「坡度 12%・4.0 km/h・30 分」
     /// 熱身組不列入
-    static func compact(_ sets: [SetValues], logType: LogType) -> String {
+    static func compact(_ sets: [SetValues], logType: LogType, unit: WeightUnit = .kg) -> String {
         let working = sets.filter { $0.kind != .warmup }
         guard !working.isEmpty else { return "—" }
 
@@ -127,11 +148,17 @@ nonisolated enum SetFormat {
         }
 
         let first = working[0]
-        let allSame = working.allSatisfy { $0.weightKg == first.weightKg && $0.reps == first.reps && $0.kind == first.kind }
+        let allSame = working.allSatisfy {
+            $0.weightKg == first.weightKg && $0.reps == first.reps && $0.seconds == first.seconds && $0.kind == first.kind
+        }
         if allSame {
             var parts: [String] = []
-            if let w = first.weightKg { parts.append(weightText(w, logType: logType)) }
-            if let r = first.reps { parts.append("\(r) 下") }
+            if let w = first.weightKg { parts.append(weightText(w, logType: logType, unit: unit)) }
+            if logType == .timed {
+                if let s = first.seconds { parts.append("\(Units.number(s)) 秒") }
+            } else if let r = first.reps {
+                parts.append("\(r) 下")
+            }
             if working.count > 1 { parts.append("\(working.count) 組") }
             var text = parts.isEmpty ? "\(working.count) 組" : parts.joined(separator: " × ")
             if first.kind == .max { text += " (MAX)" }
@@ -140,9 +167,11 @@ nonisolated enum SetFormat {
 
         let prefix = logType == .assisted ? "輔助 " : ""
         return prefix + working.map { s in
-            let w = s.weightKg.map(Units.number) ?? "—"
-            let r = s.reps.map(String.init) ?? "—"
-            return "\(w)×\(r)" + (s.kind == .max ? " (MAX)" : "")
+            let amount: String = logType == .timed
+                ? (s.seconds.map { "\(Units.number($0)) 秒" } ?? "—")
+                : (s.reps.map(String.init) ?? "—")
+            let text = s.weightKg.map { "\(unit.format(kg: $0))×\(amount)" } ?? amount
+            return text + (s.kind == .max ? " (MAX)" : "")
         }.joined(separator: "、")
     }
 
@@ -154,31 +183,40 @@ nonisolated enum SetFormat {
         return parts.isEmpty ? "—" : parts.joined(separator: "・")
     }
 
-    /// 「上一次」欄的短格式：60 × 5、輔助 12 × 5
-    static func short(_ s: SetValues, logType: LogType) -> String {
-        if logType == .cardio {
+    /// 「上一次」欄的短格式：60 × 5、12 (+10)、45″ (+20)
+    static func short(_ s: SetValues, logType: LogType, unit: WeightUnit = .kg) -> String {
+        let w = s.weightKg.map { unit.format(kg: $0) }
+        switch logType {
+        case .cardio:
             // 欄位窄，只放數字：12%·4.0·30′
             var parts: [String] = []
             if let incline = s.incline { parts.append("\(Units.number(incline))%") }
             if let speed = s.speed { parts.append(speed.formatted(.number.precision(.fractionLength(1)))) }
             if let minutes = s.minutes { parts.append("\(Units.number(minutes))′") }
             return parts.isEmpty ? "—" : parts.joined(separator: "·")
-        }
-        let w = s.weightKg.map(Units.number)
-        let r = s.reps.map(String.init)
-        switch (w, r) {
-        case let (w?, r?): return "\(w) × \(r)"
-        case let (w?, nil): return w
-        case let (nil, r?): return "\(r) 下"
-        default: return "—"
+        case .bodyweight:
+            guard let r = s.reps else { return "—" }
+            return w.map { "\(r) (+\($0))" } ?? String(r)
+        case .timed:
+            guard let sec = s.seconds else { return "—" }
+            return "\(Units.number(sec))″" + (w.map { " (+\($0))" } ?? "")
+        case .weight, .assisted:
+            let r = s.reps.map(String.init)
+            switch (w, r) {
+            case let (w?, r?): return "\(w) × \(r)"
+            case let (w?, nil): return w
+            case let (nil, r?): return "\(r) 下"
+            default: return "—"
+            }
         }
     }
 
-    private static func weightText(_ w: Double, logType: LogType) -> String {
-        if logType == .assisted {
-            return w == 0 ? "自重" : "輔助 \(Units.number(w)) kg"
+    private static func weightText(_ w: Double, logType: LogType, unit: WeightUnit) -> String {
+        switch logType {
+        case .assisted: w == 0 ? "自重" : "輔助 \(unit.formatWithUnit(kg: w))"
+        case .bodyweight, .timed: "+\(unit.formatWithUnit(kg: w))"
+        default: unit.formatWithUnit(kg: w)
         }
-        return "\(Units.number(w)) kg"
     }
 }
 

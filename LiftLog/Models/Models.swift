@@ -141,6 +141,8 @@ final class SetRecord {
     var incline: Double?
     var speed: Double?
     var minutes: Double?
+    /// timed 型的秒數
+    var seconds: Double?
     var isCompleted: Bool
     var completedAt: Date?
     /// 從 Apple Watch 帶入時記下的 HKWorkout uuid，避免重複帶入
@@ -156,6 +158,7 @@ final class SetRecord {
         incline: Double? = nil,
         speed: Double? = nil,
         minutes: Double? = nil,
+        seconds: Double? = nil,
         isCompleted: Bool = false,
         completedAt: Date? = nil,
         healthWorkoutID: UUID? = nil
@@ -169,6 +172,7 @@ final class SetRecord {
         self.incline = incline
         self.speed = speed
         self.minutes = minutes
+        self.seconds = seconds
         self.isCompleted = isCompleted
         self.completedAt = completedAt
         self.healthWorkoutID = healthWorkoutID
@@ -181,7 +185,7 @@ final class SetRecord {
 
     var values: SetValues {
         SetValues(kind: kind, weightKg: weightKg, reps: reps, incline: incline, speed: speed, minutes: minutes,
-                  isCompleted: isCompleted, completedAt: completedAt)
+                  seconds: seconds, isCompleted: isCompleted, completedAt: completedAt)
     }
 }
 

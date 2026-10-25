@@ -26,6 +26,7 @@ nonisolated struct BackupFile: Codable {
         var incline: Double?
         var speed: Double?
         var minutes: Double?
+        var seconds: Double?
         var isCompleted: Bool
         var completedAt: Date?
         var healthWorkoutID: UUID?
@@ -126,7 +127,7 @@ nonisolated struct BackupFile: Codable {
                                        SetRecordData(id: UUID(), order: order, kind: s.values.kind.rawValue,
                                                      weightKg: s.values.weightKg, reps: s.values.reps,
                                                      incline: s.values.incline, speed: s.values.speed,
-                                                     minutes: s.values.minutes, isCompleted: s.values.isCompleted,
+                                                     minutes: s.values.minutes, seconds: nil, isCompleted: s.values.isCompleted,
                                                      completedAt: s.values.completedAt, healthWorkoutID: s.healthWorkoutID)
                                    })
                     }
@@ -167,7 +168,7 @@ enum BackupService {
                           return .init(id: item.id, exerciseId: exerciseId, order: item.order, note: item.note,
                                        sets: item.orderedSets.map { r in
                                            .init(id: r.id, order: r.order, kind: r.kindRaw, weightKg: r.weightKg, reps: r.reps,
-                                                 incline: r.incline, speed: r.speed, minutes: r.minutes,
+                                                 incline: r.incline, speed: r.speed, minutes: r.minutes, seconds: r.seconds,
                                                  isCompleted: r.isCompleted, completedAt: r.completedAt,
                                                  healthWorkoutID: r.healthWorkoutID)
                                        })
@@ -215,7 +216,7 @@ enum BackupService {
                     context.insert(SetRecord(
                         id: r.id, sessionExercise: item, order: r.order, kind: SetKind(rawValue: r.kind) ?? .normal,
                         weightKg: r.weightKg, reps: r.reps, incline: r.incline, speed: r.speed, minutes: r.minutes,
-                        isCompleted: r.isCompleted, completedAt: r.completedAt, healthWorkoutID: r.healthWorkoutID
+                        seconds: r.seconds, isCompleted: r.isCompleted, completedAt: r.completedAt, healthWorkoutID: r.healthWorkoutID
                     ))
                 }
             }

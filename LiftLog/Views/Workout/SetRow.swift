@@ -1,13 +1,18 @@
 import SwiftUI
 
 enum SetField: Int, CaseIterable {
-    case weight, reps, incline, speed, minutes
+    case weight, reps, seconds, incline, speed, minutes
 
     static func fields(for logType: LogType) -> [SetField] {
-        logType == .cardio ? [.incline, .speed, .minutes] : [.weight, .reps]
+        switch logType {
+        case .weight, .assisted: [.weight, .reps]
+        case .bodyweight: [.reps, .weight]
+        case .timed: [.seconds, .weight]
+        case .cardio: [.incline, .speed, .minutes]
+        }
     }
 
-    var isDecimal: Bool { self != .reps }
+    var isDecimal: Bool { self != .reps && self != .seconds }
 
     /// 鍵盤快捷鍵 -2.5／+2.5／+5 只作用在重量欄
     var acceptsWeightSteps: Bool { self == .weight }
@@ -32,6 +37,7 @@ struct SetRow: View {
     let previous: SetValues?
     let placeholder: SetValues?
     let logType: LogType
+    let unit: WeightUnit
     let text: (SetField) -> Binding<String>
     let focus: FocusState<FieldID?>.Binding
     /// 回傳 false 代表欄位不齊全
@@ -58,7 +64,7 @@ struct SetRow: View {
                 }
             }
 
-            Text(previous.map { SetFormat.short($0, logType: logType) } ?? "—")
+            Text(previous.map { SetFormat.short($0, logType: logType, unit: unit) } ?? "—")
                 .font(.subheadline.monospacedDigit())
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
@@ -104,8 +110,9 @@ struct SetRow: View {
     private func placeholderText(_ field: SetField) -> String {
         guard let p = placeholder else { return "" }
         switch field {
-        case .weight: return p.weightKg.map(Units.number) ?? ""
+        case .weight: return p.weightKg.map { unit.format(kg: $0) } ?? ""
         case .reps: return p.reps.map(String.init) ?? ""
+        case .seconds: return p.seconds.map(Units.number) ?? ""
         case .incline: return p.incline.map(Units.number) ?? ""
         case .speed: return p.speed.map(Units.number) ?? ""
         case .minutes: return p.minutes.map(Units.number) ?? ""
@@ -126,6 +133,8 @@ struct Shake: GeometryEffect {
 struct SetHeaderRow: View {
     let logType: LogType
     let unilateral: Bool
+    let unit: WeightUnit
+    let equipment: Equipment
 
     var body: some View {
         HStack(spacing: 8) {
@@ -141,9 +150,13 @@ struct SetHeaderRow: View {
     }
 
     private var titles: [String] {
-        switch logType {
-        case .weight: ["kg", unilateral ? "次／邊" : "次"]
-        case .assisted: ["輔助 kg", unilateral ? "次／邊" : "次"]
+        let reps = unilateral ? "次／邊" : "次"
+        let weight = unit.columnTitle(equipment: equipment)
+        return switch logType {
+        case .weight: [weight, reps]
+        case .assisted: ["輔助 \(unit.symbol)", reps]
+        case .bodyweight: [reps, "負重"]
+        case .timed: ["秒", "負重"]
         case .cardio: ["坡度", "速度", "分鐘"]
         }
     }

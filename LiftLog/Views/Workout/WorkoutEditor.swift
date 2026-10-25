@@ -24,6 +24,7 @@ struct WorkoutEditor<Header: View>: View {
     @ViewBuilder var header: Header
 
     @Environment(\.modelContext) private var context
+    @AppStorage(WeightUnit.storageKey) private var unit: WeightUnit = .kg
     @State private var drafts = SetDrafts()
     @FocusState private var focus: FieldID?
 
@@ -144,7 +145,8 @@ struct WorkoutEditor<Header: View>: View {
                 Text(item.note).font(.subheadline).foregroundStyle(.secondary)
             }
 
-            SetHeaderRow(logType: logType, unilateral: exercise.tags.contains(.unilateral))
+            SetHeaderRow(logType: logType, unilateral: exercise.tags.contains(.unilateral),
+                         unit: unit, equipment: exercise.equipment)
 
             ForEach(rows) { row in
                 SetRow(
@@ -153,6 +155,7 @@ struct WorkoutEditor<Header: View>: View {
                     previous: row.previous,
                     placeholder: row.placeholder,
                     logType: logType,
+                    unit: unit,
                     text: { binding(row.set, $0) },
                     focus: $focus,
                     onToggle: { toggle(row, item: item, exercise: exercise) },
@@ -243,6 +246,7 @@ struct WorkoutEditor<Header: View>: View {
         set.incline = values.incline
         set.speed = values.speed
         set.minutes = values.minutes
+        set.seconds = values.seconds
         set.isCompleted = true
         set.completedAt = .now
         clearDrafts(set)
@@ -274,31 +278,35 @@ struct WorkoutEditor<Header: View>: View {
 
     private func binding(_ set: SetRecord, _ field: SetField) -> Binding<String> {
         let id = FieldID(set: set.id, field: field)
+        let unit = unit
         return Binding {
-            drafts.texts[id] ?? Self.format(set, field)
+            drafts.texts[id] ?? Self.format(set, field, unit: unit)
         } set: { text in
             drafts.texts[id] = text
-            Self.write(text, to: set, field)
+            Self.write(text, to: set, field, unit: unit)
             WorkoutActions.save(context)
         }
     }
 
-    private static func format(_ set: SetRecord, _ field: SetField) -> String {
+    /// 重量欄以目前單位顯示與輸入，存檔一律換算成 kg
+    private static func format(_ set: SetRecord, _ field: SetField, unit: WeightUnit) -> String {
         switch field {
-        case .weight: set.weightKg.map(Units.number) ?? ""
+        case .weight: set.weightKg.map { unit.format(kg: $0) } ?? ""
         case .reps: set.reps.map(String.init) ?? ""
+        case .seconds: set.seconds.map(Units.number) ?? ""
         case .incline: set.incline.map(Units.number) ?? ""
         case .speed: set.speed.map(Units.number) ?? ""
         case .minutes: set.minutes.map(Units.number) ?? ""
         }
     }
 
-    private static func write(_ text: String, to set: SetRecord, _ field: SetField) {
+    private static func write(_ text: String, to set: SetRecord, _ field: SetField, unit: WeightUnit) {
         let trimmed = text.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: ".")
         let number = Double(trimmed)
         switch field {
-        case .weight: set.weightKg = number
+        case .weight: set.weightKg = number.map(unit.toKg)
         case .reps: set.reps = Int(trimmed)
+        case .seconds: set.seconds = number
         case .incline: set.incline = number
         case .speed: set.speed = number
         case .minutes: set.minutes = number
@@ -330,13 +338,13 @@ struct WorkoutEditor<Header: View>: View {
         }
     }
 
-    /// 以目前輸入（沒輸入就用預填）為基準加減
+    /// 以目前輸入（沒輸入就用預填）為基準加減，單位跟著全域設定（lbs 模式就是 ±2.5 lb）
     private func stepWeight(_ delta: Double) {
         guard let id = focus, let (set, placeholder) = locate(id.set) else { return }
-        let base = set.weightKg ?? placeholder?.weightKg ?? 0
+        let base = unit.displayRounded(unit.fromKg(set.weightKg ?? placeholder?.weightKg ?? 0))
         let value = max(0, base + delta)
         drafts.texts[id] = Units.number(value)
-        set.weightKg = value
+        set.weightKg = unit.toKg(value)
         WorkoutActions.save(context)
     }
 
