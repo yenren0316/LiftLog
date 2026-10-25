@@ -29,7 +29,7 @@ struct SessionsView: View {
                                 .frame(maxWidth: .infinity, minHeight: 56)
                                 .background(Theme.accent, in: .capsule)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressable)
                     }
                 }
                 .listRowBackground(Color.clear)
@@ -87,7 +87,7 @@ struct SessionsView: View {
             .card()
             .overlay(RoundedRectangle(cornerRadius: Theme.cardRadius).stroke(Theme.accent.opacity(0.5)))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 }
 

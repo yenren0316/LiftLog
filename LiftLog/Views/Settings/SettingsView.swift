@@ -93,7 +93,7 @@ struct SettingsView: View {
                     Button { showingImporter = true } label: {
                         actionLabel("從 JSON 匯入", icon: "square.and.arrow.down", filled: false)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
                 .card()
 

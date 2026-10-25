@@ -112,7 +112,7 @@ struct LibraryView: View {
             .background(selected ? Theme.accent : Theme.card, in: .capsule)
             .overlay(Capsule().stroke(Theme.separator))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     // MARK: - 分區
@@ -128,7 +128,7 @@ struct LibraryView: View {
     }
 
     private func sectionHeader(_ category: ExerciseCategory, count: Int) -> some View {
-        Button { withAnimation { toggleCollapsed(category) } } label: {
+        Button { withAnimation(.tap) { toggleCollapsed(category) } } label: {
             HStack {
                 Text("\(category.fullTitle) · \(count)")
                 Spacer()
@@ -138,7 +138,7 @@ struct LibraryView: View {
             .font(.subheadline.weight(.semibold))
             .contentShape(.rect)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     // MARK: - 列

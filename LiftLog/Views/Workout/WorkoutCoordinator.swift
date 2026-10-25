@@ -94,7 +94,7 @@ struct WorkoutMiniBar: View {
                 .padding(.horizontal, 16)
                 .padding(.bottom, 4)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
         }
     }
 }

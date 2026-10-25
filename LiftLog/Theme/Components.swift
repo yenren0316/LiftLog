@@ -109,7 +109,7 @@ struct TagFilterBar: View {
         HStack(spacing: 8) {
             ForEach(TagFilter.allCases) { filter in
                 let selected = filter == selection
-                Button { selection = filter } label: {
+                Button { withAnimation(.tap) { selection = filter } } label: {
                     Text(filter.title)
                         .font(.headline)
                         .foregroundStyle(selected ? Theme.onAccent : Theme.textPrimary)
@@ -117,7 +117,7 @@ struct TagFilterBar: View {
                         .frame(minHeight: 40)
                         .background(selected ? Theme.accent : Theme.field, in: .capsule)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
             Spacer(minLength: 0)
         }
@@ -135,4 +135,30 @@ struct Chip: View {
             .padding(.horizontal, 8).padding(.vertical, 3)
             .background(Theme.field, in: .capsule)
     }
+}
+
+// MARK: - 點擊回饋與動畫
+
+extension Animation {
+    /// 點選後狀態改變的動畫（選取、打勾、篩選、新增或刪除一組…），全 App 一致
+    nonisolated static let tap = Animation.snappy(duration: 0.3, extraBounce: 0.05)
+}
+
+/// 按下時微微縮小、變淡，放開時用彈簧彈回；取代 .plain，讓每次點擊都有回饋
+struct PressableButtonStyle: ButtonStyle {
+    var scale: CGFloat = 0.97
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? scale : 1)
+            .opacity(configuration.isPressed ? 0.8 : 1)
+            .animation(.spring(response: 0.25, dampingFraction: 0.65), value: configuration.isPressed)
+    }
+}
+
+extension ButtonStyle where Self == PressableButtonStyle {
+    static var pressable: PressableButtonStyle { PressableButtonStyle() }
+
+    /// 小按鈕（例如打勾）縮得明顯一點
+    static func pressable(scale: CGFloat) -> PressableButtonStyle { PressableButtonStyle(scale: scale) }
 }

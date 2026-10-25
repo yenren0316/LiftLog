@@ -32,7 +32,7 @@ struct ThemeSection: View {
                 Button { selection.wrappedValue = option } label: {
                     ThemePreviewCard(theme: option, isSelected: selection.wrappedValue == option)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
         }
     }

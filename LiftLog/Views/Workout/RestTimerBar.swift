@@ -36,7 +36,7 @@ struct RestTimerBar: View {
             .padding(.horizontal, 12)
             .frame(minHeight: 36)
             .background(Theme.field, in: .capsule)
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
     }
 }
 

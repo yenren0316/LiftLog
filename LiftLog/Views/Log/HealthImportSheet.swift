@@ -36,7 +36,7 @@ struct HealthImportSheet: View {
                     } label: {
                         WorkoutRow(workout: workout)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     .listRowBackground(Theme.card)
                 }
             }

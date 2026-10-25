@@ -25,6 +25,7 @@ App 只給自己用、不上架，用免費 Apple ID（Personal Team）安裝。
 - App Groups（CHANGE_05）：先用 `xcodebuild -allowProvisioningUpdates` 對實機建置，確認免費帳號（Personal Team）也能簽署，才開始使用。群組 `group.com.aaronhou.LiftLog` 只用來讓 App 把小工具快照交給小工具；資料庫不放在群組裡。
 - 介面全部繁體中文。重量單位由設定頁的全域 kg／lbs 決定，資料一律存 kg（1 lb = 0.45359237 kg）。版面簡潔、字大，適合在健身房單手操作。
 - UI 風格參考 Habits First：大圓角卡片、細進度條、懸浮膠囊分頁列。顏色由主題決定（見「主題配色」），預設石墨橙。
+- 點擊回饋與動畫：自訂按鈕一律用 `PressableButtonStyle`（`.pressable`，按下時微縮、變淡，放開時彈回），不用 `.plain`。點選造成的狀態改變（選項、組合、候選動作、篩選 chips、打勾、新增或刪除一組、上下移、收合）都包在 `withAnimation(.tap)` 裡；勾選圖示用 symbol 的 replace／bounce 效果；分頁和圖表的切換用 `.animation(.tap)` 的 binding；換主題時整個畫面淡入淡出。
 - 資料夾自動同步：新的 .swift 檔直接放進 App 資料夾即可。非必要不改 project.pbxproj，不動 Signing 設定。
   - 例外（已同意）：為了讀取 Apple Watch 運動，加了 HealthKit entitlement（`LiftLog.entitlements`）與健康資料讀取說明。
   - CHANGE_05 在 Xcode 介面加了小工具 target `LiftLogWidgetsExtension`（資料夾 `LiftLogWidgets/`）、Supports Live Activities、URL scheme `liftlog`（`LiftLog/Info.plist`）、兩個 target 的 App Groups。
@@ -429,7 +430,11 @@ CHANGE_04 刪除了 15 個從沒練過的動作（前抱式深蹲、分腿蹲、
 - CHANGE_03 只新增欄位（有預設值），沿用 `LiftLog3.store`；手機仍未安裝，seed 已重新產生。
 - CHANGE_04 改用 `LiftLog4.store`（手機上還沒有實際使用），seed 重新產生；說明的匯入旗標改成 `guidesImported.v2`，讓新資料庫重新填入說明。
 - CHANGE_05 加了 App Groups。`ModelConfiguration` 的 groupContainer 預設（.automatic）在有 App Group 權限時會改用群組容器裡的新資料庫，所以固定為 `.none`，資料庫留在原本的位置。
-- 之後的變更若手機上已有資料，必須提供遷移（或先匯出 JSON、再以新版匯入）。
+- **2026-10-25 起手機上已有實際的訓練紀錄**（`Library/Application Support/LiftLog4.store`，在 App 自己的容器裡）。之後：
+  - 不能再像 CHANGE_01／02／04 那樣換資料庫檔名重建。
+  - 資料結構有變（新增欄位以外的改動）就要做 SwiftData 遷移，並在安裝前提醒先在設定頁匯出 JSON。
+  - 用 Xcode 重新安裝只會換掉 App 本身，資料會保留；把 App 從手機刪除才會連資料一起刪掉。
+  - 手機上另外留著 CHANGE_04 之前的 `LiftLog3.store`，App 已經不讀它。
 
 ## 已移除
 - CHANGE_02 移除了舊的單筆記錄頁，連帶移除 lbs 輸入切換與 +1.25 快速鍵（新的鍵盤快捷鍵為 -2.5／+2.5／+5）。CHANGE_03 以全域 kg／lbs 設定取代 lbs 輸入切換。

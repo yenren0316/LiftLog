@@ -173,14 +173,14 @@ private struct OptionButton: View {
     var action: () -> Void
 
     var body: some View {
-        Button(action: action) {
+        Button { withAnimation(.tap, action) } label: {
             Text(title)
                 .font(.headline)
                 .foregroundStyle(isSelected ? Theme.onAccent : Theme.textPrimary)
                 .frame(maxWidth: .infinity, minHeight: 52)
                 .background(isSelected ? Theme.accent : Theme.field, in: .capsule)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 }
 
@@ -197,7 +197,7 @@ private struct PrimaryButton: View {
                 .frame(maxWidth: .infinity, minHeight: 60)
                 .background(Theme.accent.opacity(isEnabled ? 1 : 0.4), in: .capsule)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
         .disabled(!isEnabled)
         .padding(.horizontal, 16)
         .padding(.bottom, 8)
@@ -216,8 +216,8 @@ private struct ModeStep: View {
         ScrollView {
             VStack(spacing: 16) {
                 ForEach(modes) { mode in
-                    Button { selection = mode.id } label: { card(mode) }
-                        .buttonStyle(.plain)
+                    Button { withAnimation(.tap) { selection = mode.id } } label: { card(mode) }
+                        .buttonStyle(.pressable)
                 }
             }
             .padding(16)
@@ -236,6 +236,7 @@ private struct ModeStep: View {
                 Image(systemName: selected ? "checkmark.circle.fill" : "circle")
                     .font(.title2)
                     .foregroundStyle(selected ? Theme.accent : Theme.textSecondary)
+                    .contentTransition(.symbolEffect(.replace))
                 Text("模式 \(mode.variant ?? "")").font(.title2.bold())
                 if mode.id == recommended?.id { AccentChip(text: "建議") }
                 Spacer()
@@ -349,12 +350,12 @@ private struct SlotCard: View {
                     row(candidate, isFirst: index == 0)
                 }
                 if items.count > Self.visibleCount {
-                    Button { withAnimation { showAll.toggle() } } label: {
+                    Button { withAnimation(.tap) { showAll.toggle() } } label: {
                         Text(showAll ? "收起" : "顯示全部（\(items.count)）")
                             .font(.headline)
                             .frame(maxWidth: .infinity, minHeight: 44)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     .foregroundStyle(Theme.accent)
                 }
             }
@@ -363,11 +364,11 @@ private struct SlotCard: View {
     }
 
     private func row(_ candidate: PlanCandidate, isFirst: Bool) -> some View {
-        Button { onPick(candidate.id) } label: {
+        Button { withAnimation(.tap) { onPick(candidate.id) } } label: {
             CandidateRow(candidate: candidate, isSelected: state.selected?.id == candidate.id,
                          suggestion: isFirst ? .some(state.candidates.reason) : nil)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 }
 
@@ -384,6 +385,7 @@ struct CandidateRow: View {
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .font(.title2)
                     .foregroundStyle(isSelected ? Theme.accent : Theme.textSecondary)
+                    .contentTransition(.symbolEffect(.replace))
             }
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {

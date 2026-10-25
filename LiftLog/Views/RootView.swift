@@ -35,6 +35,7 @@ struct RootView: View {
         // 換主題時重建畫面，讓所有 token 重新取色
         tabs
             .id(themeSettings.key)
+            .animation(.easeInOut(duration: 0.35), value: themeSettings.key)
             .tint(Theme.accent)
             .preferredColorScheme(themeSettings.colorScheme)
             .onChange(of: themeSettings.key) {

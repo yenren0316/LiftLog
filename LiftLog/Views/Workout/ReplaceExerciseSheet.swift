@@ -33,7 +33,7 @@ struct ReplaceExerciseSheet: View {
                                 CandidateRow(candidate: candidate, isSelected: nil,
                                              suggestion: index == 0 ? .some(ranked.reason) : nil)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.pressable)
                         }
                     }
                     .listRowBackground(Theme.card)

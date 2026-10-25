@@ -82,17 +82,18 @@ struct SetRow: View {
             }
 
             Button {
-                if !onToggle() {
+                if !withAnimation(.tap, onToggle) {
                     withAnimation(.linear(duration: 0.4)) { shakes += 1 }
                 }
             } label: {
                 Image(systemName: "checkmark")
                     .font(.headline.weight(.bold))
                     .foregroundStyle(set.isCompleted ? Theme.done : Theme.textSecondary)
+                    .symbolEffect(.bounce, value: set.isCompleted)
                     .frame(width: SetColumns.check, height: 40)
                     .background(set.isCompleted ? Theme.done.opacity(0.18) : Theme.field, in: .rect(cornerRadius: 8))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable(scale: 0.88))
         }
         .modifier(Shake(animatableData: CGFloat(shakes)))
         .sensoryFeedback(.success, trigger: set.isCompleted) { _, done in done }

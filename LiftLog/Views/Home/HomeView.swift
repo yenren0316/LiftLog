@@ -170,7 +170,7 @@ private struct NextPlanCard: View {
             }
             .contentShape(.rect)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
         .card()
     }
 }
@@ -212,7 +212,7 @@ private struct CategoryBarsCard: View {
                     }
                     .contentShape(.rect)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
             Divider().overlay(Theme.separator)
             HStack(alignment: .firstTextBaseline, spacing: 6) {
@@ -231,7 +231,7 @@ private struct CategoryBarsCard: View {
                             Text("天").font(.subheadline).foregroundStyle(Theme.textSecondary)
                         }
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
             }
         }
@@ -284,7 +284,7 @@ private struct CategorySection: View {
 
             if !untrained.isEmpty {
                 if !trained.isEmpty { Divider().overlay(Theme.separator) }
-                Button { withAnimation { showUntrained.toggle() } } label: {
+                Button { withAnimation(.tap) { showUntrained.toggle() } } label: {
                     HStack {
                         Text("還沒練過（\(untrained.count)）")
                             .font(.headline)
@@ -297,7 +297,7 @@ private struct CategorySection: View {
                     .padding(.vertical, 12)
                     .contentShape(.rect)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 if showUntrained {
                     ForEach(untrained) { exercise in
                         Divider().overlay(Theme.separator)
@@ -313,7 +313,7 @@ private struct CategorySection: View {
         Button { onShowDetail(exercise) } label: {
             ExerciseRow(exercise: exercise)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 }
 

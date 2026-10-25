@@ -99,7 +99,7 @@ struct WorkoutSummaryView: View {
                         .frame(maxWidth: .infinity, minHeight: 56)
                         .background(Theme.accent, in: .capsule)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
             .padding(16)
         }

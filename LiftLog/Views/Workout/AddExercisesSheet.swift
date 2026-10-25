@@ -50,7 +50,7 @@ struct AddExercisesSheet: View {
                         }
                     } header: {
                         Button {
-                            withAnimation {
+                            withAnimation(.tap) {
                                 if collapsed.contains(section.category) {
                                     collapsed.remove(section.category)
                                 } else {
@@ -67,7 +67,7 @@ struct AddExercisesSheet: View {
                             .font(.headline)
                             .contentShape(.rect)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressable)
                     }
                     .listRowBackground(Theme.card)
                 }
@@ -95,11 +95,12 @@ struct AddExercisesSheet: View {
         let added = alreadyAdded.contains(exercise.id)
         let isSelected = selected.contains { $0 === exercise }
         let days = Recency.daysSince(exercise.lastCompletedDate)
-        return Button { toggle(exercise) } label: {
+        return Button { withAnimation(.tap) { toggle(exercise) } } label: {
             HStack(spacing: 12) {
                 Image(systemName: added || isSelected ? "checkmark.circle.fill" : "circle")
                     .font(.title2)
                     .foregroundStyle(isSelected ? Theme.accent : Theme.textSecondary)
+                    .contentTransition(.symbolEffect(.replace))
                 Text(exercise.name).font(.body.weight(.semibold))
                 ForEach(exercise.tags) { Chip(text: $0.title) }
                 Spacer()
@@ -116,7 +117,7 @@ struct AddExercisesSheet: View {
             .padding(.vertical, 4)
             .contentShape(.rect)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
         .disabled(added)
     }
 
@@ -135,7 +136,7 @@ struct AddExercisesSheet: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
                         ForEach(selected) { exercise in
-                            Button { toggle(exercise) } label: {
+                            Button { withAnimation(.tap) { toggle(exercise) } } label: {
                                 HStack(spacing: 6) {
                                     Text(exercise.name).font(.subheadline.weight(.semibold))
                                     Image(systemName: "xmark").font(.caption.bold())
@@ -144,11 +145,13 @@ struct AddExercisesSheet: View {
                                 .frame(minHeight: 36)
                                 .background(Theme.field, in: .capsule)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.pressable)
+                            .transition(.scale(scale: 0.6).combined(with: .opacity))
                         }
                     }
                     .padding(.horizontal, 16)
                 }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
             Button {
                 onAdd(selected)
@@ -156,11 +159,12 @@ struct AddExercisesSheet: View {
             } label: {
                 Text("加入（\(selected.count)）")
                     .font(.title3.bold())
+                    .contentTransition(.numericText(value: Double(selected.count)))
                     .foregroundStyle(Theme.onAccent)
                     .frame(maxWidth: .infinity, minHeight: 56)
                     .background(Theme.accent.opacity(selected.isEmpty ? 0.4 : 1), in: .capsule)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             .disabled(selected.isEmpty)
             .padding(.horizontal, 16)
         }
@@ -177,7 +181,7 @@ struct FilterChip: View {
     var action: () -> Void
 
     var body: some View {
-        Button(action: action) {
+        Button { withAnimation(.tap, action) } label: {
             Text(title)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(isSelected ? Theme.onAccent : Theme.textPrimary)
@@ -185,6 +189,6 @@ struct FilterChip: View {
                 .frame(minHeight: 36)
                 .background(isSelected ? Theme.accent : Theme.field, in: .capsule)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 }

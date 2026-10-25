@@ -26,7 +26,7 @@ struct ExerciseDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 DetailHeader(exercise: exercise)
-                Picker("分頁", selection: $tab) {
+                Picker("分頁", selection: $tab.animation(.tap)) {
                     ForEach(Tab.allCases) { Text($0.title).tag($0) }
                 }
                 .pickerStyle(.segmented)
@@ -96,7 +96,7 @@ private struct DetailHeader: View {
                     .frame(maxWidth: .infinity, minHeight: 50)
                     .background(Theme.accent, in: .capsule)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
         }
         .card()
     }
@@ -137,7 +137,7 @@ private struct HistoryCard: View {
                     } label: {
                         HistoryLine(item: item, date: session.startedAt).contentShape(.rect)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
             }
         }

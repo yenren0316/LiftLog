@@ -56,7 +56,7 @@ private struct RecordsCard: View {
                     }
                     .contentShape(.rect)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
         }
         .card()
@@ -103,7 +103,7 @@ private struct TrendChartCard: View {
                 }
                 Spacer()
                 if metric.isWeight || logType == .assisted {
-                    Picker("單位", selection: $unit) {
+                    Picker("單位", selection: $unit.animation(.tap)) {
                         ForEach(WeightUnit.allCases) { Text($0.symbol).tag($0) }
                     }
                     .pickerStyle(.segmented)
@@ -113,13 +113,13 @@ private struct TrendChartCard: View {
 
             let options = ChartMetric.options(for: logType)
             if !options.isEmpty {
-                Picker("指標", selection: Binding(get: { metric }, set: { chosenMetric = $0 })) {
+                Picker("指標", selection: Binding(get: { metric }, set: { chosenMetric = $0 }).animation(.tap)) {
                     ForEach(options) { Text($0.title).tag($0) }
                 }
                 .pickerStyle(.segmented)
             }
 
-            Picker("範圍", selection: $range) {
+            Picker("範圍", selection: $range.animation(.tap)) {
                 ForEach(ChartRange.allCases) { Text($0.title).tag($0) }
             }
             .pickerStyle(.segmented)
@@ -263,7 +263,7 @@ private struct IntensityCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("強度換算表").font(.headline).foregroundStyle(Theme.textSecondary)
-            Picker("基準", selection: $base) {
+            Picker("基準", selection: $base.animation(.tap)) {
                 ForEach(Base.allCases) { Text($0.title).tag($0) }
             }
             .pickerStyle(.segmented)
@@ -345,7 +345,7 @@ private struct AlternativesCard: View {
                     }
                     .contentShape(.rect)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
         }
         .card()

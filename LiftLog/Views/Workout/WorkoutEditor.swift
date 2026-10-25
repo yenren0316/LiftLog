@@ -86,14 +86,14 @@ struct WorkoutEditor<Header: View>: View {
         .sheet(isPresented: $addingExercise) {
             AddExercisesSheet(alreadyAdded: Set(session.items.compactMap { $0.exercise?.id })) { exercises in
                 // 角色依動作判定
-                let items = exercises.map { WorkoutActions.add($0, to: session, in: context) }
+                let items = withAnimation(.tap) { exercises.map { WorkoutActions.add($0, to: session, in: context) } }
                 scrollTarget = items.last?.id
             }
         }
         .sheet(item: $replacing) { item in
             ReplaceExerciseSheet(item: item) { exercise, role in
                 clearDrafts(item)
-                WorkoutActions.replace(item, with: exercise, role: role, in: context)
+                withAnimation(.tap) { WorkoutActions.replace(item, with: exercise, role: role, in: context) }
             }
         }
         .sheet(item: $healthImportItem) { item in
@@ -108,7 +108,7 @@ struct WorkoutEditor<Header: View>: View {
         }
         .alert("移除「\(confirmRemove?.exercise?.name ?? "")」？", isPresented: isPresented($confirmRemove)) {
             Button("移除", role: .destructive) {
-                if let item = confirmRemove { WorkoutActions.remove(item, in: context) }
+                if let item = confirmRemove { withAnimation(.tap) { WorkoutActions.remove(item, in: context) } }
                 confirmRemove = nil
             }
             Button("取消", role: .cancel) { confirmRemove = nil }
@@ -142,7 +142,7 @@ struct WorkoutEditor<Header: View>: View {
                         ForEach(exercise.tags.filter { $0.title != item.role.title }) { Chip(text: $0.title) }
                     }
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 Spacer()
                 cardMenu(item, exercise: exercise)
             }
@@ -182,13 +182,13 @@ struct WorkoutEditor<Header: View>: View {
                 }
             }
 
-            Button { WorkoutActions.addSet(to: item, in: context) } label: {
+            Button { withAnimation(.tap) { WorkoutActions.addSet(to: item, in: context) } } label: {
                 Label("新增一組", systemImage: "plus")
                     .font(.subheadline.weight(.semibold))
                     .frame(maxWidth: .infinity, minHeight: 36)
                     .background(Theme.field, in: .capsule)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
         }
         .listRowBackground(Theme.card)
         .listRowSeparator(.hidden)
@@ -209,12 +209,16 @@ struct WorkoutEditor<Header: View>: View {
                 noteText = item.note
                 editingNote = item
             }
-            Button("上移", systemImage: "arrow.up") { WorkoutActions.move(item, by: -1, in: context) }
+            Button("上移", systemImage: "arrow.up") { withAnimation(.tap) { WorkoutActions.move(item, by: -1, in: context) } }
                 .disabled(index == 0)
-            Button("下移", systemImage: "arrow.down") { WorkoutActions.move(item, by: 1, in: context) }
+            Button("下移", systemImage: "arrow.down") { withAnimation(.tap) { WorkoutActions.move(item, by: 1, in: context) } }
                 .disabled(index == items.count - 1)
             Button("移除", systemImage: "trash", role: .destructive) {
-                if item.completedSets.isEmpty { WorkoutActions.remove(item, in: context) } else { confirmRemove = item }
+                if item.completedSets.isEmpty {
+                    withAnimation(.tap) { WorkoutActions.remove(item, in: context) }
+                } else {
+                    confirmRemove = item
+                }
             }
         } label: {
             Image(systemName: "ellipsis")
@@ -255,7 +259,7 @@ struct WorkoutEditor<Header: View>: View {
 
     private func delete(_ set: SetRecord) {
         clearDrafts(set)
-        WorkoutActions.delete(set, in: context)
+        withAnimation(.tap) { WorkoutActions.delete(set, in: context) }
     }
 
     private func applyHealth(_ workout: TreadmillWorkout, to item: SessionExercise) {
