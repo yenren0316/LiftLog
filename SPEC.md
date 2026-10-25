@@ -401,6 +401,12 @@ CHANGE_04 刪除了 15 個從沒練過的動作（前抱式深蹲、分腿蹲、
 - 預覽頁：`-widgetGallery live`（鎖定畫面）、`-widgetGallery island`（動態島，黑色底和形狀是模擬的）。
 - 開發注意：以 App 當 host 跑單元測試時不建立即時動態。模擬器上如果還留著即時動態，測試會在啟動時卡住，先把 App 從模擬器移除再跑。
 
+#### 11-6. 控制中心、動作按鈕、App Shortcut
+- `StartWorkoutIntent`「開始訓練」：`supportedModes = .foreground(.immediate)`，打開 App 後交給 `DeepLinkRouter`，行為和 `liftlog://new` 相同。宣告在 Shared，實際動作在 App。
+- ControlWidget「開始訓練」（kind `com.aaronhou.LiftLog.StartWorkout`），啞鈴圖示；可以放進控制中心，也能在「設定 › 動作按鈕 › 控制項」指定。
+- App Shortcut「開始訓練」（`LiftLogShortcuts`），Siri 和捷徑都能用。語句：「用 LiftLog 開始訓練」「在 LiftLog 開始訓練」「LiftLog 開始訓練」。
+- 預覽頁：`-widgetGallery control`（控制項的外觀由系統決定，這裡是模擬）。
+
 ## 初始資料
 - `tools/parse_log.py` 解析 `tools/workout_log.txt`，產生 `LiftLog/Data/seed.json`、`tools/unmatched.txt` 與 `tools/unit_review.txt`。
 - App 第一次啟動且資料庫為空時自動匯入 seed.json（v2，匯入時轉成訓練）。

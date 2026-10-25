@@ -2,7 +2,7 @@
 import SwiftUI
 
 /// 開發用：把小工具和即時動態的畫面（Shared 裡同一份程式碼）以系統的尺寸排出來截圖。
-/// 啟動參數 -widgetGallery small｜lock｜live｜island
+/// 啟動參數 -widgetGallery small｜lock｜live｜island｜control
 struct WidgetGalleryView: View {
     var page: String
     @Environment(\.colorScheme) private var colorScheme
@@ -19,6 +19,8 @@ struct WidgetGalleryView: View {
                     livePage
                 case "island":
                     islandPage
+                case "control":
+                    controlPage
                 default:
                     smallPage
                 }
@@ -152,6 +154,38 @@ struct WidgetGalleryView: View {
         .background(.black, in: .rect(cornerRadius: 44, style: .continuous))
         .foregroundStyle(.white)
         .environment(\.colorScheme, .dark)
+    }
+
+    // MARK: - 控制中心（控制項的外觀由系統決定，這裡模擬 1×1 和 2×1 兩種大小）
+
+    private var controlPage: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            caption("控制中心・1×1")
+            controlButton(wide: false)
+            caption("控制中心・2×1")
+            controlButton(wide: true)
+            caption("在「設定 › 動作按鈕 › 控制項」也能選「開始訓練」")
+        }
+    }
+
+    private func controlButton(wide: Bool) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "dumbbell.fill")
+                .font(.title3)
+                .frame(width: 44, height: 44)
+                .background(.white.opacity(wide ? 0.18 : 0), in: .circle)
+            if wide {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("開始訓練").font(.subheadline.weight(.semibold))
+                    Text("LiftLog").font(.caption).foregroundStyle(.white.opacity(0.6))
+                }
+                Spacer(minLength: 0)
+            }
+        }
+        .foregroundStyle(.white)
+        .padding(wide ? 10 : 10)
+        .frame(width: wide ? 160 : 68, height: 68)
+        .background(.white.opacity(0.14), in: .rect(cornerRadius: 34, style: .continuous))
     }
 
     private func caption(_ text: String) -> some View {

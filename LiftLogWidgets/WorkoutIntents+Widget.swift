@@ -14,3 +14,7 @@ extension SkipRestIntent {
 extension ExtendRestIntent {
     func perform() async throws -> some IntentResult { .result() }
 }
+
+extension StartWorkoutIntent {
+    func perform() async throws -> some IntentResult { .result() }
+}

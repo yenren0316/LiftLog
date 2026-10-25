@@ -5,7 +5,7 @@ import WidgetKit
 struct LiftLogWidgetsBundle: WidgetBundle {
     var body: some Widget {
         LastWorkoutWidget()
-        LiftLogWidgetsControl()
+        StartWorkoutControl()
         WorkoutLiveActivity()
     }
 }

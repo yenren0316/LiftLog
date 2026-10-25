@@ -39,3 +39,11 @@ enum WorkoutIntentActions {
         await LiveActivityController.shared.sync()
     }
 }
+
+extension StartWorkoutIntent {
+    /// App 已經被系統帶到前景，交給深層連結導向
+    nonisolated func perform() async throws -> some IntentResult {
+        await MainActor.run { DeepLinkRouter.shared.pending = .new }
+        return .result()
+    }
+}

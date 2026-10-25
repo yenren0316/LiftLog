@@ -21,3 +21,11 @@ nonisolated struct ExtendRestIntent: LiveActivityIntent {
     static let title: LocalizedStringResource = "休息加 15 秒"
     static let isDiscoverable = false
 }
+
+/// 開始訓練（CHANGE_05 第 7 節）：控制中心、動作按鈕、Siri 與捷徑共用。
+/// 打開 App，行為和 liftlog://new 相同：建立菜單，有進行中的訓練時直接打開那次訓練
+nonisolated struct StartWorkoutIntent: AppIntent {
+    static let title: LocalizedStringResource = "開始訓練"
+    static let description = IntentDescription("打開 LiftLog 建立今天的菜單；有進行中的訓練時直接打開那次訓練。")
+    static let supportedModes: IntentModes = .foreground(.immediate)
+}
