@@ -84,6 +84,8 @@ final class WorkoutEntry {
     var speed: Double?
     var minutes: Double?
     var note: String
+    /// 從「健康」帶入時記下的 HKWorkout uuid，避免同一次運動重複帶入
+    var healthWorkoutID: UUID?
 
     init(
         date: Date,
@@ -95,7 +97,8 @@ final class WorkoutEntry {
         incline: Double? = nil,
         speed: Double? = nil,
         minutes: Double? = nil,
-        note: String = ""
+        note: String = "",
+        healthWorkoutID: UUID? = nil
     ) {
         self.date = date
         self.exercise = exercise
@@ -107,6 +110,7 @@ final class WorkoutEntry {
         self.speed = speed
         self.minutes = minutes
         self.note = note
+        self.healthWorkoutID = healthWorkoutID
     }
 }
 

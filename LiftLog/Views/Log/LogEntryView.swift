@@ -20,6 +20,9 @@ struct LogEntryView: View {
     @State private var speedText = ""
     @State private var minutesText = ""
     @State private var loaded = false
+    @State private var healthWorkout: TreadmillWorkout?
+    @State private var healthWorkoutID: UUID?
+    @State private var showingHealthImport = false
 
     private var logType: LogType { exercise.logType }
 
@@ -115,11 +118,46 @@ struct LogEntryView: View {
 
     private var cardioCard: some View {
         VStack(spacing: 14) {
+            if HealthWorkouts.isAvailable {
+                Button { showingHealthImport = true } label: {
+                    Label(healthWorkoutID == nil ? "從 Apple Watch 帶入" : "重新選擇 Apple Watch 紀錄",
+                          systemImage: "applewatch")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .background(Theme.field, in: .capsule)
+                }
+                .buttonStyle(.plain)
+            }
+            if let healthWorkout {
+                Label("已帶入 \(healthWorkout.start.formatted(date: .abbreviated, time: .shortened))，坡度請自己填",
+                      systemImage: "checkmark.circle.fill")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.green)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else if healthWorkoutID != nil {
+                Label("這筆紀錄是從 Apple Watch 帶入的", systemImage: "applewatch")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
             cardioField("坡度", text: $inclineText, unit: "%")
             cardioField("速度", text: $speedText, unit: "km/h")
             cardioField("時間", text: $minutesText, unit: "分")
         }
         .card()
+        .sheet(isPresented: $showingHealthImport) {
+            HealthImportSheet(onPick: applyHealthWorkout)
+        }
+    }
+
+    /// 帶入時間、速度、日期；坡度 Apple 不會記錄，保留原本（上次）的數字讓使用者確認
+    private func applyHealthWorkout(_ workout: TreadmillWorkout) {
+        healthWorkout = workout
+        healthWorkoutID = workout.id
+        date = workout.start
+        minutesText = Units.number(workout.minutes)
+        speedText = workout.speedKmh.map(Units.number) ?? ""
+        if workout.isRunning && note.isEmpty { note = "跑步" }
     }
 
     private func cardioField(_ title: String, text: Binding<String>, unit: String) -> some View {
@@ -205,6 +243,7 @@ struct LogEntryView: View {
             isMax = editing.isMax
             note = editing.note
             date = editing.date
+            healthWorkoutID = editing.healthWorkoutID
         }
     }
 
@@ -216,12 +255,14 @@ struct LogEntryView: View {
         if editing == nil { context.insert(entry) }
 
         // 改日期時保留原本的時間；新增時用現在的時間，讓同一天的紀錄依順序排列
-        entry.date = merge(day: date, time: editing?.date ?? .now)
+        // 從 Apple Watch 帶入時用運動開始的時間
+        entry.date = merge(day: date, time: healthWorkout?.start ?? editing?.date ?? .now)
         entry.note = note.trimmingCharacters(in: .whitespacesAndNewlines)
         if logType == .cardio {
             entry.incline = parse(inclineText)
             entry.speed = parse(speedText)
             entry.minutes = parse(minutesText)
+            entry.healthWorkoutID = healthWorkoutID
         } else {
             entry.weightKg = weightKg
             entry.reps = reps

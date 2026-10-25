@@ -27,6 +27,7 @@ nonisolated struct BackupFile: Codable {
         var speed: Double?
         var minutes: Double?
         var note: String
+        var healthWorkoutID: UUID?
     }
 
     struct BodyWeightRecord: Codable {
@@ -68,7 +69,8 @@ enum BackupService {
             entries: entries.compactMap { e in
                 guard let id = e.exercise?.id else { return nil }
                 return .init(date: e.date, exerciseId: id, weightKg: e.weightKg, sets: e.sets, reps: e.reps,
-                             isMax: e.isMax, incline: e.incline, speed: e.speed, minutes: e.minutes, note: e.note)
+                             isMax: e.isMax, incline: e.incline, speed: e.speed, minutes: e.minutes, note: e.note,
+                             healthWorkoutID: e.healthWorkoutID)
             },
             bodyWeights: bodyWeights.map { .init(date: $0.date, kg: $0.kg) }
         )
@@ -103,7 +105,8 @@ enum BackupService {
             guard let exercise = byID[r.exerciseId] else { continue }
             context.insert(WorkoutEntry(
                 date: r.date, exercise: exercise, weightKg: r.weightKg, sets: r.sets, reps: r.reps,
-                isMax: r.isMax, incline: r.incline, speed: r.speed, minutes: r.minutes, note: r.note
+                isMax: r.isMax, incline: r.incline, speed: r.speed, minutes: r.minutes, note: r.note,
+                healthWorkoutID: r.healthWorkoutID
             ))
         }
         for r in file.bodyWeights {
