@@ -1,20 +1,20 @@
 import SwiftUI
 import SwiftData
 
-/// 打開建立菜單流程；answers 為 nil 時用預設答案
+/// 打開建立菜單流程；answers 為 nil 時用預設答案；backfill 有值時是補登（建立已結束的訓練）
 struct PlanRequest: Identifiable {
     let id = UUID()
     var answers: PlanAnswers?
+    var backfill: DateInterval?
 }
 
 /// 建立菜單：三個問題 → 每一格選一個動作（格子由日型和動作數決定）
 struct PlanFlowView: View {
-    var initialAnswers: PlanAnswers?
-    /// 已建立訓練；呼叫端在 sheet 關閉後展開訓練中畫面
-    var onStarted: () -> Void
+    var request: PlanRequest
 
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
+    @Environment(WorkoutLauncher.self) private var launcher
     @Query(sort: \Exercise.name) private var allExercises: [Exercise]
     @Query(filter: #Predicate<WorkoutSession> { $0.endedAt != nil }) private var endedSessions: [WorkoutSession]
 
@@ -32,7 +32,7 @@ struct PlanFlowView: View {
                 if let history {
                     // 預覽和第二步一樣依預設的主項決定格子（主項是爆發划船時「拉」會變成「推」）
                     let preview = PlanRanking.resolve(answers: answers, picks: [:], exercises: exercises, history: history)
-                    QuestionsStep(answers: $answers, slots: preview.map(\.slot)) {
+                    QuestionsStep(answers: $answers, slots: preview.map(\.slot), onFree: startFree) {
                         picks = [:]
                         showExercises = true
                     }
@@ -53,11 +53,12 @@ struct PlanFlowView: View {
             }
             .screenBackground()
         }
+        .launchConfirmation(launcher, origin: .plan, context: context)
         .task {
             guard history == nil else { return }
             let snapshot = PlanHistory(sessions: endedSessions)
             exercises = allExercises.map(PlanExercise.init)
-            answers = initialAnswers ?? PlanDefaults.answers(snapshot)
+            answers = request.answers ?? PlanDefaults.answers(snapshot)
             history = snapshot
             #if DEBUG
             // 開發用：-planStep 2 直接跳到選動作（截圖用）；-planAnswers deUpper,2,1 指定三個問題的答案
@@ -85,9 +86,13 @@ struct PlanFlowView: View {
             roles.append(state.slot.role)
         }
         guard !chosen.isEmpty else { return }
-        WorkoutActions.start(with: chosen, roles: roles, dayType: answers.dayType, in: context)
-        onStarted()
-        dismiss()
+        launcher.start(.init(exercises: chosen, roles: roles, dayType: answers.dayType, backfill: request.backfill, origin: .plan),
+                       context: context)
+    }
+
+    /// 「不照建議，自由選動作」：建立一次沒有日型的訓練，直接打開新增動作
+    private func startFree() {
+        launcher.start(.init(openAdd: true, backfill: request.backfill, origin: .plan), context: context)
     }
 }
 
@@ -97,6 +102,7 @@ private struct QuestionsStep: View {
     @Binding var answers: PlanAnswers
     /// 「今天的順序」
     var slots: [Slot]
+    var onFree: () -> Void
     var onNext: () -> Void
 
     var body: some View {
@@ -131,6 +137,10 @@ private struct QuestionsStep: View {
                     FlowSlots(slots: slots)
                 }
                 .card()
+                Button("不照建議，自由選動作", action: onFree)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+                    .frame(maxWidth: .infinity)
             }
             .padding(16)
         }

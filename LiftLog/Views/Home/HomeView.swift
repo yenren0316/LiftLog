@@ -10,17 +10,10 @@ struct HomeView: View {
     @Query(filter: #Predicate<WorkoutSession> { $0.endedAt != nil }) private var endedSessions: [WorkoutSession]
 
     @Environment(\.modelContext) private var context
-    @Environment(WorkoutCoordinator.self) private var coordinator
+    @Environment(WorkoutLauncher.self) private var launcher
 
     @State private var path = NavigationPath()
     @State private var filter: TagFilter = .all
-    @State private var planRequest: PlanRequest?
-    /// 有進行中的訓練時，按「＋」先問要繼續還是結束
-    @State private var pendingPlan: PlanRequest?
-    /// 建立菜單後，等 sheet 關掉再展開訓練中畫面
-    @State private var startedFromPlan = false
-    /// 往下滑時分頁列隱藏，右下角改出現「＋」
-    @State private var tabBarHidden = false
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -29,7 +22,9 @@ struct HomeView: View {
                     VStack(alignment: .leading, spacing: 20) {
                         ScreenHeader(title: "該練什麼")
                         let history = PlanHistory(sessions: endedSessions)
-                        NextPlanCard(history: history, exercises: exercises.map(PlanExercise.init)) { openPlan($0) }
+                        NextPlanCard(history: history, exercises: exercises.map(PlanExercise.init)) {
+                            launcher.requestPlan($0, context: context)
+                        }
                         ActivityGraph(days: trainingDays)
                         MainLiftsCard(exercises: exercises.filter { $0.tags.contains(.main) }, history: history) {
                             path.append($0)
@@ -58,7 +53,7 @@ struct HomeView: View {
                     }
                     .padding(16)
                 }
-                .hidesTabBarOnScroll($tabBarHidden)
+                .hidesTabBarOnScroll()
             }
             .screenBackground()
             .toolbar(.hidden, for: .navigationBar)
@@ -68,45 +63,6 @@ struct HomeView: View {
             #if DEBUG
             .navigationDestination(for: DebugDetailRoute.self) { ExerciseDetailView(exercise: $0.exercise) }
             #endif
-        }
-        // 放在 NavigationStack 外面才會排在訓練中橫條的上方；進入下一頁時 tabBarHidden 會恢復成 false
-        .overlay(alignment: .bottomTrailing) {
-            if tabBarHidden {
-                FloatingActionButton(systemName: "plus") { openPlan(nil) }
-                    .accessibilityLabel("建立菜單")
-                    .padding(.trailing, 20)
-                    .padding(.bottom, 8)
-                    .transition(.scale(scale: 0.4).combined(with: .opacity))
-            }
-        }
-        .sheet(item: $planRequest, onDismiss: {
-            if startedFromPlan {
-                startedFromPlan = false
-                coordinator.isExpanded = true
-            }
-        }) { request in
-            PlanFlowView(initialAnswers: request.answers) { startedFromPlan = true }
-        }
-        .confirmationDialog(
-            "已經有進行中的訓練",
-            isPresented: Binding(get: { pendingPlan != nil }, set: { if !$0 { pendingPlan = nil } }),
-            titleVisibility: .visible,
-            presenting: pendingPlan
-        ) { request in
-            Button("繼續目前訓練") { coordinator.isExpanded = true }
-            Button("結束並建立新菜單", role: .destructive) {
-                coordinator.finishActive(context: context)
-                planRequest = request
-            }
-            Button("取消", role: .cancel) {}
-        } message: { _ in
-            Text("結束目前的訓練時，沒打勾的組會被刪除。")
-        }
-        // 深層連結 liftlog://new：用預設答案打開建立菜單（App 剛啟動時也要接得到，所以 initial）
-        .onChange(of: coordinator.planRequestedByLink, initial: true) { _, requested in
-            guard requested else { return }
-            coordinator.planRequestedByLink = false
-            if planRequest == nil { openPlan(nil) }
         }
         #if DEBUG
         // 開發用：啟動參數 -openExercise 臥推 直接打開記錄頁；-openDetail 臥推 直接打開動作詳情
@@ -121,7 +77,7 @@ struct HomeView: View {
                 path.append(DebugDetailRoute(exercise: exercise))
             }
             // -openPlan YES 直接打開建立菜單
-            if defaults.bool(forKey: "openPlan") { planRequest = PlanRequest() }
+            if defaults.bool(forKey: "openPlan") { launcher.requestPlan(context: context) }
         }
         #endif
     }
@@ -136,18 +92,6 @@ extension HomeView {
             exercisesByDay[Calendar.current.startOfDay(for: date), default: []].insert(item.persistentModelID)
         }
         return exercisesByDay.mapValues(\.count)
-    }
-}
-
-extension HomeView {
-    /// 打開建立菜單；有進行中的訓練時先問
-    private func openPlan(_ answers: PlanAnswers?) {
-        let request = PlanRequest(answers: answers)
-        if WorkoutActions.activeSession(in: context) != nil {
-            pendingPlan = request
-        } else {
-            planRequest = request
-        }
     }
 }
 

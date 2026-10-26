@@ -8,13 +8,14 @@ enum WorkoutActions {
         return try? context.fetch(descriptor).first
     }
 
-    /// 開始新訓練。呼叫前要先確認沒有進行中的訓練。
-    /// 從建立菜單來的會帶日型與每一格的角色；部位一律在完成時依動作推算
+    /// 開始新訓練：只由 WorkoutLauncher 呼叫，呼叫前要先確認沒有進行中的訓練（補登除外）。
+    /// 從建立菜單來的會帶日型與每一格的角色；部位在完成時依動作推算。
+    /// backfill 有值時是補登：建立一次已結束的訓練（不會出現在進行中，也不會有休息計時和即時動態）
     @discardableResult
     static func start(with exercises: [Exercise], roles: [Role]? = nil, dayType: DayType? = nil,
-                      in context: ModelContext) -> WorkoutSession {
-        let session = WorkoutSession(startedAt: .now, title: SessionTitle.automatic(exercises.map(\.name)),
-                                     dayType: dayType)
+                      backfill: DateInterval? = nil, in context: ModelContext) -> WorkoutSession {
+        let session = WorkoutSession(startedAt: backfill?.start ?? .now, endedAt: backfill?.end,
+                                     title: SessionTitle.automatic(exercises.map(\.name)), dayType: dayType)
         context.insert(session)
         for (index, exercise) in exercises.enumerated() {
             _ = add(exercise, to: session, role: roles?[index], in: context, updateTitle: false)

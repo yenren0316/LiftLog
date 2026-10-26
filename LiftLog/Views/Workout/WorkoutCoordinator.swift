@@ -1,74 +1,28 @@
 import SwiftUI
 import SwiftData
 
-/// 開始訓練的內容；「再做一次」會帶入原本的角色與日型
-struct StartRequest {
-    var exercises: [Exercise]
-    var roles: [Role]?
-    var dayType: DayType?
-}
-
-/// 管理進行中訓練的顯示（全螢幕／縮小橫條）與開始訓練時的衝突處理
+/// 管理訓練相關畫面的呈現：訓練中全螢幕／縮小橫條、完成摘要、訓練摘要浮窗。
+/// 開始訓練（包括衝突處理）在 WorkoutLauncher
 @Observable
 final class WorkoutCoordinator {
     /// 全螢幕顯示訓練中畫面
     var isExpanded = false
-    /// 已有進行中的訓練時，等待使用者選擇「加入」或「結束並開始新的」
-    var pendingStart: StartRequest?
     /// 剛完成的訓練摘要；有值時全螢幕畫面顯示摘要
     var summary: WorkoutSummary?
     /// 完成時沒有任何已完成的組，整次訓練已刪除
     var showEmptyFinishNotice = false
-    /// 深層連結 liftlog://new 要求打開建立菜單；首頁收到後開啟並清掉
-    var planRequestedByLink = false
+    /// 展開訓練中畫面時直接打開「新增動作」（自由選動作）
+    var openAddOnExpand = false
+    /// 訓練摘要浮窗（RootView 呈現，任何畫面都可以打開）
+    var summarySession: WorkoutSession?
+    /// 浮窗打開後直接進入編輯（補登）；編輯畫面打開後直接打開「新增動作」
+    var editOnSummaryOpen = false
+    var openAddInEditor = false
 
-    @ObservationIgnored private let restTimer: RestTimer
-
-    init(restTimer: RestTimer = .shared) {
-        self.restTimer = restTimer
-    }
-
-    /// 開始訓練的唯一入口：沒有進行中的訓練就直接開始；有的話先問
-    func requestStart(_ exercises: [Exercise], context: ModelContext) {
-        requestStart(StartRequest(exercises: exercises), context: context)
-    }
-
-    func requestStart(_ request: StartRequest, context: ModelContext) {
-        if WorkoutActions.activeSession(in: context) != nil {
-            pendingStart = request
-        } else {
-            start(request, context: context)
-        }
-    }
-
-    private func start(_ request: StartRequest, context: ModelContext) {
-        WorkoutActions.start(with: request.exercises, roles: request.roles, dayType: request.dayType, in: context)
-        isExpanded = true
-    }
-
-    func addToCurrent(context: ModelContext) {
-        guard let request = pendingStart, let session = WorkoutActions.activeSession(in: context) else { return }
-        for (index, exercise) in request.exercises.enumerated() {
-            _ = WorkoutActions.add(exercise, to: session, role: request.roles?[index], in: context)
-        }
-        pendingStart = nil
-        isExpanded = true
-    }
-
-    /// 結束目前的訓練（刪掉未完成的組）並開始新的
-    func finishCurrentAndStartNew(context: ModelContext) {
-        guard let request = pendingStart else { return }
-        finishActive(context: context)
-        pendingStart = nil
-        start(request, context: context)
-    }
-
-    /// 為了開始新的訓練而結束目前的訓練：刪掉未完成的組，休息倒數一起停掉（不然會延續到新訓練）
-    func finishActive(context: ModelContext) {
-        restTimer.skip()
-        if let session = WorkoutActions.activeSession(in: context) {
-            WorkoutActions.finish(session, choice: .deleteIncomplete, in: context)
-        }
+    func showSummary(of session: WorkoutSession, editing: Bool = false, openAdd: Bool = false) {
+        editOnSummaryOpen = editing
+        openAddInEditor = openAdd
+        summarySession = session
     }
 }
 
@@ -113,20 +67,5 @@ extension View {
     /// 每個分頁底部都放縮小橫條（位在分頁列上方）
     func workoutMiniBar() -> some View {
         safeAreaInset(edge: .bottom) { WorkoutMiniBar() }
-    }
-
-    /// 「已有進行中的訓練」時的選擇
-    func workoutStartConflictDialog(_ coordinator: WorkoutCoordinator, context: ModelContext) -> some View {
-        confirmationDialog(
-            "已經有進行中的訓練",
-            isPresented: Binding(get: { coordinator.pendingStart != nil }, set: { if !$0 { coordinator.pendingStart = nil } }),
-            titleVisibility: .visible
-        ) {
-            Button("加入目前的訓練") { coordinator.addToCurrent(context: context) }
-            Button("結束目前的訓練並開始新的", role: .destructive) { coordinator.finishCurrentAndStartNew(context: context) }
-            Button("取消", role: .cancel) { coordinator.pendingStart = nil }
-        } message: {
-            Text("結束目前的訓練時，沒打勾的組會被刪除。")
-        }
     }
 }

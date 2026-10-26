@@ -19,6 +19,9 @@ struct SetRowInfo: Identifiable {
 /// 訓練內容的編輯器：訓練中畫面與歷史訓練詳情共用
 struct WorkoutEditor<Header: View>: View {
     let session: WorkoutSession
+    /// 一出現就打開「新增動作」（自由選動作）；打開後呼叫 onAutoOpenedAdd
+    var openAddOnAppear = false
+    var onAutoOpenedAdd: () -> Void = {}
     /// 打勾時通知（訓練中畫面用來開始休息計時）
     var onSetCompleted: (SessionExercise) -> Void = { _ in }
     @ViewBuilder var header: Header
@@ -72,6 +75,13 @@ struct WorkoutEditor<Header: View>: View {
         }
         .screenBackground()
         .toolbar { keyboardToolbar }
+        .task(id: openAddOnAppear) {
+            guard openAddOnAppear else { return }
+            // 等全螢幕畫面出現後再開 sheet
+            try? await Task.sleep(for: .milliseconds(500))
+            addingExercise = true
+            onAutoOpenedAdd()
+        }
         #if DEBUG
         // 開發用：-openAddExercise YES 打開新增動作、-openReplace YES 打開第一個動作的換動作
         .task {

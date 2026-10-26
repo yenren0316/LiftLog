@@ -410,6 +410,8 @@ enum ConjugateLibrary {
     /// 輔助引體向上的新紀錄把輔助量記成負重（輔助 20 kg 記 −20 kg）；舊紀錄不轉換
     static let negativeLoadExercise = "輔助引體向上"
     static let negativeLoadNote = "輔助量記成負重：輔助 20 kg 記 −20 kg（鍵盤列的 ± 切換正負）。2026/10/26 以前的紀錄是輔助量，沒有轉換。"
+    /// CHANGE_07 把舊紀錄也轉成負數之後的備註
+    static let negativeLoadNoteConverted = "輔助量記成負重：輔助 20 kg 記 −20 kg（鍵盤列的 ± 切換正負）。2026/10/26 以前的輔助量紀錄已轉成負數。"
 
     private static let appliedKey = "conjugateLibrary.v1"
 

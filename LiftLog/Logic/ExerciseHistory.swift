@@ -14,10 +14,14 @@ extension Exercise {
         SetLogic.lastCompletedDate(sessionItems.flatMap { $0.sets.map(\.values) })
     }
 
-    /// 上次紀錄：最近一次「已結束」訓練中的這個動作（排除指定的訓練，例如進行中的這次）。
+    /// 上次紀錄：最近一次「已結束」訓練中的這個動作。指定 session（進行中或正在編輯的那次）時，
+    /// 只取那次訓練開始「之前」的紀錄，編輯過去的訓練才不會拿到之後的紀錄。
     /// 速度和最大重量的數字差很多：DE 主項只看上次 DE；ME 主項先看上次 ME，沒有就看 DE 以外的紀錄
     func lastItem(excluding session: WorkoutSession? = nil, role: Role? = nil) -> SessionExercise? {
-        let ended = completedItems.filter { $0.session !== session && $0.session?.isActive == false }
+        let ended = completedItems.filter { item in
+            guard let s = item.session, s !== session, !s.isActive else { return false }
+            return session.map { s.startedAt < $0.startedAt } ?? true
+        }
         switch role {
         case .dynamicEffort?: return ended.first { $0.role == .dynamicEffort }
         case .maxEffort?: return ended.first { $0.role == .maxEffort } ?? ended.first { $0.role != .dynamicEffort }
@@ -30,10 +34,11 @@ extension Exercise {
         lastItem(excluding: session, role: role)?.completedSets.map(\.values) ?? []
     }
 
-    /// 已結束訓練裡的紀錄，由新到舊（ME 紀錄、建議重量用）
+    /// 已結束訓練裡的紀錄，由新到舊（ME 紀錄、建議重量用）；指定 session 時只取那次開始之前的
     func logs(excluding session: WorkoutSession? = nil) -> [ExerciseLog] {
         completedItems.compactMap { item in
-            guard let s = item.session, s !== session, !s.isActive else { return nil }
+            guard let s = item.session, s !== session, !s.isActive, session.map({ s.startedAt < $0.startedAt }) ?? true
+            else { return nil }
             return ExerciseLog(date: s.startedAt, role: item.role, sets: item.completedSets.map(\.values))
         }
     }

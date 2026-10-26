@@ -7,10 +7,10 @@ enum DeepLinkDestination: Equatable {
 }
 
 extension DeepLink {
-    /// 依有沒有進行中的訓練決定去哪裡
+    /// 依有沒有進行中的訓練決定去哪裡。new 一律進入建立菜單：有進行中的訓練時由 WorkoutLauncher 先問「繼續目前訓練／建立新菜單」
     func destination(hasActiveWorkout: Bool) -> DeepLinkDestination {
         switch self {
-        case .new: hasActiveWorkout ? .workout : .plan
+        case .new: .plan
         case .workout: hasActiveWorkout ? .workout : .home
         }
     }

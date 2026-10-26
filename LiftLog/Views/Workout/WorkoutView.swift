@@ -15,7 +15,8 @@ struct WorkoutView: View {
 
     var body: some View {
         NavigationStack {
-            WorkoutEditor(session: session, onSetCompleted: setCompleted) {
+            WorkoutEditor(session: session, openAddOnAppear: coordinator.openAddOnExpand,
+                          onAutoOpenedAdd: { coordinator.openAddOnExpand = false }, onSetCompleted: setCompleted) {
                 header
             }
             .safeAreaInset(edge: .top) { RestTimerBar() }

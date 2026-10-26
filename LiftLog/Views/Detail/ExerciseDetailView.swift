@@ -63,13 +63,9 @@ struct ExerciseDetailView: View {
     }
 }
 
-/// 頁首：名稱、分類、tags、器材、上次、近 90 天、開始或加入訓練
+/// 頁首：名稱、分類、tags、器材、上次、近 90 天
 private struct DetailHeader: View {
     let exercise: Exercise
-
-    @Environment(\.modelContext) private var context
-    @Environment(WorkoutCoordinator.self) private var coordinator
-    @Query(filter: #Predicate<WorkoutSession> { $0.endedAt == nil }) private var active: [WorkoutSession]
 
     var body: some View {
         let days = Recency.daysSince(exercise.lastCompletedDate)
@@ -87,16 +83,6 @@ private struct DetailHeader: View {
                      color: Recency.staleness(days: days).color)
                 stat("\(exercise.trainingCount(withinDays: 90)) 次", "近 90 天", color: Theme.accent)
             }
-
-            Button(action: startOrJoin) {
-                Label(active.isEmpty ? "用這個動作開始訓練" : "加入目前訓練",
-                      systemImage: active.isEmpty ? "play.fill" : "plus")
-                    .font(.headline)
-                    .foregroundStyle(Theme.onAccent)
-                    .frame(maxWidth: .infinity, minHeight: 50)
-                    .background(Theme.accent, in: .capsule)
-            }
-            .buttonStyle(.pressable)
         }
         .card()
     }
@@ -107,15 +93,6 @@ private struct DetailHeader: View {
             Text(value).font(.title3.bold().monospacedDigit()).foregroundStyle(color)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func startOrJoin() {
-        if let session = active.first {
-            _ = WorkoutActions.add(exercise, to: session, in: context)
-            coordinator.isExpanded = true
-        } else {
-            coordinator.requestStart([exercise], context: context)
-        }
     }
 }
 

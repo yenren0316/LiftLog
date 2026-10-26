@@ -18,22 +18,13 @@ struct SessionsView: View {
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 0, trailing: 16))
 
-                Section {
-                    if let active = sessions.first(where: \.isActive) {
+                if let active = sessions.first(where: \.isActive) {
+                    Section {
                         activeCard(active)
-                    } else {
-                        Button { coordinator.requestStart([], context: context) } label: {
-                            Label("開始空白訓練", systemImage: "plus")
-                                .font(.title3.bold())
-                                .foregroundStyle(Theme.onAccent)
-                                .frame(maxWidth: .infinity, minHeight: 56)
-                                .background(Theme.accent, in: .capsule)
-                        }
-                        .buttonStyle(.pressable)
                     }
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                 }
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
 
                 let history = sessions.filter { !$0.isActive }
                 Section {

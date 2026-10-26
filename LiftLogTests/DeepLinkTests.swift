@@ -15,9 +15,10 @@ struct DeepLinkTests {
         #expect(DeepLink.workout.url.absoluteString == "liftlog://workout")
     }
 
-    @Test func newOpensPlanOrTheActiveWorkout() {
+    @Test func newAlwaysGoesToThePlanFlow() {
+        // 有進行中的訓練時由 WorkoutLauncher 先問「繼續目前訓練／建立新菜單」
         #expect(DeepLink.new.destination(hasActiveWorkout: false) == .plan)
-        #expect(DeepLink.new.destination(hasActiveWorkout: true) == .workout)
+        #expect(DeepLink.new.destination(hasActiveWorkout: true) == .plan)
     }
 
     @Test func workoutOpensTheActiveWorkoutOrHome() {

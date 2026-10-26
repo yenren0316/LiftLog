@@ -3,13 +3,20 @@ import SwiftData
 
 struct RootView: View {
     @Environment(\.modelContext) private var context
-    @State private var coordinator = WorkoutCoordinator()
+    @State private var coordinator: WorkoutCoordinator
+    @State private var launcher: WorkoutLauncher
     @State private var restTimer = RestTimer.shared
     @State private var tab = 0
     @AppStorage(AppTheme.storageKey) private var theme: AppTheme = .graphiteOrange
     @AppStorage(WeightUnit.storageKey) private var unit: WeightUnit = .kg
     @Query(filter: #Predicate<WorkoutSession> { $0.endedAt == nil }) private var active: [WorkoutSession]
     private let router = DeepLinkRouter.shared
+
+    init() {
+        let coordinator = WorkoutCoordinator()
+        _coordinator = State(initialValue: coordinator)
+        _launcher = State(initialValue: WorkoutLauncher(coordinator: coordinator))
+    }
 
     var body: some View {
         #if DEBUG
@@ -43,7 +50,7 @@ struct RootView: View {
             }
     }
 
-    /// 深層連結：有進行中的訓練就打開它；建立菜單交給首頁開啟
+    /// 深層連結：workout 打開進行中的訓練；new 進入建立菜單（有進行中的訓練時由 WorkoutLauncher 先詢問）
     private func handle(_ link: DeepLink) {
         router.pending = nil
         let coverShown = coordinator.isExpanded && (active.first != nil || coordinator.summary != nil)
@@ -58,10 +65,10 @@ struct RootView: View {
                 // 等全螢幕畫面關掉再開 sheet
                 Task {
                     try? await Task.sleep(for: .milliseconds(600))
-                    coordinator.planRequestedByLink = true
+                    launcher.requestPlan(context: context)
                 }
             } else {
-                coordinator.planRequestedByLink = true
+                launcher.requestPlan(context: context)
             }
         case .home:
             closeWorkoutCover()
@@ -90,7 +97,15 @@ struct RootView: View {
             }
         }
         .environment(coordinator)
+        .environment(launcher)
         .environment(restTimer)
+        .sheet(item: $launcher.planRequest, onDismiss: launcher.sheetDismissed) { request in
+            PlanFlowView(request: request)
+                .environment(coordinator)
+                .environment(launcher)
+        }
+        .planEntryQuestion(launcher)
+        .launchConfirmation(launcher, origin: .root, context: context)
         .fullScreenCover(isPresented: Binding(
             get: { coordinator.isExpanded && (active.first != nil || coordinator.summary != nil) },
             set: { coordinator.isExpanded = $0 }
@@ -106,6 +121,7 @@ struct RootView: View {
                 }
             }
             .environment(coordinator)
+            .environment(launcher)
             .environment(restTimer)
             .preferredColorScheme(.dark)
         }
@@ -117,12 +133,13 @@ struct RootView: View {
         } message: {
             Text("這次訓練沒有打勾的組，已經刪除。")
         }
-        .workoutStartConflictDialog(coordinator, context: context)
         .task {
             SeedImporter.importIfNeeded(into: context)
             GuideImporter.importIfNeeded(into: context)
             LibraryAdditions.applyIfNeeded(into: context)
             ConjugateLibrary.applyIfNeeded(into: context)
+            // 資料遷移：每個遷移執行前先在 Documents/AutoBackups 自動備份
+            DataMigrations.runIfNeeded(context: context)
             SnapshotWriter.shared.start(context: context)
             LiveActivityController.shared.start()
             #if DEBUG
@@ -132,7 +149,7 @@ struct RootView: View {
             if UserDefaults.standard.bool(forKey: "demoWorkout"), active.isEmpty {
                 let names = ["臥推", "輔助引體向上", "跑步機"]
                 let all = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
-                coordinator.requestStart(names.compactMap { n in all.first { $0.name == n } }, context: context)
+                launcher.start(.init(exercises: names.compactMap { n in all.first { $0.name == n } }), context: context)
             } else if UserDefaults.standard.bool(forKey: "demoWorkout") {
                 coordinator.isExpanded = true
             }

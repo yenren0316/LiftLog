@@ -44,25 +44,6 @@ struct ThinBar: View {
     }
 }
 
-/// 右下角懸浮的圓形按鈕（首頁的「＋」）
-struct FloatingActionButton: View {
-    var systemName: String
-    var action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: systemName)
-                .font(.title2.weight(.bold))
-                .foregroundStyle(Theme.onAccent)
-                .frame(width: 60, height: 60)
-                .background(Theme.accent, in: .circle)
-                .shadow(color: .black.opacity(0.4), radius: 12, y: 6)
-                .contentShape(.circle)
-        }
-        .buttonStyle(.pressable(scale: 0.9))
-    }
-}
-
 /// 頁面大標題列：左邊標題、右邊可選的按鈕
 struct ScreenHeader<Trailing: View>: View {
     var title: String
@@ -168,19 +149,14 @@ extension ButtonStyle where Self == PressableButtonStyle {
 // MARK: - 捲動時隱藏分頁列
 
 extension View {
-    /// 分頁裡的捲動畫面用：往下滑隱藏分頁列，往上滑或回到頂端時出現（像 Threads）。
-    /// 畫面要跟著顯示其他按鈕時傳入 isHidden
-    func hidesTabBarOnScroll(_ isHidden: Binding<Bool>) -> some View {
-        modifier(TabBarAutoHideModifier(isHidden: isHidden))
-    }
-
+    /// 分頁裡的捲動畫面用：往下滑隱藏分頁列，往上滑或回到頂端時出現（像 Threads）
     func hidesTabBarOnScroll() -> some View {
-        modifier(OwnTabBarAutoHide())
+        modifier(TabBarAutoHideModifier())
     }
 }
 
 private struct TabBarAutoHideModifier: ViewModifier {
-    @Binding var isHidden: Bool
+    @State private var isHidden = false
     @State private var autoHide = TabBarAutoHide()
     @State private var isScrolling = false
 
@@ -208,13 +184,5 @@ private struct TabBarAutoHideModifier: ViewModifier {
                 autoHide.reset()
                 isHidden = false
             }
-    }
-}
-
-private struct OwnTabBarAutoHide: ViewModifier {
-    @State private var isHidden = false
-
-    func body(content: Content) -> some View {
-        content.hidesTabBarOnScroll($isHidden)
     }
 }

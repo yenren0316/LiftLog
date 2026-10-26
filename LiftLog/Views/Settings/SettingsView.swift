@@ -97,6 +97,8 @@ struct SettingsView: View {
                 }
                 .card()
 
+                AutoBackupList().card()
+
                 VStack(spacing: 6) {
                     Label("LiftLog", systemImage: "dumbbell.fill")
                         .font(.system(.title3, design: .monospaced).bold())

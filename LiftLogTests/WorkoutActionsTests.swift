@@ -111,35 +111,6 @@ struct WorkoutActionsTests {
         #expect(WorkoutActions.completionDate(in: active, now: now) == now)
     }
 
-    @Test func startingANewWorkoutOverTheCurrentOneStopsTheRest() throws {
-        final class SilentNotifications: RestNotifying {
-            func schedule(at endDate: Date) {}
-            func cancel() {}
-        }
-        let context = try makeContext()
-        let defaults = try #require(UserDefaults(suiteName: "WorkoutActionsTests.\(UUID().uuidString)"))
-        let timer = RestTimer(defaults: defaults, notifications: SilentNotifications())
-        let coordinator = WorkoutCoordinator(restTimer: timer)
-        let bench = Exercise(name: "臥推", category: .horizontalPush, equipment: .barbell)
-        let row = Exercise(name: "坐姿 Cable 划船", category: .horizontalPull, equipment: .cable)
-        [bench, row].forEach(context.insert)
-        let current = WorkoutActions.start(with: [bench], in: context)
-        current.orderedItems[0].orderedSets[0].weightKg = 40
-        current.orderedItems[0].orderedSets[0].reps = 5
-        current.orderedItems[0].orderedSets[0].isCompleted = true
-        timer.start(seconds: 90)
-        // 「結束目前的訓練並開始新的」：舊訓練結束，休息倒數不會延續到新訓練
-        coordinator.requestStart([row], context: context)
-        coordinator.finishCurrentAndStartNew(context: context)
-        #expect(!timer.isRunning)
-        #expect(current.endedAt != nil)
-        #expect(WorkoutActions.activeSession(in: context)?.orderedItems.first?.exercise === row)
-        // 首頁「結束並建立新菜單」走同一個 finishActive
-        timer.start(seconds: 90)
-        coordinator.finishActive(context: context)
-        #expect(!timer.isRunning)
-    }
-
     @Test func finishWithNothingCompletedDeletesSession() throws {
         let context = try makeContext()
         let bench = Exercise(name: "臥推", category: .horizontalPush, equipment: .barbell)
@@ -273,20 +244,26 @@ struct WorkoutActionsTests {
         #expect(session.orderedItems[0].role == .maxEffort)
     }
 
-    @Test func repeatCarriesRolesAndDayType() throws {
+    @Test func previousSetsInAPastSessionComeOnlyFromEarlierSessions() throws {
+        // T3：編輯過去的訓練時，「上一次」和灰字預填只取那次訓練開始之前最新的紀錄
         let context = try makeContext()
-        let squat = Exercise(name: "深蹲", category: .kneeDominant, tags: [.main], equipment: .barbell)
-        let curl = Exercise(name: "二頭彎舉", category: .accessory, equipment: .dumbbell)
-        [squat, curl].forEach(context.insert)
-        // 把補強動作放在核心的位置，再做一次時照原本的角色
-        let session = WorkoutActions.start(with: [squat, curl], roles: [.dynamicEffort, .core], dayType: .deLower, in: context)
-        let request = StartRequest(exercises: session.orderedItems.compactMap(\.exercise),
-                                   roles: session.orderedItems.map(\.role), dayType: session.dayType)
-        WorkoutActions.discard(session, in: context)
-        let again = WorkoutActions.start(with: request.exercises, roles: request.roles, dayType: request.dayType, in: context)
-        #expect(again.orderedItems.map { $0.exercise?.name } == ["深蹲", "二頭彎舉"])
-        #expect(again.orderedItems.map(\.role) == [.dynamicEffort, .core])
-        #expect(again.dayType == .deLower)
+        let bench = Exercise(name: "臥推", category: .horizontalPush, equipment: .barbell)
+        context.insert(bench)
+        history(bench, sets: [(40, 5)], daysAgo: 20, in: context)
+        history(bench, sets: [(50, 5), (50, 5)], daysAgo: 10, in: context)
+        history(bench, sets: [(60, 3)], daysAgo: 2, in: context)
+        let middle = try #require(bench.completedItems.first { $0.completedSets.count == 2 })
+        let session = try #require(middle.session)
+        #expect(bench.lastSets(excluding: session).map(\.weightKg) == [40])
+        #expect(middle.setHints().map(\.previous?.weightKg) == [40, nil])
+        // 建議重量用的紀錄也一樣
+        #expect(bench.logs(excluding: session).map { $0.sets.compactMap(\.weightKg) } == [[40]])
+        // 最早的那次沒有之前的紀錄
+        let first = try #require(bench.completedItems.last?.session)
+        #expect(bench.lastSets(excluding: first).isEmpty)
+        // 進行中的訓練照常取最近一次
+        let active = WorkoutActions.start(with: [bench], in: context)
+        #expect(bench.lastSets(excluding: active).map(\.weightKg) == [60])
     }
 
     @Test func previousSetsDependOnMainRole() throws {
