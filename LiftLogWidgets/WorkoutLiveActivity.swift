@@ -12,22 +12,30 @@ struct WorkoutLiveActivity: Widget {
         } dynamicIsland: { context in
             let accent = Color(hex: context.attributes.accent)
             return DynamicIsland {
-                // 展開的高度有限（約 160 pt），上方只放角色圖示和經過時間，標題留在鎖定畫面
+                // 展開的高度有限（約 160 pt）：和鎖定畫面一樣的資訊層級。第 1 列放在左右區域（名稱、經過時間），
+                // 下面是第 2～4 列，倒數小一點；字級最大到 large，文字一律一行
                 DynamicIslandExpandedRegion(.leading) {
-                    WorkoutActivityCompactLeading(attributes: context.attributes, state: context.state)
-                        .font(.title2)
+                    Text(context.state.title)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
                         .padding(.leading, 4)
+                        .dynamicTypeSize(...DynamicTypeSize.large)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     Text(context.state.startedAt, style: .timer)
-                        .font(.subheadline.monospacedDigit())
+                        .font(.caption.monospacedDigit())
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.trailing)
+                        .lineLimit(1)
                         .frame(maxWidth: 64, alignment: .trailing)
+                        .dynamicTypeSize(...DynamicTypeSize.large)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    WorkoutActivityBody(attributes: context.attributes, state: context.state,
-                                        isStale: context.isStale, countdownSize: 32)
+                    WorkoutActivityBody(attributes: context.attributes, state: context.state, isStale: context.isStale,
+                                        middleHeight: LiveActivityLayout.islandMiddleHeight,
+                                        countdownSize: LiveActivityLayout.islandCountdownSize)
+                        .dynamicTypeSize(...DynamicTypeSize.large)
                 }
             } compactLeading: {
                 WorkoutActivityCompactLeading(attributes: context.attributes, state: context.state)

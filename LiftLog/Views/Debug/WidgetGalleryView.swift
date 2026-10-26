@@ -107,10 +107,12 @@ struct WidgetGalleryView: View {
     }
 
     private func lockScreen(_ state: WorkoutActivityState) -> some View {
-        WorkoutActivityLockScreenView(attributes: activityAttributes, state: state, isStale: false)
-            .frame(width: 370)
-            .background(.black.opacity(0.72), in: .rect(cornerRadius: 24, style: .continuous))
-            .environment(\.colorScheme, .dark)
+        MeasuredHeight(limit: 160) {
+            WorkoutActivityLockScreenView(attributes: activityAttributes, state: state, isStale: false)
+                .frame(width: 370)
+                .background(.black.opacity(0.72), in: .rect(cornerRadius: 24, style: .continuous))
+                .environment(\.colorScheme, .dark)
+        }
     }
 
     private func compact(_ state: WorkoutActivityState) -> some View {
@@ -135,24 +137,34 @@ struct WidgetGalleryView: View {
             .environment(\.colorScheme, .dark)
     }
 
+    /// 和 WorkoutLiveActivity 的展開區域一樣：左右是名稱和經過時間，下面是第 2～4 列
     private func expanded(_ state: WorkoutActivityState) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline) {
-                WorkoutActivityCompactLeading(attributes: activityAttributes, state: state).font(.title2)
-                Spacer()
-                Text(state.startedAt, style: .timer)
-                    .font(.subheadline.monospacedDigit())
-                    .foregroundStyle(.secondary)
-                    .frame(width: 64, alignment: .trailing)
+        MeasuredHeight(limit: 160) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(state.title)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                    Spacer(minLength: 8)
+                    Text(state.startedAt, style: .timer)
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: 64, alignment: .trailing)
+                }
+                WorkoutActivityBody(attributes: activityAttributes, state: state, isStale: false,
+                                    middleHeight: LiveActivityLayout.islandMiddleHeight,
+                                    countdownSize: LiveActivityLayout.islandCountdownSize)
             }
-            WorkoutActivityBody(attributes: activityAttributes, state: state, isStale: false, countdownSize: 32)
+            .dynamicTypeSize(...DynamicTypeSize.large)
+            .padding(.horizontal, 22)
+            .padding(.vertical, 14)
+            .frame(width: 370)
+            .background(.black, in: .rect(cornerRadius: 44, style: .continuous))
+            .foregroundStyle(.white)
+            .environment(\.colorScheme, .dark)
         }
-        .padding(.horizontal, 22)
-        .padding(.vertical, 18)
-        .frame(width: 370)
-        .background(.black, in: .rect(cornerRadius: 44, style: .continuous))
-        .foregroundStyle(.white)
-        .environment(\.colorScheme, .dark)
     }
 
     // MARK: - 控制中心（控制項的外觀由系統決定，這裡模擬 1×1 和 2×1 兩種大小）
@@ -196,12 +208,13 @@ struct WidgetGalleryView: View {
         return WorkoutActivityAttributes(sessionID: "preview", accent: palette.accent, done: palette.done)
     }
 
+    /// 最長的測試字串（CHANGE_08 V4）：名稱和動作都很長，看截斷和高度
     private static func activityState(resting: Bool) -> WorkoutActivityState {
         let now = Date.now
         return WorkoutActivityState(
-            title: "臥推＋輔助引體向上＋跑步機", startedAt: now.addingTimeInterval(-24 * 60 - 32),
-            exerciseName: "臥推", roleTitle: "推", roleSymbol: Role.push.symbol,
-            setNumber: 2, setCount: 5, target: "60 kg × 5", canComplete: true,
+            title: "下肢速度與爆發・坐姿分腿壺鈴三點搬移", startedAt: now.addingTimeInterval(-24 * 60 - 32),
+            exerciseName: "坐姿分腿壺鈴三點搬移", roleTitle: "核心", roleSymbol: Role.core.symbol,
+            setNumber: 2, setCount: 6, target: "60 kg × 5", canComplete: true,
             completedSets: 6, totalSets: 15,
             restStartDate: resting ? now.addingTimeInterval(-35) : nil,
             restEndDate: resting ? now.addingTimeInterval(145) : nil
@@ -237,5 +250,20 @@ struct WidgetGalleryView: View {
     static let trainedToday = snapshot(daysAgo: 0)
     static let never = snapshot(daysAgo: nil)
     static let inProgress = snapshot(daysAgo: 2, inProgressMinutes: 32)
+}
+/// 預覽頁用：在畫面下面寫出實際的高度（CHANGE_08 V4：鎖定畫面的即時動態最高 160 pt）
+private struct MeasuredHeight<Content: View>: View {
+    var limit: CGFloat
+    @ViewBuilder var content: Content
+    @State private var height: CGFloat = 0
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            content.onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
+            Text("高度 \(Int(height.rounded())) pt（上限 \(Int(limit))）")
+                .font(.caption2.monospacedDigit())
+                .foregroundStyle(height <= limit ? Color.white.opacity(0.7) : Color.red)
+        }
+    }
 }
 #endif

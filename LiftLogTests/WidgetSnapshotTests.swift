@@ -143,4 +143,13 @@ struct WidgetSnapshotTests {
         #expect(WidgetSnapshotStore.save(snapshot, to: defaults))
         #expect(WidgetSnapshotStore.load(from: defaults)?.isInProgress == true)
     }
+
+    /// CHANGE_08 §5：鎖定畫面的即時動態最高 160 pt；休息和非休息用同一組固定高度
+    @Test func liveActivityFitsTheLockScreen() {
+        #expect(LiveActivityLayout.lockScreenHeight <= 160)
+        #expect(LiveActivityLayout.lockScreenHeight == 150)
+        // 休息狀態的中段：「休息」和下一組兩行、倒數、進度條都要放得進固定高度
+        #expect(LiveActivityLayout.countdownSize + 4 + 6 <= LiveActivityLayout.middleHeight)
+        #expect(LiveActivityLayout.islandCountdownSize + 4 + 6 <= LiveActivityLayout.islandMiddleHeight)
+    }
 }
