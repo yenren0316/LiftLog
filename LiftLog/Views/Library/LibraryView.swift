@@ -1,51 +1,43 @@
 import SwiftUI
 import SwiftData
 
+/// 第 1 層「動作庫」：只回答「我有哪些動作？」——9 個分類列和「已封存」。搜尋時直接列出所有分類的結果（不含封存）
 struct LibraryView: View {
-    @Environment(\.modelContext) private var context
-    @Query(sort: \Exercise.name) private var exercises: [Exercise]
+    enum Route: Hashable {
+        case category(ExerciseCategory)
+        case archived
+    }
 
-    @State private var showingNew = false
-    @State private var filter = LibraryFilter()
+    @Query(sort: \Exercise.name) private var exercises: [Exercise]
+    @Environment(StatsCache.self) private var stats
+    @State private var path = NavigationPath()
     @State private var query = ""
-    @State private var mergeSource: Exercise?
-    @State private var deleteCandidate: Exercise?
-    @AppStorage("library.showArchived") private var showArchived = false
-    /// 收合的分類（rawValue 以逗號串起來保存）
-    @AppStorage("library.collapsed") private var collapsedRaw = ""
+    @State private var showingNew = false
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             List {
-                Section {
-                    filterBar
-                    Toggle("顯示已封存", isOn: $showArchived)
-                        .font(.subheadline)
-                }
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-                .listRowSeparator(.hidden)
-
-                let visible = ExerciseLists.library(exercises, showArchived: showArchived, filter: filter, query: query)
-                ForEach(ExerciseCategory.allCases) { category in
-                    let items = LibraryOrder.sorted(
-                        visible.filter { $0.category == category },
-                        tags: \.tags, equipment: \.equipment, count: \.trainingCount, name: \.name
-                    )
-                    if !items.isEmpty {
-                        Section {
-                            if !collapsed.contains(category) {
-                                ForEach(items) { row($0) }
-                            }
-                        } header: {
-                            sectionHeader(category, count: items.count)
+                if query.isEmpty {
+                    Section {
+                        ForEach(ExerciseCategory.allCases) { category in
+                            NavigationLink(value: Route.category(category)) { categoryRow(category) }
+                                .listRowBackground(Theme.card)
                         }
                     }
-                }
-
-                Section {
-                } footer: {
-                    Text("長按動作可以合併或刪除。有紀錄的動作只能封存。")
+                    Section {
+                        NavigationLink(value: Route.archived) {
+                            Text("已封存（\(exercises.filter(\.isArchived).count)）").font(.body.weight(.semibold))
+                        }
+                        .listRowBackground(Theme.card)
+                    }
+                } else {
+                    let results = ExerciseLists.search(exercises, query: query)
+                    if results.isEmpty {
+                        Text("找不到「\(query)」").foregroundStyle(Theme.textSecondary).listRowBackground(Theme.card)
+                    }
+                    ForEach(results) { exercise in
+                        LibraryExerciseRow(exercise: exercise, stat: stats.snapshot.exercises[exercise.id], showsCategory: true)
+                    }
                 }
             }
             .listSectionSpacing(12)
@@ -59,138 +51,156 @@ struct LibraryView: View {
                 }
             }
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "搜尋名稱、別名、英文名")
-            .sheet(isPresented: $showingNew) {
-                ExerciseEditView(exercise: nil)
-            }
-            .sheet(item: $mergeSource) { source in
-                MergeTargetView(source: source)
-            }
-            .confirmationDialog(
-                "刪除「\(deleteCandidate?.name ?? "")」？",
-                isPresented: Binding(get: { deleteCandidate != nil }, set: { if !$0 { deleteCandidate = nil } }),
-                titleVisibility: .visible
-            ) {
-                Button("刪除", role: .destructive) {
-                    if let exercise = deleteCandidate, exercise.sessionItems.isEmpty {
-                        context.delete(exercise)
-                        try? context.save()
-                    }
-                    deleteCandidate = nil
+            .navigationDestination(for: Route.self) { route in
+                switch route {
+                case .category(let category): CategoryExerciseList(category: category)
+                case .archived: ArchivedExerciseList()
                 }
             }
+            .navigationDestination(for: Exercise.self) { ExerciseDetailView(exercise: $0) }
+            .libraryRowActionSheets()
+            .sheet(isPresented: $showingNew) { ExerciseEditView(exercise: nil) }
+            #if DEBUG
+            // 開發用：-libraryCategory kneeDominant 直接打開該分類；-openArchived YES 打開已封存
+            .task {
+                if let raw = UserDefaults.standard.string(forKey: "libraryCategory"), let category = ExerciseCategory(rawValue: raw) {
+                    path.append(Route.category(category))
+                }
+                if UserDefaults.standard.bool(forKey: "openArchived") { path.append(Route.archived) }
+            }
+            #endif
         }
     }
 
-    // MARK: - 篩選
+    /// 分類名稱、「N 個動作・最久沒練：N 天」；有沒練過的動作時另外寫「M 個未練過」
+    private func categoryRow(_ category: ExerciseCategory) -> some View {
+        let members = exercises.filter { $0.category == category && !$0.isArchived }
+        let dates = members.map { stats.snapshot.exercises[$0.id]?.lastDate }
+        let untrained = dates.filter { $0 == nil }.count
+        var parts = ["\(members.count) 個動作"]
+        if let oldest = dates.compactMap({ $0 }).min() {
+            parts.append("最久沒練：\(Recency.daysSince(oldest) ?? 0) 天")
+        }
+        if untrained > 0 { parts.append("\(untrained) 個未練過") }
+        return VStack(alignment: .leading, spacing: 2) {
+            Text(category.fullTitle).font(.body.weight(.semibold))
+            Text(parts.joined(separator: "・")).font(.footnote).foregroundStyle(Theme.textSecondary)
+        }
+        .padding(.vertical, 2)
+    }
+}
 
-    private var filterBar: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                ForEach(LibraryFilter.Trained.allCases) { option in
-                    chip(option.title, selected: filter.trained == option) { filter.trained = option }
+/// 第 2 層「分類清單」：右上角的排序和篩選（排序記住上次的選擇）
+struct CategoryExerciseList: View {
+    let category: ExerciseCategory
+
+    @Query(filter: #Predicate<Exercise> { !$0.isArchived }, sort: \Exercise.name) private var exercises: [Exercise]
+    @Environment(StatsCache.self) private var stats
+    @AppStorage(LibrarySort.storageKey) private var sort: LibrarySort = .stalest
+    @State private var filter = LibraryFilter()
+    @State private var showingOptions = false
+
+    var body: some View {
+        let members = exercises.filter { $0.category == category && filter.matches(tags: $0.tags) }
+        let sorted = sort.sorted(members, lastDate: { stats.snapshot.exercises[$0.id]?.lastDate },
+                                 count: { stats.snapshot.exercises[$0.id]?.sessionCount ?? 0 }, name: \.name)
+        List {
+            if sorted.isEmpty {
+                Text(filter.tags.isEmpty ? "這個分類沒有動作" : "沒有符合篩選的動作")
+                    .foregroundStyle(Theme.textSecondary)
+                    .listRowBackground(Theme.card)
+            }
+            ForEach(sorted) { exercise in
+                LibraryExerciseRow(exercise: exercise, stat: stats.snapshot.exercises[exercise.id])
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .screenBackground()
+        .navigationTitle(category.title)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { showingOptions = true } label: {
+                    Image(systemName: filter.tags.isEmpty ? "line.3.horizontal.decrease.circle"
+                                                          : "line.3.horizontal.decrease.circle.fill")
+                }
+                .accessibilityLabel("排序與篩選")
+                .popover(isPresented: $showingOptions) {
+                    SortFilterPanel(sort: $sort, filter: $filter)
+                        .presentationCompactAdaptation(.popover)
                 }
             }
+        }
+        .libraryRowActionSheets()
+        #if DEBUG
+        // 開發用：-librarySortMenu YES 打開排序與篩選（截圖用）
+        .task {
+            if UserDefaults.standard.bool(forKey: "librarySortMenu") {
+                try? await Task.sleep(for: .milliseconds(600))
+                showingOptions = true
+            }
+        }
+        #endif
+    }
+}
+
+/// 排序（四選一）和篩選（主、單、爆，取交集）
+private struct SortFilterPanel: View {
+    @Binding var sort: LibrarySort
+    @Binding var filter: LibraryFilter
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("排序").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.textSecondary)
+            ForEach(LibrarySort.allCases) { option in
+                Button { withAnimation(.tap) { sort = option } } label: {
+                    HStack {
+                        Text(option.title)
+                        Spacer()
+                        if sort == option { Image(systemName: "checkmark").foregroundStyle(Theme.accent) }
+                    }
+                    .contentShape(.rect)
+                }
+                .buttonStyle(.pressable)
+            }
+            Divider().overlay(Theme.separator)
+            Text("篩選").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.textSecondary)
             HStack(spacing: 8) {
                 ForEach(ExerciseTag.allCases) { tag in
-                    chip(tag.title, selected: filter.tags.contains(tag), systemImage: filter.tags.contains(tag) ? "checkmark" : nil) {
+                    FilterCapsule(title: tag.title, isSelected: filter.tags.contains(tag)) {
                         if filter.tags.contains(tag) { filter.tags.remove(tag) } else { filter.tags.insert(tag) }
                     }
                 }
             }
         }
+        .padding(20)
+        .frame(width: 280)
+        .foregroundStyle(Theme.textPrimary)
     }
+}
 
-    private func chip(_ title: String, selected: Bool, systemImage: String? = nil, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 4) {
-                if let systemImage { Image(systemName: systemImage) }
-                Text(title)
+/// 第 2 層「已封存」
+struct ArchivedExerciseList: View {
+    @Query(filter: #Predicate<Exercise> { $0.isArchived }, sort: \Exercise.name) private var exercises: [Exercise]
+    @Environment(StatsCache.self) private var stats
+
+    var body: some View {
+        List {
+            if exercises.isEmpty {
+                Text("沒有封存的動作").foregroundStyle(Theme.textSecondary).listRowBackground(Theme.card)
             }
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(selected ? Theme.onAccent : Theme.textPrimary)
-            .padding(.horizontal, 14)
-            .frame(minHeight: 34)
-            .background(selected ? Theme.accent : Theme.card, in: .capsule)
-            .overlay(Capsule().stroke(Theme.separator))
-        }
-        .buttonStyle(.pressable)
-    }
-
-    // MARK: - 分區
-
-    private var collapsed: Set<ExerciseCategory> {
-        Set(collapsedRaw.split(separator: ",").compactMap { ExerciseCategory(rawValue: String($0)) })
-    }
-
-    private func toggleCollapsed(_ category: ExerciseCategory) {
-        var set = collapsed
-        if set.contains(category) { set.remove(category) } else { set.insert(category) }
-        collapsedRaw = set.map(\.rawValue).sorted().joined(separator: ",")
-    }
-
-    private func sectionHeader(_ category: ExerciseCategory, count: Int) -> some View {
-        Button { withAnimation(.tap) { toggleCollapsed(category) } } label: {
-            HStack {
-                Text("\(category.fullTitle) · \(count)")
-                Spacer()
-                Image(systemName: "chevron.down")
-                    .rotationEffect(.degrees(collapsed.contains(category) ? -90 : 0))
+            ForEach(exercises) { exercise in
+                LibraryExerciseRow(exercise: exercise, stat: stats.snapshot.exercises[exercise.id], showsCategory: true)
             }
-            .font(.subheadline.weight(.semibold))
-            .contentShape(.rect)
-        }
-        .buttonStyle(.pressable)
-    }
-
-    // MARK: - 列
-
-    private func row(_ exercise: Exercise) -> some View {
-        NavigationLink {
-            ExerciseDetailView(exercise: exercise)
-        } label: {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 6) {
-                        Text(exercise.name).font(.body.weight(.semibold))
-                        ForEach(exercise.tags) { Chip(text: $0.title) }
-                        if exercise.isArchived { Chip(text: "封存") }
-                    }
-                    Text(subtitle(for: exercise))
-                        .font(.footnote)
-                        .foregroundStyle(Theme.textSecondary)
-                        .lineLimit(1)
-                }
-                Spacer()
-                Text("\(exercise.trainingCount) 次")
-                    .font(.footnote.monospacedDigit())
-                    .foregroundStyle(Theme.textSecondary)
-            }
-            .padding(.vertical, 4)
-            .opacity(exercise.isArchived ? 0.6 : 1)
-        }
-        .listRowBackground(Theme.card)
-        .swipeActions {
-            Button(exercise.isArchived ? "取消封存" : "封存") {
-                exercise.isArchived.toggle()
-                try? context.save()
-            }
-            .tint(exercise.isArchived ? Theme.accent : Theme.warning)
-        }
-        .contextMenu {
-            Button("合併到…", systemImage: "arrow.triangle.merge") { mergeSource = exercise }
-            Button(exercise.isArchived ? "取消封存" : "封存", systemImage: "archivebox") {
-                exercise.isArchived.toggle()
-                try? context.save()
-            }
-            if exercise.sessionItems.isEmpty {
-                Button("刪除", systemImage: "trash", role: .destructive) { deleteCandidate = exercise }
+            Section {
+            } footer: {
+                Text("封存的動作不會出現在建議和新增動作裡，紀錄仍然保留。向左滑可以取消封存。")
             }
         }
-    }
-
-    /// 「器材 · 上次 2025/10/05」或「器材 · 未練過」；別名不顯示但可搜尋
-    private func subtitle(for exercise: Exercise) -> String {
-        let last = exercise.lastCompletedDate.map { "上次 \($0.shortDate)" } ?? "未練過"
-        return "\(exercise.equipment.title) · \(last)"
+        .scrollContentBackground(.hidden)
+        .screenBackground()
+        .navigationTitle("已封存")
+        .navigationBarTitleDisplayMode(.inline)
+        .libraryRowActionSheets()
     }
 }

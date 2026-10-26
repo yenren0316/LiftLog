@@ -1,10 +1,43 @@
 import SwiftUI
 import SwiftData
 
-/// 管理訓練相關畫面的呈現：訓練中全螢幕／縮小橫條、完成摘要、訓練摘要浮窗。
+/// 四個分頁，每個只回答一個問題（CHANGE_07 設計原則 1、4）
+enum AppTab: Hashable, CaseIterable {
+    /// 下一次該練什麼？
+    case today
+    /// 我練了什麼、進步了多少？
+    case history
+    /// 我有哪些動作？
+    case library
+    /// App 怎麼運作？
+    case settings
+
+    var title: String {
+        switch self {
+        case .today: "今天"
+        case .history: "歷程"
+        case .library: "動作庫"
+        case .settings: "設定"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .today: "dumbbell.fill"
+        case .history: "calendar"
+        case .library: "list.bullet.rectangle"
+        case .settings: "gearshape.fill"
+        }
+    }
+}
+
+/// 管理畫面的呈現：目前的分頁、「今天」的導覽路徑、訓練中全螢幕／縮小橫條、完成摘要、訓練摘要浮窗。
 /// 開始訓練（包括衝突處理）在 WorkoutLauncher
 @Observable
 final class WorkoutCoordinator {
+    var tab: AppTab = .today
+    /// 「今天」分頁的導覽路徑（liftlog://today 會清空，回到第 1 層）
+    var todayPath = NavigationPath()
     /// 全螢幕顯示訓練中畫面
     var isExpanded = false
     /// 剛完成的訓練摘要；有值時全螢幕畫面顯示摘要
@@ -42,17 +75,15 @@ struct WorkoutMiniBar: View {
                         Text(session.title.isEmpty ? "訓練中" : session.title)
                             .font(.subheadline.weight(.semibold))
                             .lineLimit(1)
-                        TimelineView(.periodic(from: .now, by: 1)) { context in
-                            Text("訓練中 \(WorkoutSession.format(duration: context.date.timeIntervalSince(session.startedAt)))")
-                                .font(.caption.monospacedDigit())
-                                .foregroundStyle(Theme.textSecondary)
-                        }
+                        ElapsedTimeText(since: session.startedAt, prefix: "訓練中 ")
+                            .font(.caption)
+                            .foregroundStyle(Theme.textSecondary)
                     }
                     Spacer()
                     Image(systemName: "chevron.up").foregroundStyle(Theme.textSecondary)
                 }
                 .padding(.horizontal, 18)
-                .frame(height: 56)
+                .frame(height: Metrics.controlHeight)
                 .background(Theme.card, in: .capsule)
                 .overlay(Capsule().stroke(Theme.accent.opacity(0.5)))
                 .padding(.horizontal, 16)

@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 import Charts
 
-/// 數據分頁：個人紀錄、折線圖、強度換算表、同分類替代動作
+/// 數據分頁：個人紀錄、折線圖、強度換算表
 struct ExerciseDataTab: View {
     let exercise: Exercise
     var onOpenSession: (UUID) -> Void
@@ -15,7 +15,6 @@ struct ExerciseDataTab: View {
             if exercise.logType == .weight {
                 IntensityCard(exercise: exercise, sessions: sessions)
             }
-            AlternativesCard(exercise: exercise)
         }
     }
 }
@@ -102,13 +101,6 @@ private struct TrendChartCard: View {
                     Text("越低越好 ↑").font(.caption).foregroundStyle(Theme.textSecondary)
                 }
                 Spacer()
-                if metric.isWeight || logType == .assisted {
-                    Picker("單位", selection: $unit.animation(.tap)) {
-                        ForEach(WeightUnit.allCases) { Text($0.symbol).tag($0) }
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 110)
-                }
             }
 
             let options = ChartMetric.options(for: logType)
@@ -308,58 +300,4 @@ private struct IntensityCard: View {
     private func purposeColor(_ percent: Int) -> Color {
         percent >= 85 ? Theme.danger : percent >= 75 ? Theme.warning : Theme.done
     }
-}
-
-// MARK: - (d) 同分類替代動作
-
-private struct AlternativesCard: View {
-    let exercise: Exercise
-    @Query(filter: #Predicate<Exercise> { !$0.isArchived }) private var candidates: [Exercise]
-
-    var body: some View {
-        let others = candidates.filter { $0.category == exercise.category && $0 !== exercise }
-        let list = Array(Recency.sortedByNeglect(others, lastDate: \.lastCompletedDate, name: \.name, untrainedLast: true).prefix(5))
-        VStack(alignment: .leading, spacing: 12) {
-            Text("同分類替代動作").font(.headline).foregroundStyle(Theme.textSecondary)
-            if list.isEmpty {
-                Text("這個分類沒有其他動作").foregroundStyle(Theme.textSecondary)
-            }
-            ForEach(Array(list.enumerated()), id: \.element.id) { index, other in
-                if index > 0 { Divider().overlay(Theme.separator) }
-                NavigationLink {
-                    ExerciseDetailView(exercise: other)
-                } label: {
-                    let days = Recency.daysSince(other.lastCompletedDate)
-                    HStack {
-                        Text(other.name).font(.body.weight(.semibold))
-                        ForEach(other.tags) { Chip(text: $0.title) }
-                        Spacer()
-                        if let days {
-                            Text(days == 0 ? "今天" : "上次 \(days) 天前")
-                                .font(.subheadline.monospacedDigit())
-                                .foregroundStyle(Recency.staleness(days: days).color)
-                        } else {
-                            Chip(text: "未練過")
-                        }
-                        Image(systemName: "chevron.right").font(.footnote).foregroundStyle(.tertiary)
-                    }
-                    .contentShape(.rect)
-                }
-                .buttonStyle(.pressable)
-            }
-        }
-        .card()
-    }
-}
-
-/// 強度換算表的進位單位（設定頁可改）
-enum RoundingSteps {
-    static let barbellKgKey = "round.barbell.kg"
-    static let barbellLbsKey = "round.barbell.lbs"
-    static let otherKgKey = "round.other.kg"
-    static let otherLbsKey = "round.other.lbs"
-    static let barbellKgDefault = 2.5
-    static let barbellLbsDefault = 5.0
-    static let otherKgDefault = 1.0
-    static let otherLbsDefault = 2.5
 }

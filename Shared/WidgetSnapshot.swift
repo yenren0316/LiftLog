@@ -25,9 +25,9 @@ nonisolated struct WidgetSnapshot: Codable, Equatable, Sendable {
         return max(0, calendar.dateComponents([.day], from: from, to: to).day ?? 0)
     }
 
-    /// 「今天」「2 天前」
+    /// 「今天」「昨天」「2 天前」
     static func daysText(_ days: Int) -> String {
-        days == 0 ? "今天" : "\(days) 天前"
+        RelativeDay.text(days)
     }
 
     /// 「ME 下肢・10/23」；沒有日型時用部位，部位未指定時只有日期

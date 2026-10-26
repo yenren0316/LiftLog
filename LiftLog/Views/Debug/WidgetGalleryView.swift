@@ -54,7 +54,7 @@ struct WidgetGalleryView: View {
 
     private var lockPage: some View {
         VStack(alignment: .leading, spacing: 22) {
-            lockRow("上次訓練 2 天前", Self.trained)
+            lockRow("上次訓練 \(RelativeDay.text(2))", Self.trained)
             lockRow("今天練過", Self.trainedToday)
             lockRow("訓練中", Self.inProgress)
             lockRow("還沒有紀錄", Self.never)

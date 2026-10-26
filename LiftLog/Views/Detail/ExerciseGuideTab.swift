@@ -12,7 +12,7 @@ struct ExerciseGuideTab: View {
                 HStack {
                     Text("動作說明").font(.headline).foregroundStyle(Theme.textSecondary)
                     Spacer()
-                    Button("編輯", systemImage: "pencil") { editing = true }
+                    Button("編輯說明", systemImage: "pencil") { editing = true }
                         .labelStyle(.titleAndIcon)
                         .font(.subheadline.weight(.semibold))
                 }

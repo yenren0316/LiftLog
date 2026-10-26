@@ -2,16 +2,178 @@ import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
 
+/// 第 1 層「設定」：只回答「App 怎麼運作？」——五列，點進去才是各自的內容
 struct SettingsView: View {
-    @Environment(\.modelContext) private var context
+    enum Page: String, CaseIterable, Identifiable, Hashable {
+        case appearance, units, training, backup, about
 
-    @AppStorage("autoRestTimer") private var autoRestTimer = true
-    @AppStorage(LiveActivityController.enabledKey) private var liveActivityEnabled = true
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .appearance: "外觀"
+            case .units: "單位與進位"
+            case .training: "訓練"
+            case .backup: "備份與還原"
+            case .about: "關於"
+            }
+        }
+
+        var systemImage: String {
+            switch self {
+            case .appearance: "paintpalette.fill"
+            case .units: "scalemass.fill"
+            case .training: "timer"
+            case .backup: "externaldrive.fill"
+            case .about: "info.circle.fill"
+            }
+        }
+    }
+
+    @State private var path: [Page] = []
+
+    var body: some View {
+        NavigationStack(path: $path) {
+            List {
+                ForEach(Page.allCases) { page in
+                    NavigationLink(value: page) {
+                        Label(page.title, systemImage: page.systemImage).font(.body.weight(.semibold))
+                    }
+                    .listRowBackground(Theme.card)
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .screenBackground()
+            .navigationTitle("設定")
+            .navigationDestination(for: Page.self) { page in
+                Group {
+                    switch page {
+                    case .appearance: AppearanceSettings()
+                    case .units: UnitsSettings()
+                    case .training: TrainingSettings()
+                    case .backup: BackupSettings()
+                    case .about: AboutSettings()
+                    }
+                }
+                .navigationTitle(page.title)
+                .navigationBarTitleDisplayMode(.inline)
+            }
+            #if DEBUG
+            // 開發用：-settingsPage backup 直接打開該頁
+            .task {
+                if let raw = UserDefaults.standard.string(forKey: "settingsPage"), let page = Page(rawValue: raw) { path = [page] }
+            }
+            #endif
+        }
+    }
+}
+
+/// 第 2 層頁面共用的捲動容器
+private struct SettingsPage<Content: View>: View {
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) { content }
+                .padding(16)
+        }
+        .screenBackground()
+    }
+}
+
+// MARK: - 外觀
+
+private struct AppearanceSettings: View {
+    var body: some View {
+        SettingsPage { ThemeSection() }
+    }
+}
+
+// MARK: - 單位與進位
+
+private struct UnitsSettings: View {
     @AppStorage(WeightUnit.storageKey) private var unit: WeightUnit = .kg
     @AppStorage(RoundingSteps.barbellKgKey) private var barbellKg = RoundingSteps.barbellKgDefault
     @AppStorage(RoundingSteps.barbellLbsKey) private var barbellLbs = RoundingSteps.barbellLbsDefault
     @AppStorage(RoundingSteps.otherKgKey) private var otherKg = RoundingSteps.otherKgDefault
     @AppStorage(RoundingSteps.otherLbsKey) private var otherLbs = RoundingSteps.otherLbsDefault
+
+    var body: some View {
+        SettingsPage {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Label("重量單位", systemImage: "scalemass").font(.headline)
+                    Spacer()
+                    Picker("重量單位", selection: $unit) {
+                        ForEach(WeightUnit.allCases) { Text($0.symbol).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                    .fixedSize()
+                }
+                Text("所有畫面依這個單位顯示與輸入，資料一律存成 kg。啞鈴、壺鈴記單顆重量。")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            .card()
+
+            VStack(alignment: .leading, spacing: 10) {
+                Label("強度換算表進位", systemImage: "number").font(.headline)
+                stepper("槓鈴（kg）", value: $barbellKg, step: 0.5, unit: "kg")
+                stepper("槓鈴（lbs）", value: $barbellLbs, step: 2.5, unit: "lb")
+                stepper("其他器材（kg）", value: $otherKg, step: 0.5, unit: "kg")
+                stepper("其他器材（lbs）", value: $otherLbs, step: 2.5, unit: "lb")
+            }
+            .card()
+        }
+    }
+
+    private func stepper(_ title: String, value: Binding<Double>, step: Double, unit: String) -> some View {
+        Stepper(value: value, in: step...20, step: step) {
+            HStack {
+                Text(title)
+                Spacer()
+                Text("每 \(Units.number(value.wrappedValue)) \(unit)").monospacedDigit().foregroundStyle(Theme.textSecondary)
+            }
+        }
+    }
+}
+
+// MARK: - 訓練
+
+private struct TrainingSettings: View {
+    @AppStorage(WorkoutService.autoRestKey) private var autoRestTimer = true
+    @AppStorage(LiveActivityController.enabledKey) private var liveActivityEnabled = true
+
+    var body: some View {
+        SettingsPage {
+            VStack(alignment: .leading, spacing: 8) {
+                Toggle(isOn: $autoRestTimer) {
+                    Label("打勾後自動開始休息計時", systemImage: "timer").font(.headline)
+                }
+                Text("預設依角色：ME 主項 180 秒；DE 速度主項 60 秒；DE 爆發、下肢輔助、推、拉 90 秒；核心、補強 60 秒。每個動作可以在動作詳情的「編輯動作」裡自訂。")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            .card()
+
+            VStack(alignment: .leading, spacing: 8) {
+                Toggle(isOn: $liveActivityEnabled) {
+                    Label("訓練中顯示即時動態", systemImage: "lock.iphone").font(.headline)
+                }
+                Text("在鎖定畫面和動態島顯示目前的組和休息倒數，不用打開 App 就能按「完成這組」。")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            .card()
+            .onChange(of: liveActivityEnabled) { LiveActivityController.shared.scheduleSync() }
+        }
+    }
+}
+
+// MARK: - 備份與還原
+
+private struct BackupSettings: View {
+    @Environment(\.modelContext) private var context
     @State private var exportURL: URL?
     @State private var counts = (exercises: 0, sessions: 0, bodyWeights: 0)
     @State private var showingImporter = false
@@ -19,103 +181,29 @@ struct SettingsView: View {
     @State private var message: String?
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                ScreenHeader(title: "設定")
-
-                ThemeSection()
-
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        Label("重量單位", systemImage: "scalemass").font(.headline)
-                        Spacer()
-                        Picker("重量單位", selection: $unit) {
-                            ForEach(WeightUnit.allCases) { Text($0.symbol).tag($0) }
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(width: 140)
-                    }
-                    Text("所有畫面依這個單位顯示與輸入，資料一律存成 kg。啞鈴、壺鈴記單顆重量。")
-                        .font(.footnote)
-                        .foregroundStyle(Theme.textSecondary)
+        SettingsPage {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("免費簽署的 App 被刪掉後資料就沒了。記得定期匯出，存到「檔案」或用 AirDrop 傳到 Mac。")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textSecondary)
+                HStack(spacing: 0) {
+                    stat(counts.exercises, "動作")
+                    stat(counts.sessions, "次訓練")
+                    stat(counts.bodyWeights, "體重")
                 }
-                .card()
-
-                VStack(alignment: .leading, spacing: 10) {
-                    Label("強度換算表進位", systemImage: "number").font(.headline)
-                    stepper("槓鈴（kg）", value: $barbellKg, step: 0.5, unit: "kg")
-                    stepper("槓鈴（lbs）", value: $barbellLbs, step: 2.5, unit: "lb")
-                    stepper("其他器材（kg）", value: $otherKg, step: 0.5, unit: "kg")
-                    stepper("其他器材（lbs）", value: $otherLbs, step: 2.5, unit: "lb")
-                }
-                .card()
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Toggle(isOn: $autoRestTimer) {
-                        Label("打勾後自動開始休息計時", systemImage: "timer").font(.headline)
-                    }
-                    Text("預設依角色：ME 主項 180 秒；DE 速度主項 60 秒；DE 爆發、下肢輔助、推、拉 90 秒；核心、補強 60 秒。每個動作可以在動作詳情的「編輯」裡自訂。")
-                        .font(.footnote)
-                        .foregroundStyle(Theme.textSecondary)
-                }
-                .card()
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Toggle(isOn: $liveActivityEnabled) {
-                        Label("訓練中顯示即時動態", systemImage: "lock.iphone").font(.headline)
-                    }
-                    Text("在鎖定畫面和動態島顯示目前的組和休息倒數，不用打開 App 就能按「完成這組」。")
-                        .font(.footnote)
-                        .foregroundStyle(Theme.textSecondary)
-                }
-                .card()
-                .onChange(of: liveActivityEnabled) { LiveActivityController.shared.scheduleSync() }
-
-                VStack(alignment: .leading, spacing: 16) {
-                    Label("備份", systemImage: "externaldrive.fill")
-                        .font(.title3.bold())
-                    Text("免費簽署的 App 被刪掉後資料就沒了。記得定期匯出，存到「檔案」或用 AirDrop 傳到 Mac。")
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.textSecondary)
-
-                    HStack(spacing: 0) {
-                        stat(counts.exercises, "動作")
-                        stat(counts.sessions, "次訓練")
-                        stat(counts.bodyWeights, "體重")
-                    }
-                    .padding(.vertical, 8)
-
-                    if let exportURL {
-                        ShareLink(item: exportURL) {
-                            actionLabel("匯出 JSON", icon: "square.and.arrow.up", filled: true)
-                        }
-                    }
-                    Button { showingImporter = true } label: {
-                        actionLabel("從 JSON 匯入", icon: "square.and.arrow.down", filled: false)
-                    }
-                    .buttonStyle(.pressable)
-                }
-                .card()
-
-                AutoBackupList().card()
-
-                VStack(spacing: 6) {
-                    Label("LiftLog", systemImage: "dumbbell.fill")
-                        .font(.system(.title3, design: .monospaced).bold())
-                    Text("版本 \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")")
-                        .font(.footnote)
-                        .foregroundStyle(Theme.textSecondary)
-                    if let expiration {
-                        ExpirationLine(expiration: expiration)
+                if let exportURL {
+                    ShareLink(item: exportURL) {
+                        PrimaryButtonLabel(title: "匯出 JSON", systemImage: "square.and.arrow.up")
                     }
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.top, 20)
+                PrimaryButton(title: "從 JSON 匯入", systemImage: "square.and.arrow.down", prominent: false) {
+                    showingImporter = true
+                }
             }
-            .padding(16)
+            .card()
+
+            AutoBackupList().card()
         }
-        .hidesTabBarOnScroll()
-        .screenBackground()
         .onAppear(perform: refresh)
         .fileImporter(isPresented: $showingImporter, allowedContentTypes: [.json], onCompletion: readImport)
         .alert(
@@ -133,41 +221,14 @@ struct SettingsView: View {
         }
     }
 
-    /// 免費簽署的到期日；開發用：啟動參數 -previewExpirationDays 6 在模擬器顯示假的到期日
-    private var expiration: Date? {
-        #if DEBUG
-        let days = UserDefaults.standard.integer(forKey: "previewExpirationDays")
-        if days > 0 { return Calendar.current.date(byAdding: .day, value: days, to: .now) }
-        #endif
-        return ProvisioningProfile.installedExpiration
-    }
-
-    private func stepper(_ title: String, value: Binding<Double>, step: Double, unit: String) -> some View {
-        Stepper(value: value, in: step...20, step: step) {
-            HStack {
-                Text(title)
-                Spacer()
-                Text("每 \(Units.number(value.wrappedValue)) \(unit)").monospacedDigit().foregroundStyle(Theme.textSecondary)
-            }
-        }
-    }
-
     private func stat(_ value: Int, _ title: String) -> some View {
         VStack(spacing: 2) {
             Text(String(value))
-                .font(.system(size: 30, weight: .bold, design: .rounded).monospacedDigit())
+                .font(.title.bold().monospacedDigit())
                 .foregroundStyle(Theme.accent)
             Text(title).font(.footnote).foregroundStyle(Theme.textSecondary)
         }
         .frame(maxWidth: .infinity)
-    }
-
-    private func actionLabel(_ title: String, icon: String, filled: Bool) -> some View {
-        Label(title, systemImage: icon)
-            .font(.headline)
-            .foregroundStyle(filled ? Theme.onAccent : Theme.textPrimary)
-            .frame(maxWidth: .infinity, minHeight: 54)
-            .background(filled ? Theme.accent : Theme.field, in: .capsule)
     }
 
     /// 重新產生匯出檔，確保分享出去的是最新資料
@@ -206,7 +267,39 @@ struct SettingsView: View {
     }
 }
 
-/// 設定頁最下方：免費簽署的到期日，剩一天以內用 warning 色提醒重新安裝
+// MARK: - 關於
+
+private struct AboutSettings: View {
+    var body: some View {
+        SettingsPage {
+            VStack(spacing: 6) {
+                Label("LiftLog", systemImage: "dumbbell.fill")
+                    .font(.system(.title3, design: .monospaced).bold())
+                Text("版本 \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+                if let expiration {
+                    ExpirationLine(expiration: expiration)
+                } else {
+                    Text("簽署到期日只有裝在手機上才看得到").font(.footnote).foregroundStyle(Theme.textSecondary)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .card()
+        }
+    }
+
+    /// 免費簽署的到期日；開發用：啟動參數 -previewExpirationDays 6 在模擬器顯示假的到期日
+    private var expiration: Date? {
+        #if DEBUG
+        let days = UserDefaults.standard.integer(forKey: "previewExpirationDays")
+        if days > 0 { return Calendar.current.date(byAdding: .day, value: days, to: .now) }
+        #endif
+        return ProvisioningProfile.installedExpiration
+    }
+}
+
+/// 免費簽署的到期日，剩一天以內用 warning 色提醒重新安裝
 private struct ExpirationLine: View {
     var expiration: Date
 

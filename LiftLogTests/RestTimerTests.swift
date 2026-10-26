@@ -4,8 +4,20 @@ import Testing
 
 @MainActor
 struct RestTimerTests {
+    /// 不排真的通知（模擬器會跳出通知權限的對話框），也不寫進 App 的 UserDefaults
+    final class SilentNotifications: RestNotifying {
+        func schedule(at endDate: Date) {}
+        func cancel() {}
+    }
+
+    private let defaults = UserDefaults(suiteName: "RestTimerTests.\(UUID().uuidString)")!
+
+    private func makeTimer() -> RestTimer {
+        RestTimer(defaults: defaults, notifications: SilentNotifications())
+    }
+
     @Test func remainingComesFromEndTimestamp() {
-        let timer = RestTimer()
+        let timer = makeTimer()
         timer.start(seconds: 90)
         defer { timer.skip() }
         let now = Date.now
@@ -16,7 +28,7 @@ struct RestTimerTests {
     }
 
     @Test func adjustAndSkip() {
-        let timer = RestTimer()
+        let timer = makeTimer()
         timer.start(seconds: 90)
         timer.adjust(by: 15)
         #expect(abs(timer.remaining(at: .now) - 105) < 1)
@@ -28,9 +40,9 @@ struct RestTimerTests {
     }
 
     @Test func survivesRelaunchThroughStoredTimestamp() {
-        let first = RestTimer()
+        let first = makeTimer()
         first.start(seconds: 120)
-        let restored = RestTimer()   // 模擬重開 App
+        let restored = makeTimer()   // 模擬重開 App（同一份 UserDefaults）
         defer { restored.skip(); first.skip() }
         #expect(restored.isRunning)
         #expect(abs(restored.remaining(at: .now) - 120) < 1)

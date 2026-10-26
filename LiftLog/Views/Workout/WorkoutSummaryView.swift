@@ -92,14 +92,7 @@ struct WorkoutSummaryView: View {
                 }
                 .card()
 
-                Button(action: onClose) {
-                    Text("完成")
-                        .font(.title3.bold())
-                        .foregroundStyle(Theme.onAccent)
-                        .frame(maxWidth: .infinity, minHeight: 56)
-                        .background(Theme.accent, in: .capsule)
-                }
-                .buttonStyle(.pressable)
+                PrimaryButton(title: "完成", action: onClose)
             }
             .padding(16)
         }

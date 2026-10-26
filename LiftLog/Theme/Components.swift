@@ -44,6 +44,90 @@ struct ThinBar: View {
     }
 }
 
+/// 共用尺寸
+enum Metrics {
+    /// 主按鈕、選項膠囊、訓練中橫條的高度（全 App 一致）
+    static let controlHeight: CGFloat = 50
+    /// 篩選膠囊的高度
+    static let capsuleHeight: CGFloat = 38
+}
+
+/// 主按鈕的外觀（Button 和 ShareLink 共用）：prominent 是 accent 實心，否則是 field 底
+struct PrimaryButtonLabel: View {
+    var title: String
+    var systemImage: String?
+    var prominent = true
+    var isEnabled = true
+
+    var body: some View {
+        Group {
+            if let systemImage {
+                Label(title, systemImage: systemImage)
+            } else {
+                Text(title)
+            }
+        }
+        .font(.headline)
+        .foregroundStyle(prominent ? Theme.onAccent : Theme.textPrimary)
+        .frame(maxWidth: .infinity, minHeight: Metrics.controlHeight)
+        .background(prominent ? Theme.accent.opacity(isEnabled ? 1 : 0.4) : Theme.field, in: .capsule)
+        .contentShape(.capsule)
+    }
+}
+
+/// 主按鈕：全 App 只有這一種（CHANGE_07 B-4）
+struct PrimaryButton: View {
+    var title: String
+    var systemImage: String?
+    var prominent = true
+    var isEnabled = true
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            PrimaryButtonLabel(title: title, systemImage: systemImage, prominent: prominent, isEnabled: isEnabled)
+        }
+        .buttonStyle(.pressable)
+        .disabled(!isEnabled)
+    }
+}
+
+/// 篩選或選項用的膠囊：全 App 只有這一種樣式。選中時 accent 底；fill 為 true 時撐滿寬度、高度同主按鈕
+struct FilterCapsule: View {
+    var title: String
+    var isSelected: Bool
+    var fill = false
+    var action: () -> Void
+
+    var body: some View {
+        Button { withAnimation(.tap, action) } label: {
+            Text(title)
+                .font(fill ? .headline : .subheadline.weight(.semibold))
+                .lineLimit(1)
+                .foregroundStyle(isSelected ? Theme.onAccent : Theme.textPrimary)
+                .padding(.horizontal, 14)
+                .frame(maxWidth: fill ? .infinity : nil,
+                       minHeight: fill ? Metrics.controlHeight : Metrics.capsuleHeight)
+                .background(isSelected ? Theme.accent : Theme.field, in: .capsule)
+                .contentShape(.capsule)
+        }
+        .buttonStyle(.pressable)
+    }
+}
+
+/// 經過時間（每秒更新）：「1:05:30」，可加前綴（「訓練中 」）
+struct ElapsedTimeText: View {
+    var since: Date
+    var prefix = ""
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            Text(prefix + WorkoutSession.format(duration: context.date.timeIntervalSince(since)))
+                .monospacedDigit()
+        }
+    }
+}
+
 /// 頁面大標題列：左邊標題、右邊可選的按鈕
 struct ScreenHeader<Trailing: View>: View {
     var title: String
@@ -81,29 +165,6 @@ extension Date {
     /// 2026/10/20
     var shortDate: String {
         formatted(.dateTime.year().month(.twoDigits).day(.twoDigits))
-    }
-}
-
-/// 「全部／單邊／爆發」膠囊篩選列
-struct TagFilterBar: View {
-    @Binding var selection: TagFilter
-
-    var body: some View {
-        HStack(spacing: 8) {
-            ForEach(TagFilter.allCases) { filter in
-                let selected = filter == selection
-                Button { withAnimation(.tap) { selection = filter } } label: {
-                    Text(filter.title)
-                        .font(.headline)
-                        .foregroundStyle(selected ? Theme.onAccent : Theme.textPrimary)
-                        .padding(.horizontal, 18)
-                        .frame(minHeight: 40)
-                        .background(selected ? Theme.accent : Theme.field, in: .capsule)
-                }
-                .buttonStyle(.pressable)
-            }
-            Spacer(minLength: 0)
-        }
     }
 }
 

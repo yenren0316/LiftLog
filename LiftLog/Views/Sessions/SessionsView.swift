@@ -29,11 +29,10 @@ struct SessionsView: View {
                 let history = sessions.filter { !$0.isActive }
                 Section {
                     ForEach(history) { session in
-                        NavigationLink {
-                            SessionDetailView(session: session)
-                        } label: {
-                            SessionRow(session: session)
+                        Button { coordinator.showSummary(of: session) } label: {
+                            SessionRow(session: session).contentShape(.rect)
                         }
+                        .buttonStyle(.pressable)
                         .listRowBackground(Theme.card)
                         .swipeActions {
                             Button("刪除", systemImage: "trash", role: .destructive) { deleteCandidate = session }
@@ -70,10 +69,7 @@ struct SessionsView: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Theme.accent)
                 Text(session.title.isEmpty ? "空白訓練" : session.title).font(.title3.bold())
-                TimelineView(.periodic(from: .now, by: 1)) { timeline in
-                    Text(WorkoutSession.format(duration: timeline.date.timeIntervalSince(session.startedAt)))
-                        .font(.title.bold().monospacedDigit())
-                }
+                ElapsedTimeText(since: session.startedAt).font(.title.bold())
                 Text("點一下繼續").font(.footnote).foregroundStyle(Theme.textSecondary)
             }
             .card()

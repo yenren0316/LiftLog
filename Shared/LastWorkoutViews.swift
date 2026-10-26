@@ -117,19 +117,20 @@ struct LastWorkoutSmallView: View {
     }
 }
 
-/// 「今天」或「2 天前」：數字用大字，「天前」小一點
+/// 「今天」「昨天」或「2 天前」：數字用大字，「天前」小一點
 struct DaysText: View {
     var days: Int
     var unitFont: Font
 
     var body: some View {
-        if days == 0 {
-            Text("今天")
-        } else {
-            HStack(alignment: .firstTextBaseline, spacing: 2) {
-                Text(String(days))
-                Text("天前").font(unitFont)
+        let parts = RelativeDay.parts(days)
+        if let number = parts.number {
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
+                Text(number)
+                Text(parts.unit).font(unitFont)
             }
+        } else {
+            Text(parts.unit)
         }
     }
 }

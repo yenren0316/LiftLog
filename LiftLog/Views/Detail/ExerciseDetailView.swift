@@ -20,7 +20,7 @@ struct ExerciseDetailView: View {
 
     @State private var tab: Tab = .data
     @State private var showingEdit = false
-    @State private var openSession: WorkoutSession?
+    @Environment(WorkoutCoordinator.self) private var coordinator
 
     var body: some View {
         ScrollView {
@@ -37,7 +37,7 @@ struct ExerciseDetailView: View {
                 case .guide:
                     ExerciseGuideTab(exercise: exercise)
                 case .history:
-                    HistoryCard(exercise: exercise, items: exercise.completedItems)
+                    HistoryCard(items: exercise.completedItems) { coordinator.showSummary(of: $0) }
                 }
             }
             .padding(16)
@@ -48,18 +48,24 @@ struct ExerciseDetailView: View {
         .toolbar(.hidden, for: .tabBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button("編輯") { showingEdit = true }
+                Menu {
+                    Button("編輯動作", systemImage: "pencil") { showingEdit = true }
+                } label: {
+                    Image(systemName: "ellipsis")
+                }
+                .accessibilityLabel("更多")
             }
         }
         .sheet(isPresented: $showingEdit) {
             ExerciseEditView(exercise: exercise)
         }
-        .navigationDestination(item: $openSession) { SessionDetailView(session: $0) }
     }
 
-    /// 點紀錄或圖表上的點，打開那次訓練
+    /// 點紀錄或圖表上的點：打開那次訓練的摘要浮窗（第 3 層不再 push 頁面）
     private func open(_ sessionID: UUID) {
-        openSession = exercise.completedItems.lazy.compactMap(\.session).first { $0.id == sessionID }
+        if let session = exercise.completedItems.lazy.compactMap(\.session).first(where: { $0.id == sessionID }) {
+            coordinator.showSummary(of: session)
+        }
     }
 }
 
@@ -79,8 +85,7 @@ private struct DetailHeader: View {
                 .foregroundStyle(Theme.textSecondary)
 
             HStack(spacing: 0) {
-                stat(days.map { $0 == 0 ? "今天" : "\($0) 天前" } ?? "未練過", "上次",
-                     color: Recency.staleness(days: days).color)
+                stat(days.map(RelativeDay.text) ?? "未練過", "上次", color: Recency.staleness(days: days).color)
                 stat("\(exercise.trainingCount(withinDays: 90)) 次", "近 90 天", color: Theme.accent)
             }
         }
@@ -97,8 +102,8 @@ private struct DetailHeader: View {
 }
 
 private struct HistoryCard: View {
-    var exercise: Exercise
     var items: [SessionExercise]
+    var onOpen: (WorkoutSession) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -109,9 +114,7 @@ private struct HistoryCard: View {
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                 if index > 0 { Divider().overlay(Theme.separator) }
                 if let session = item.session {
-                    NavigationLink {
-                        SessionDetailView(session: session)
-                    } label: {
+                    Button { onOpen(session) } label: {
                         HistoryLine(item: item, date: session.startedAt).contentShape(.rect)
                     }
                     .buttonStyle(.pressable)

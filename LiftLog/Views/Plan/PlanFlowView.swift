@@ -57,7 +57,7 @@ struct PlanFlowView: View {
         .task {
             guard history == nil else { return }
             let snapshot = PlanHistory(sessions: endedSessions)
-            exercises = allExercises.map(PlanExercise.init)
+            exercises = allExercises.map { PlanExercise($0) }
             answers = request.answers ?? PlanDefaults.answers(snapshot)
             history = snapshot
             #if DEBUG
@@ -113,7 +113,7 @@ private struct QuestionsStep: View {
                     ForEach([[DayType.meLower, .meUpper], [.deLower, .deUpper]], id: \.self) { row in
                         HStack(spacing: 10) {
                             ForEach(row) { dayType in
-                                OptionButton(title: dayType.title, isSelected: answers.dayType == dayType) {
+                                FilterCapsule(title: dayType.title, isSelected: answers.dayType == dayType, fill: true) {
                                     answers.dayType = dayType
                                 }
                             }
@@ -123,14 +123,14 @@ private struct QuestionsStep: View {
                 .card()
                 question("今天做幾個動作？") {
                     ForEach(PlanAnswers.countOptions, id: \.self) { count in
-                        OptionButton(title: "\(count) 個", isSelected: answers.count == count) {
+                        FilterCapsule(title: "\(count) 個", isSelected: answers.count == count, fill: true) {
                             answers.count = count
                         }
                     }
                 }
                 question("最後要加跑步機嗎？") {
-                    OptionButton(title: "加", isSelected: answers.cardio) { answers.cardio = true }
-                    OptionButton(title: "不加", isSelected: !answers.cardio) { answers.cardio = false }
+                    FilterCapsule(title: "加", isSelected: answers.cardio, fill: true) { answers.cardio = true }
+                    FilterCapsule(title: "不加", isSelected: !answers.cardio, fill: true) { answers.cardio = false }
                 }
                 VStack(alignment: .leading, spacing: 10) {
                     Text("今天的順序").font(.headline).foregroundStyle(Theme.textSecondary)
@@ -146,6 +146,8 @@ private struct QuestionsStep: View {
         }
         .safeAreaInset(edge: .bottom) {
             PrimaryButton(title: "下一步", action: onNext)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 8)
         }
     }
 
@@ -155,43 +157,6 @@ private struct QuestionsStep: View {
             HStack(spacing: 10) { options() }
         }
         .card()
-    }
-}
-
-private struct OptionButton: View {
-    var title: String
-    var isSelected: Bool
-    var action: () -> Void
-
-    var body: some View {
-        Button { withAnimation(.tap, action) } label: {
-            Text(title)
-                .font(.headline)
-                .foregroundStyle(isSelected ? Theme.onAccent : Theme.textPrimary)
-                .frame(maxWidth: .infinity, minHeight: 52)
-                .background(isSelected ? Theme.accent : Theme.field, in: .capsule)
-        }
-        .buttonStyle(.pressable)
-    }
-}
-
-private struct PrimaryButton: View {
-    var title: String
-    var isEnabled = true
-    var action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(.title3.bold())
-                .foregroundStyle(Theme.onAccent)
-                .frame(maxWidth: .infinity, minHeight: 60)
-                .background(Theme.accent.opacity(isEnabled ? 1 : 0.4), in: .capsule)
-        }
-        .buttonStyle(.pressable)
-        .disabled(!isEnabled)
-        .padding(.horizontal, 16)
-        .padding(.bottom, 8)
     }
 }
 
@@ -287,6 +252,8 @@ private struct ExercisesStep: View {
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom) {
             PrimaryButton(title: "開始訓練", isEnabled: states.contains { $0.selected != nil }, action: onStart)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 8)
         }
     }
 }
@@ -400,7 +367,7 @@ struct CandidateRow: View {
             }
             Spacer(minLength: 8)
             if let days = candidate.daysSince {
-                Text(days == 0 ? "今天" : "\(String(days)) 天")
+                Text(RelativeDay.text(days))
                     .font(.headline.monospacedDigit())
                     .foregroundStyle(Recency.staleness(days: days).color)
             }

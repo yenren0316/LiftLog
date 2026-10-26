@@ -1,34 +1,5 @@
 import Foundation
 
-/// 首頁與動作庫的「全部／單邊／爆發」篩選
-nonisolated enum TagFilter: Hashable, CaseIterable, Identifiable {
-    case all
-    case tag(ExerciseTag)
-
-    static var allCases: [TagFilter] { [.all] + ExerciseTag.allCases.map(TagFilter.tag) }
-
-    var id: String {
-        switch self {
-        case .all: "all"
-        case .tag(let t): t.rawValue
-        }
-    }
-
-    var title: String {
-        switch self {
-        case .all: "全部"
-        case .tag(let t): t.title
-        }
-    }
-
-    func matches(_ tags: [ExerciseTag]) -> Bool {
-        switch self {
-        case .all: true
-        case .tag(let t): tags.contains(t)
-        }
-    }
-}
-
 nonisolated enum ExerciseSearch {
     /// 比對名稱、別名、英文名，忽略空白與大小寫；空字串全部符合
     static func matches(query: String, name: String, aliases: [String], englishName: String) -> Bool {
@@ -42,87 +13,70 @@ nonisolated enum ExerciseSearch {
     }
 }
 
-extension Exercise {
-    func matches(_ filter: TagFilter, query: String = "") -> Bool {
-        filter.matches(tags)
-            && ExerciseSearch.matches(query: query, name: name, aliases: aliases, englishName: englishName)
-    }
-}
+/// 動作庫分類清單的排序（CHANGE_07 B-2），記住上次的選擇
+nonisolated enum LibrarySort: String, CaseIterable, Identifiable {
+    case stalest, recent, fewest, most
 
-/// 動作庫分類內的四組，依顯示順序排列
-nonisolated enum LibraryGroup: Int, CaseIterable, Comparable {
-    case bilateral, unilateral, explosive, cable
+    static let storageKey = "library.sort"
 
-    /// 爆發優先；同時有爆發與單邊的歸爆發
-    static func of(tags: [ExerciseTag], equipment: Equipment) -> LibraryGroup {
-        if tags.contains(.explosive) { return .explosive }
-        if tags.contains(.unilateral) { return .unilateral }
-        if equipment == .cable { return .cable }
-        return .bilateral
-    }
+    var id: String { rawValue }
 
-    static func < (a: LibraryGroup, b: LibraryGroup) -> Bool { a.rawValue < b.rawValue }
-}
-
-nonisolated enum LibraryOrder {
-    /// 雙邊自由重量 → 單邊 → 爆發 → Cable；同組內訓練次數多到少，再依名稱
-    static func sorted<T>(
-        _ items: [T],
-        tags: (T) -> [ExerciseTag],
-        equipment: (T) -> Equipment,
-        count: (T) -> Int,
-        name: (T) -> String
-    ) -> [T] {
-        items.sorted { a, b in
-            let ga = LibraryGroup.of(tags: tags(a), equipment: equipment(a))
-            let gb = LibraryGroup.of(tags: tags(b), equipment: equipment(b))
-            if ga != gb { return ga < gb }
-            if count(a) != count(b) { return count(a) > count(b) }
-            return name(a) < name(b)
+    var title: String {
+        switch self {
+        case .stalest: "最久沒練"
+        case .recent: "最近練過"
+        case .fewest: "次數最少"
+        case .most: "次數最多"
         }
     }
-}
 
-/// 動作庫篩選：練過／未練過（單選）與 tags（複選），兩組取交集；選多個 tag 時要全部符合
-nonisolated struct LibraryFilter: Equatable {
-    enum Trained: String, CaseIterable, Identifiable {
-        case all, trained, untrained
-
-        var id: String { rawValue }
-
-        var title: String {
-            switch self {
-            case .all: "全部"
-            case .trained: "練過"
-            case .untrained: "未練過"
+    /// 最久沒練：沒練過的排最前，再由舊到新；最近練過：由新到舊，沒練過的排最後；
+    /// 次數：同次數時最久沒練的在前。最後都依名稱
+    func sorted<T>(_ items: [T], lastDate: (T) -> Date?, count: (T) -> Int, name: (T) -> String) -> [T] {
+        func staler(_ a: T, _ b: T) -> Bool? {
+            switch (lastDate(a), lastDate(b)) {
+            case (nil, nil): return nil
+            case (nil, _): return true
+            case (_, nil): return false
+            case let (da?, db?): return da == db ? nil : da < db
             }
         }
+        return items.sorted { a, b in
+            let decided: Bool?
+            switch self {
+            case .stalest:
+                decided = staler(a, b)
+            case .recent:
+                decided = staler(a, b).map(!)
+            case .fewest:
+                decided = count(a) != count(b) ? count(a) < count(b) : staler(a, b)
+            case .most:
+                decided = count(a) != count(b) ? count(a) > count(b) : staler(a, b)
+            }
+            return decided ?? (name(a).localizedStandardCompare(name(b)) == .orderedAscending)
+        }
     }
+}
 
-    var trained: Trained = .all
+/// 動作庫分類清單的標籤篩選：主、單、爆三個開關，條件取交集
+nonisolated struct LibraryFilter: Equatable {
     var tags: Set<ExerciseTag> = []
 
-    func matches(tags exerciseTags: [ExerciseTag], trainingCount: Int) -> Bool {
-        let trainedOK = switch trained {
-        case .all: true
-        case .trained: trainingCount > 0
-        case .untrained: trainingCount == 0
-        }
-        return trainedOK && tags.isSubset(of: Set(exerciseTags))
+    func matches(tags exerciseTags: [ExerciseTag]) -> Bool {
+        tags.isSubset(of: Set(exerciseTags))
     }
 }
 
 /// 各清單要列哪些動作：封存的動作不出現在預設清單與新增動作清單
 enum ExerciseLists {
-    static func library(_ all: [Exercise], showArchived: Bool, filter: LibraryFilter, query: String) -> [Exercise] {
+    /// 動作庫的搜尋：所有分類、不含封存
+    static func search(_ all: [Exercise], query: String) -> [Exercise] {
         all.filter { e in
-            (showArchived || !e.isArchived)
-                && filter.matches(tags: e.tags, trainingCount: e.trainingCount)
-                && ExerciseSearch.matches(query: query, name: e.name, aliases: e.aliases, englishName: e.englishName)
+            !e.isArchived && ExerciseSearch.matches(query: query, name: e.name, aliases: e.aliases, englishName: e.englishName)
         }
     }
 
-    /// 訓練中「新增動作」與「換動作」
+    /// 訓練中「新增動作」
     static func picker(_ all: [Exercise], category: ExerciseCategory?, excluding: Exercise?, query: String) -> [Exercise] {
         all.filter { e in
             !e.isArchived

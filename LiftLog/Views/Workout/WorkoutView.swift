@@ -78,12 +78,8 @@ struct WorkoutView: View {
                 .onChange(of: session.title) { WorkoutActions.save(context) }
             HStack(spacing: 12) {
                 Text(session.startedAt.formatted(date: .abbreviated, time: .shortened))
-                TimelineView(.periodic(from: .now, by: 1)) { timeline in
-                    // 經過時間一律用 startedAt 推算
-                    Label(WorkoutSession.format(duration: timeline.date.timeIntervalSince(session.startedAt)),
-                          systemImage: "timer")
-                        .monospacedDigit()
-                }
+                // 經過時間一律用 startedAt 推算
+                Label { ElapsedTimeText(since: session.startedAt) } icon: { Image(systemName: "timer") }
             }
             .font(.subheadline)
             .foregroundStyle(Theme.textSecondary)

@@ -11,18 +11,18 @@ struct ExerciseListsTests {
 
     private var all: [Exercise] { [bench, chestMachine, pushUp, squat] }
 
-    @Test func archivedHiddenFromDefaultLibrary() {
-        let names = ExerciseLists.library(all, showArchived: false, filter: LibraryFilter(), query: "").map(\.name)
-        #expect(!names.contains("胸推訓練機"))
-        let withArchived = ExerciseLists.library(all, showArchived: true, filter: LibraryFilter(), query: "").map(\.name)
-        #expect(withArchived.contains("胸推訓練機"))
+    @Test func librarySearchCoversAllCategoriesButNotArchived() {
+        // 動作庫搜尋：直接列出所有分類的結果，不含封存動作
+        #expect(Set(ExerciseLists.search(all, query: "").map(\.name)) == ["臥推", "伏地挺身", "深蹲"])
+        #expect(ExerciseLists.search(all, query: "胸推").isEmpty)
+        #expect(ExerciseLists.search(all, query: "槓鈴").map(\.name) == ["臥推"])   // 比對別名
     }
 
     @Test func archivedNeverInPicker() {
         let add = ExerciseLists.picker(all, category: nil, excluding: nil, query: "").map(\.name)
         #expect(Set(add) == ["臥推", "伏地挺身", "深蹲"])
-        let replace = ExerciseLists.picker(all, category: .horizontalPush, excluding: bench, query: "").map(\.name)
-        #expect(replace == ["伏地挺身"])
+        let pushes = ExerciseLists.picker(all, category: .horizontalPush, excluding: bench, query: "").map(\.name)
+        #expect(pushes == ["伏地挺身"])
         // 搜尋比對別名
         #expect(ExerciseLists.picker(all, category: nil, excluding: nil, query: "槓鈴").map(\.name) == ["臥推"])
     }

@@ -6,7 +6,7 @@ struct RootView: View {
     @State private var coordinator: WorkoutCoordinator
     @State private var launcher: WorkoutLauncher
     @State private var restTimer = RestTimer.shared
-    @State private var tab = 0
+    @State private var stats = StatsCache.shared
     @AppStorage(AppTheme.storageKey) private var theme: AppTheme = .graphiteOrange
     @AppStorage(WeightUnit.storageKey) private var unit: WeightUnit = .kg
     @Query(filter: #Predicate<WorkoutSession> { $0.endedAt == nil }) private var active: [WorkoutSession]
@@ -60,7 +60,7 @@ struct RootView: View {
             coordinator.isExpanded = true
         case .plan:
             closeWorkoutCover()
-            tab = 0
+            coordinator.tab = .today
             if coverShown {
                 // 等全螢幕畫面關掉再開 sheet
                 Task {
@@ -72,7 +72,7 @@ struct RootView: View {
             }
         case .home:
             closeWorkoutCover()
-            tab = 0
+            coordinator.tab = .today
         }
     }
 
@@ -82,27 +82,36 @@ struct RootView: View {
     }
 
     private var tabs: some View {
-        TabView(selection: $tab) {
-            Tab("該練什麼", systemImage: "dumbbell.fill", value: 0) {
-                HomeView().workoutMiniBar()
-            }
-            Tab("訓練", systemImage: "figure.strengthtraining.traditional", value: 1) {
-                SessionsView().workoutMiniBar()
-            }
-            Tab("動作庫", systemImage: "list.bullet.rectangle", value: 2) {
-                LibraryView().workoutMiniBar()
-            }
-            Tab("設定", systemImage: "gearshape.fill", value: 3) {
-                SettingsView().workoutMiniBar()
+        TabView(selection: $coordinator.tab) {
+            ForEach(AppTab.allCases, id: \.self) { tab in
+                Tab(tab.title, systemImage: tab.systemImage, value: tab) {
+                    Group {
+                        switch tab {
+                        case .today: TodayView()
+                        case .history: SessionsView()
+                        case .library: LibraryView()
+                        case .settings: SettingsView()
+                        }
+                    }
+                    .workoutMiniBar()
+                }
             }
         }
         .environment(coordinator)
         .environment(launcher)
         .environment(restTimer)
+        .environment(stats)
         .sheet(item: $launcher.planRequest, onDismiss: launcher.sheetDismissed) { request in
             PlanFlowView(request: request)
                 .environment(coordinator)
                 .environment(launcher)
+                .environment(stats)
+        }
+        .sheet(item: $coordinator.summarySession, onDismiss: launcher.sheetDismissed) { session in
+            WorkoutSummarySheet(session: session)
+                .environment(coordinator)
+                .environment(launcher)
+                .environment(stats)
         }
         .planEntryQuestion(launcher)
         .launchConfirmation(launcher, origin: .root, context: context)
@@ -123,6 +132,7 @@ struct RootView: View {
             .environment(coordinator)
             .environment(launcher)
             .environment(restTimer)
+            .environment(stats)
             .preferredColorScheme(.dark)
         }
         .alert("沒有完成任何一組", isPresented: Binding(
@@ -140,11 +150,13 @@ struct RootView: View {
             ConjugateLibrary.applyIfNeeded(into: context)
             // 資料遷移：每個遷移執行前先在 Documents/AutoBackups 自動備份
             DataMigrations.runIfNeeded(context: context)
+            stats.start(context: context)
             SnapshotWriter.shared.start(context: context)
             LiveActivityController.shared.start()
             #if DEBUG
-            // 開發用：啟動參數 -startTab 1 直接切到該分頁
-            tab = UserDefaults.standard.integer(forKey: "startTab")
+            // 開發用：啟動參數 -startTab 1 直接切到該分頁（0 今天、1 歷程、2 動作庫、3 設定）
+            let index = UserDefaults.standard.integer(forKey: "startTab")
+            if AppTab.allCases.indices.contains(index) { coordinator.tab = AppTab.allCases[index] }
             // 開發用：啟動參數 -demoWorkout YES 開一個示範訓練
             if UserDefaults.standard.bool(forKey: "demoWorkout"), active.isEmpty {
                 let names = ["臥推", "輔助引體向上", "跑步機"]

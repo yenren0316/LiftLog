@@ -24,15 +24,15 @@ struct AddExercisesSheet: View {
             List {
                 Section {
                     chipRow {
-                        FilterChip(title: "全部分類", isSelected: category == nil) { category = nil }
+                        FilterCapsule(title: "全部分類", isSelected: category == nil) { category = nil }
                         ForEach(ExerciseCategory.allCases) { c in
-                            FilterChip(title: c.title, isSelected: category == c) { category = category == c ? nil : c }
+                            FilterCapsule(title: c.title, isSelected: category == c) { category = category == c ? nil : c }
                         }
                     }
                     chipRow {
-                        FilterChip(title: "全部標籤", isSelected: tag == nil) { tag = nil }
+                        FilterCapsule(title: "全部標籤", isSelected: tag == nil) { tag = nil }
                         ForEach(ExerciseTag.allCases) { t in
-                            FilterChip(title: t.title, isSelected: tag == t) { tag = tag == t ? nil : t }
+                            FilterCapsule(title: t.title, isSelected: tag == t) { tag = tag == t ? nil : t }
                         }
                     }
                 }
@@ -107,7 +107,7 @@ struct AddExercisesSheet: View {
                 if added {
                     Chip(text: "已加入")
                 } else if let days {
-                    Text(days == 0 ? "今天" : "\(String(days)) 天前")
+                    Text(RelativeDay.text(days))
                         .font(.subheadline.monospacedDigit())
                         .foregroundStyle(Recency.staleness(days: days).color)
                 } else {
@@ -142,7 +142,7 @@ struct AddExercisesSheet: View {
                                     Image(systemName: "xmark").font(.caption.bold())
                                 }
                                 .padding(.horizontal, 12)
-                                .frame(minHeight: 36)
+                                .frame(minHeight: Metrics.capsuleHeight)
                                 .background(Theme.field, in: .capsule)
                             }
                             .buttonStyle(.pressable)
@@ -153,42 +153,14 @@ struct AddExercisesSheet: View {
                 }
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
-            Button {
+            PrimaryButton(title: "加入（\(selected.count)）", isEnabled: !selected.isEmpty) {
                 onAdd(selected)
                 dismiss()
-            } label: {
-                Text("加入（\(selected.count)）")
-                    .font(.title3.bold())
-                    .contentTransition(.numericText(value: Double(selected.count)))
-                    .foregroundStyle(Theme.onAccent)
-                    .frame(maxWidth: .infinity, minHeight: 56)
-                    .background(Theme.accent.opacity(selected.isEmpty ? 0.4 : 1), in: .capsule)
             }
-            .buttonStyle(.pressable)
-            .disabled(selected.isEmpty)
             .padding(.horizontal, 16)
         }
         .padding(.top, 10)
         .padding(.bottom, 8)
         .background(Theme.background)
-    }
-}
-
-/// 篩選用的膠囊（單選，可再點一次取消）
-struct FilterChip: View {
-    var title: String
-    var isSelected: Bool
-    var action: () -> Void
-
-    var body: some View {
-        Button { withAnimation(.tap, action) } label: {
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(isSelected ? Theme.onAccent : Theme.textPrimary)
-                .padding(.horizontal, 14)
-                .frame(minHeight: 36)
-                .background(isSelected ? Theme.accent : Theme.field, in: .capsule)
-        }
-        .buttonStyle(.pressable)
     }
 }

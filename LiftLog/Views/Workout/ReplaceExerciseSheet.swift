@@ -55,8 +55,8 @@ struct ReplaceExerciseSheet: View {
         let inSession = Set(session?.items.compactMap { $0.exercise?.id } ?? [])
         // 下肢輔助依這次主項的分類排序
         let main = session?.orderedItems.first { $0 !== item && ($0.role == .maxEffort || $0.role == .dynamicEffort) }?
-            .exercise.map(PlanExercise.init)
-        return PlanRanking.candidates(for: slot, dayType: session?.dayType, exercises: exercises.map(PlanExercise.init),
+            .exercise.map { PlanExercise($0) }
+        return PlanRanking.candidates(for: slot, dayType: session?.dayType, exercises: exercises.map { PlanExercise($0) },
                                       history: PlanHistory(sessions: endedSessions), excluding: inSession, main: main)
     }
 

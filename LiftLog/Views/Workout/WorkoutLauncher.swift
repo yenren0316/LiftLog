@@ -97,6 +97,11 @@ final class WorkoutLauncher {
               context: context)
     }
 
+    /// RootView 的 sheet（建立菜單、摘要浮窗）關掉之後要做的事
+    func afterSheetDismiss(_ action: @escaping () -> Void) {
+        afterDismiss = action
+    }
+
     /// RootView 的 sheet 關掉時呼叫
     func sheetDismissed() {
         let action = afterDismiss

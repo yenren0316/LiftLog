@@ -17,6 +17,7 @@ nonisolated struct PlanHistory: Sendable {
     }
 
     struct Session: Sendable {
+        var id = UUID()
         var date: Date
         var region: Region = .unspecified
         var dayType: DayType?
@@ -33,8 +34,9 @@ nonisolated struct PlanHistory: Sendable {
         self.sessions = sessions.sorted { $0.date > $1.date }
     }
 
+    /// 近 30 天的起點（RecentWindow：含今天共 30 個日曆日）
     static func windowStart(now: Date, calendar: Calendar = .current) -> Date {
-        calendar.date(byAdding: .day, value: -30, to: calendar.startOfDay(for: now)) ?? now
+        RecentWindow.start(now: now, calendar: calendar)
     }
 
     /// 近 30 天有幾次訓練符合條件
@@ -257,7 +259,7 @@ nonisolated enum PlanRanking {
 
     private static func stalenessReason(_ candidate: PlanCandidate) -> String {
         guard let days = candidate.daysSince else { return "還沒練過" }
-        return days == 0 ? "最久沒做（今天）" : "最久沒做（\(days) 天前）"
+        return "最久沒做（\(RelativeDay.text(days))）"
     }
 
     /// 上次拉的方向：最近一筆角色為「拉」的紀錄的動作分類
@@ -414,7 +416,7 @@ nonisolated struct SlotAdvice: Equatable, Sendable {
 nonisolated extension PlanHistory {
     init(sessions: [WorkoutSession]) {
         self.init(sessions.filter { !$0.isActive }.map { s in
-            Session(date: s.startedAt, region: s.region, dayType: s.dayType, items: s.orderedItems.compactMap { item in
+            Session(id: s.id, date: s.startedAt, region: s.region, dayType: s.dayType, items: s.orderedItems.compactMap { item in
                 guard let exercise = item.exercise else { return nil }
                 return Item(exerciseID: exercise.id, category: exercise.category, tags: exercise.tags, role: item.role,
                             sets: item.completedSets.map(\.values))
@@ -425,8 +427,14 @@ nonisolated extension PlanHistory {
 
 nonisolated extension PlanExercise {
     init(_ exercise: Exercise) {
+        self.init(snapshotOf: exercise)
+        lastDate = exercise.lastCompletedDate
+    }
+
+    /// 不算最後日期（StatsCache 自己從訓練紀錄算，比逐一攤平每個動作的組快）
+    init(snapshotOf exercise: Exercise) {
         self.init(id: exercise.id, name: exercise.name, category: exercise.category, tags: exercise.tags,
-                  isArchived: exercise.isArchived, lastDate: exercise.lastCompletedDate,
+                  isArchived: exercise.isArchived, lastDate: nil,
                   meRotation: exercise.meRotation, deRotation: exercise.deRotation, logType: exercise.logType)
     }
 }
