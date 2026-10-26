@@ -46,6 +46,11 @@ nonisolated enum SetLogic {
         return v
     }
 
+    /// 自重器材的重量型動作可以記負重（輔助引體向上：輔助 20 kg 記 −20 kg）
+    static func allowsNegativeLoad(logType: LogType, equipment: Equipment) -> Bool {
+        logType == .weight && equipment == .bodyweight
+    }
+
     /// timed 型的負重是否必填（農夫走路這類負重行走）
     static func timedRequiresLoad(_ equipment: Equipment) -> Bool {
         [.dumbbell, .kettlebell, .barbell].contains(equipment)

@@ -29,8 +29,11 @@ struct HomeView: View {
                     VStack(alignment: .leading, spacing: 20) {
                         ScreenHeader(title: "該練什麼")
                         let history = PlanHistory(sessions: endedSessions)
-                        NextPlanCard(history: history) { openPlan($0) }
+                        NextPlanCard(history: history, exercises: exercises.map(PlanExercise.init)) { openPlan($0) }
                         ActivityGraph(days: trainingDays)
+                        MainLiftsCard(exercises: exercises.filter { $0.tags.contains(.main) }, history: history) {
+                            path.append($0)
+                        }
                         CategoryBarsCard(exercises: allExercises, history: history) { category in
                             withAnimation { proxy.scrollTo(category, anchor: .top) }
                         }
@@ -150,24 +153,28 @@ extension HomeView {
     }
 }
 
-/// 「下一次建議」：依建立菜單的預設答案，點一下帶著這些答案進入流程
+/// 「下一次：ME 上肢｜建議主項：臥推」：建立菜單的預設答案，點一下帶著這些答案進入建立菜單
 private struct NextPlanCard: View {
     var history: PlanHistory
+    var exercises: [PlanExercise]
     var onOpen: (PlanAnswers) -> Void
 
     var body: some View {
         let answers = PlanDefaults.answers(history)
-        let last = PlanDefaults.lastRegionSession(history)
+        let main = PlanRanking.candidates(for: Slot.main(for: answers.dayType), dayType: answers.dayType,
+                                          exercises: exercises, history: history).items.first
         Button { onOpen(answers) } label: {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("下一次建議").font(.headline).foregroundStyle(Theme.textSecondary)
+                    Text("下一次").font(.headline).foregroundStyle(Theme.textSecondary)
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(answers.region.title).font(.title.bold())
-                        if let last {
-                            Text("上次 \(last.date.formatted(.dateTime.month(.defaultDigits).day())) 是\(last.region.title)")
-                                .font(.subheadline)
-                                .foregroundStyle(Theme.textSecondary)
+                        Text(answers.dayType.title).font(.title.bold())
+                        if let main {
+                            Text("建議主項：\(main.exercise.name)")
+                                .font(.title3.weight(.semibold))
+                                .foregroundStyle(Theme.accent)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
                         }
                     }
                     Text("\(answers.count) 個動作・\(answers.cardio ? "加跑步機" : "不加跑步機")")
@@ -185,40 +192,108 @@ private struct NextPlanCard: View {
     }
 }
 
-/// 最近 30 天各分類訓練天數，點一下跳到該分類；有氧另外顯示在最下方，不參與長條比例；
-/// 下方是近 30 天有「單邊」「爆發」角色的訓練次數
+/// 「主項紀錄」：每個「主」動作最近一次 ME 紀錄（重量 × 次數、估算 1RM、日期）和上一次的差距；點一下開動作詳情
+private struct MainLiftsCard: View {
+    var exercises: [Exercise]
+    var history: PlanHistory
+    var onShowDetail: (Exercise) -> Void
+
+    @AppStorage(WeightUnit.storageKey) private var unit: WeightUnit = .kg
+
+    var body: some View {
+        let order = ExerciseCategory.allCases
+        let sorted = exercises.sorted {
+            (order.firstIndex(of: $0.category)!, $0.meRotation ?? .max, $0.name)
+                < (order.firstIndex(of: $1.category)!, $1.meRotation ?? .max, $1.name)
+        }
+        VStack(alignment: .leading, spacing: 4) {
+            Text("主項紀錄")
+                .font(.headline)
+                .foregroundStyle(Theme.textSecondary)
+                .padding(.bottom, 6)
+            ForEach(Array(sorted.enumerated()), id: \.element.id) { index, exercise in
+                if index > 0 { Divider().overlay(Theme.separator) }
+                Button { onShowDetail(exercise) } label: {
+                    row(exercise, MainLiftSummary(logs: history.logs(for: exercise.id)))
+                }
+                .buttonStyle(.pressable)
+            }
+        }
+        .card()
+    }
+
+    private func row(_ exercise: Exercise, _ summary: MainLiftSummary) -> some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(exercise.name).font(.body.weight(.semibold))
+                if let record = summary.latest {
+                    Text("\(unit.formatWithUnit(kg: record.weightKg)) × \(record.reps)・\(record.date.formatted(.dateTime.month(.defaultDigits).day()))")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+            }
+            Spacer(minLength: 8)
+            if let record = summary.latest {
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("估 1RM \(unit.formatWithUnit(kg: record.estimated1RM))")
+                        .font(.body.weight(.bold).monospacedDigit())
+                    if let change = summary.change {
+                        Text(changeText(change))
+                            .font(.subheadline.weight(.semibold).monospacedDigit())
+                            .foregroundStyle(change > 0 ? Theme.done : change < 0 ? Theme.danger : Theme.textSecondary)
+                    }
+                }
+            } else {
+                Text("尚無紀錄").font(.subheadline).foregroundStyle(Theme.textSecondary)
+            }
+        }
+        .padding(.vertical, 8)
+        .contentShape(.rect)
+    }
+
+    /// 「比上次 +3.3 kg」
+    private func changeText(_ change: Double) -> String {
+        let value = unit.format(kg: abs(change))
+        return change == 0 || value == "0" ? "和上次一樣" : "比上次 \(change > 0 ? "+" : "−")\(value) \(unit.symbol)"
+    }
+}
+
+/// 最近 30 天各重訓分類完成的組數，點一下跳到該分類；下面是推：拉組數比（拉比推少時用警示色），
+/// 再下面是近 30 天有「單邊」「爆發」動作的訓練次數和有氧天數
 private struct CategoryBarsCard: View {
     var exercises: [Exercise]
     var history: PlanHistory
     var onSelect: (ExerciseCategory) -> Void
 
     var body: some View {
-        let done = exercises.flatMap { ex in
-            ex.sessionItems.flatMap { $0.completedSets.compactMap(\.completedAt) }.map { (date: $0, exercise: ex) }
-        }
-        let counts = Recency.trainingDays(done.map { (date: $0.date, key: $0.exercise.category) })
-        let unilateral = history.sessionCount(within: .now) { $0.role == .unilateral }
-        let explosive = history.sessionCount(within: .now) { $0.role == .explosive }
+        let volume = RecentVolume(history: history)
+        let unilateral = history.sessionCount(within: .now) { $0.tags.contains(.unilateral) }
+        let explosive = history.sessionCount(within: .now) { $0.tags.contains(.explosive) }
+        let cardioDays = Recency.trainingDays(
+            exercises.filter { $0.category == .cardio }.flatMap { ex in
+                ex.sessionItems.flatMap { $0.completedSets.compactMap(\.completedAt) }.map { (date: $0, key: 0) }
+            }
+        )[0] ?? 0
         // 沒有動作的分類不顯示；有氧另外放
         let categories = ExerciseCategory.allCases.filter { c in c != .cardio && exercises.contains { $0.category == c } }
-        let maxCount = max(categories.compactMap { counts[$0] }.max() ?? 0, 1)
+        let maxCount = max(categories.map { volume[$0] }.max() ?? 0, 1)
 
         VStack(alignment: .leading, spacing: 12) {
             Text("最近 30 天")
                 .font(.headline)
                 .foregroundStyle(Theme.textSecondary)
             ForEach(categories) { category in
-                let count = counts[category] ?? 0
+                let count = volume[category]
                 Button { onSelect(category) } label: {
                     HStack(spacing: 12) {
                         Text(category.title)
                             .font(.body.weight(.semibold))
                             .frame(width: 96, alignment: .leading)
-                        ThinBar(fraction: Double(count) / Double(maxCount), color: color(for: count))
-                        Text("\(count) 天")
+                        ThinBar(fraction: Double(count) / Double(maxCount), color: color(forSets: count))
+                        Text("\(count) 組")
                             .font(.body.weight(.bold).monospacedDigit())
-                            .foregroundStyle(color(for: count))
-                            .frame(width: 52, alignment: .trailing)
+                            .foregroundStyle(color(forSets: count))
+                            .frame(width: 60, alignment: .trailing)
                     }
                     .contentShape(.rect)
                 }
@@ -226,18 +301,27 @@ private struct CategoryBarsCard: View {
             }
             Divider().overlay(Theme.separator)
             HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text("推：拉").font(.body.weight(.semibold))
+                Text("\(volume.push)：\(volume.pull)")
+                    .font(.title3.bold().monospacedDigit())
+                    .foregroundStyle(volume.pullIsShort ? Theme.warning : Theme.done)
+                Text("組").font(.subheadline).foregroundStyle(Theme.textSecondary)
+                if volume.pullIsShort {
+                    Text("拉比推少").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.warning)
+                }
+            }
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
                 roleCount("單邊", unilateral)
                 Text("・").foregroundStyle(Theme.textSecondary)
                 roleCount("爆發", explosive)
                 Spacer()
                 if exercises.contains(where: { $0.category == .cardio }) {
-                    let cardio = counts[.cardio] ?? 0
                     Button { onSelect(.cardio) } label: {
                         HStack(alignment: .firstTextBaseline, spacing: 6) {
                             Text("有氧").font(.body.weight(.semibold))
-                            Text(String(cardio))
+                            Text(String(cardioDays))
                                 .font(.title3.bold().monospacedDigit())
-                                .foregroundStyle(color(for: cardio))
+                                .foregroundStyle(color(forCount: cardioDays))
                             Text("天").font(.subheadline).foregroundStyle(Theme.textSecondary)
                         }
                     }
@@ -253,12 +337,18 @@ private struct CategoryBarsCard: View {
             Text(title).font(.body.weight(.semibold))
             Text(String(count))
                 .font(.title3.bold().monospacedDigit())
-                .foregroundStyle(color(for: count))
+                .foregroundStyle(color(forCount: count))
             Text("次").font(.subheadline).foregroundStyle(Theme.textSecondary)
         }
     }
 
-    private func color(for count: Int) -> Color {
+    /// 組數：0 組紅色、未滿 10 組黃色、10 組以上綠色
+    private func color(forSets count: Int) -> Color {
+        count == 0 ? Theme.danger : count < RecentVolume.enoughSets ? Theme.warning : Theme.done
+    }
+
+    /// 次數、天數：0 紅色、1–2 黃色、3 以上綠色
+    private func color(forCount count: Int) -> Color {
         switch count {
         case 0: Theme.danger
         case 1...2: Theme.warning
@@ -332,7 +422,7 @@ struct ExerciseRow: View {
     @AppStorage(WeightUnit.storageKey) private var unit: WeightUnit = .kg
 
     var body: some View {
-        let last = exercise.lastSummary(unit: unit)
+        let last = exercise.homeSummary(unit: unit)
         let days = Recency.daysSince(exercise.lastCompletedDate)
         let staleness = Recency.staleness(days: days)
 

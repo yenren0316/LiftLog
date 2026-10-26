@@ -16,6 +16,10 @@ final class Exercise {
     var isArchived: Bool
     /// 自訂休息秒數；nil 代表依這次訓練的角色決定
     var restSeconds: Int?
+    /// 主項輪替表裡的順序（1 起算），ME 和 DE 分開；不在輪替表裡為 nil。
+    /// 下肢分類的動作屬於下肢輪替表，上肢分類的屬於上肢輪替表
+    var meRotation: Int?
+    var deRotation: Int?
 
     // 說明分頁（第一次啟動從 ExerciseGuides.json 匯入，之後可編輯）
     var guideCore: String = ""
@@ -39,7 +43,9 @@ final class Exercise {
         logType: LogType = .weight,
         note: String = "",
         isArchived: Bool = false,
-        restSeconds: Int? = nil
+        restSeconds: Int? = nil,
+        meRotation: Int? = nil,
+        deRotation: Int? = nil
     ) {
         self.id = id
         self.name = name
@@ -52,6 +58,8 @@ final class Exercise {
         self.note = note
         self.isArchived = isArchived
         self.restSeconds = restSeconds
+        self.meRotation = meRotation
+        self.deRotation = deRotation
     }
 
     var category: ExerciseCategory {
@@ -87,14 +95,16 @@ final class WorkoutSession {
     var hasTime: Bool
     /// 上半身／下半身／全身／未指定（Region）
     var regionRaw: String = "unspecified"
-    /// 建立菜單時選的組合模式，例如 lower3A；不是從流程建立的為 nil
+    /// CHANGE_04 建立菜單選的組合模式，例如 lower3A；共軛訓練之後不再寫入
     var modeID: String?
+    /// 共軛訓練的日型（DayType）；只做有氧、舊紀錄和不是從建立菜單開始的訓練為 nil
+    var dayTypeRaw: String?
 
     @Relationship(deleteRule: .cascade, inverse: \SessionExercise.session)
     var items: [SessionExercise] = []
 
     init(id: UUID = UUID(), startedAt: Date, endedAt: Date? = nil, title: String = "", note: String = "", hasTime: Bool = true,
-         region: Region = .unspecified, modeID: String? = nil) {
+         region: Region = .unspecified, modeID: String? = nil, dayType: DayType? = nil) {
         self.id = id
         self.startedAt = startedAt
         self.endedAt = endedAt
@@ -103,6 +113,7 @@ final class WorkoutSession {
         self.hasTime = hasTime
         self.regionRaw = region.rawValue
         self.modeID = modeID
+        self.dayTypeRaw = dayType?.rawValue
     }
 
     var isActive: Bool { endedAt == nil }

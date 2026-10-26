@@ -1,12 +1,11 @@
 import SwiftUI
 import SwiftData
 
-/// 開始訓練的內容；「再做一次」會帶入原本的角色、部位與模式
+/// 開始訓練的內容；「再做一次」會帶入原本的角色與日型
 struct StartRequest {
     var exercises: [Exercise]
     var roles: [Role]?
-    var region: Region = .unspecified
-    var modeID: String?
+    var dayType: DayType?
 }
 
 /// 管理進行中訓練的顯示（全螢幕／縮小橫條）與開始訓練時的衝突處理
@@ -37,8 +36,7 @@ final class WorkoutCoordinator {
     }
 
     private func start(_ request: StartRequest, context: ModelContext) {
-        WorkoutActions.start(with: request.exercises, roles: request.roles, region: request.region,
-                             modeID: request.modeID, in: context)
+        WorkoutActions.start(with: request.exercises, roles: request.roles, dayType: request.dayType, in: context)
         isExpanded = true
     }
 

@@ -9,12 +9,12 @@ enum WorkoutActions {
     }
 
     /// 開始新訓練。呼叫前要先確認沒有進行中的訓練。
-    /// 從建立菜單流程來的會帶 region、modeID 與每個位置的角色；其他入口的 region 在完成時依動作推算
+    /// 從建立菜單來的會帶日型與每一格的角色；部位一律在完成時依動作推算
     @discardableResult
-    static func start(with exercises: [Exercise], roles: [Role]? = nil, region: Region = .unspecified,
-                      modeID: String? = nil, in context: ModelContext) -> WorkoutSession {
+    static func start(with exercises: [Exercise], roles: [Role]? = nil, dayType: DayType? = nil,
+                      in context: ModelContext) -> WorkoutSession {
         let session = WorkoutSession(startedAt: .now, title: SessionTitle.automatic(exercises.map(\.name)),
-                                     region: region, modeID: modeID)
+                                     dayType: dayType)
         context.insert(session)
         for (index, exercise) in exercises.enumerated() {
             _ = add(exercise, to: session, role: roles?[index], in: context, updateTitle: false)
@@ -24,7 +24,8 @@ enum WorkoutActions {
     }
 
     /// 加入動作；已經在這次訓練裡就直接回傳那張卡片。role 為 nil 時依動作判定。
-    /// 組數照上次紀錄，讓「上一次」欄可以逐組對應；沒有上次紀錄時依角色
+    /// 組數照上次紀錄，讓「上一次」欄可以逐組對應；沒有上次紀錄時依角色的預設參數。
+    /// DE 速度主項的組數固定（深蹲 8、硬舉 6、臥推 8）
     static func add(_ exercise: Exercise, to session: WorkoutSession, role: Role? = nil, in context: ModelContext,
                     updateTitle: Bool = true) -> SessionExercise {
         if let existing = session.items.first(where: { $0.exercise === exercise }) {
@@ -34,19 +35,16 @@ enum WorkoutActions {
         let item = SessionExercise(session: session, exercise: exercise, order: (session.items.map(\.order).max() ?? -1) + 1,
                                    role: role)
         context.insert(item)
-        let last = exercise.lastSets(excluding: session)
-        let count = last.isEmpty ? item.role.defaultSets : last.count
+        let last = exercise.lastSets(excluding: session, role: item.role)
+        let prescription = item.prescription
+        let count = prescription.fixedReps != nil || last.isEmpty ? prescription.setCount : last.count
         for i in 0..<count {
-            context.insert(SetRecord(sessionExercise: item, order: i, kind: kindForNewSet(exercise, index: i, session: session)))
+            let kind = SetLogic.previous(at: i, lastSets: last)?.kind ?? .normal
+            context.insert(SetRecord(sessionExercise: item, order: i, kind: kind))
         }
         if updateTitle { refreshTitle(session, before: before) }
         save(context)
         return item
-    }
-
-    /// 新的組沿用上次同一組的種類（例如上次第一組是熱身）
-    private static func kindForNewSet(_ exercise: Exercise, index: Int, session: WorkoutSession) -> SetKind {
-        SetLogic.previous(at: index, lastSets: exercise.lastSets(excluding: session))?.kind ?? .normal
     }
 
     /// 打勾：沒輸入的欄位用預填值；必要欄位不齊時不完成，回傳 false。
@@ -147,6 +145,10 @@ enum WorkoutActions {
         for (i, item) in remaining.enumerated() { item.order = i }
         if session.modeID == nil {
             session.region = Region.infer(remaining.compactMap { $0.exercise?.category })
+        }
+        // 只做有氧的訓練不算日型
+        if !remaining.contains(where: { $0.exercise?.category != .cardio }) {
+            session.dayType = nil
         }
         session.endedAt = now
         save(context)

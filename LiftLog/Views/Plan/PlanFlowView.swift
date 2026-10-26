@@ -7,11 +7,7 @@ struct PlanRequest: Identifiable {
     var answers: PlanAnswers?
 }
 
-private enum PlanStep: Hashable {
-    case mode, exercises
-}
-
-/// 建立菜單：三個問題 → 組合模式 → 每個位置選一個動作
+/// 建立菜單：三個問題 → 每一格選一個動作（格子由日型和動作數決定）
 struct PlanFlowView: View {
     var initialAnswers: PlanAnswers?
     /// 已建立訓練；呼叫端在 sheet 關閉後展開訓練中畫面
@@ -25,17 +21,19 @@ struct PlanFlowView: View {
     /// 打開時建立一次快照，流程中不會變
     @State private var history: PlanHistory?
     @State private var exercises: [PlanExercise] = []
-    @State private var answers = PlanAnswers(region: .lower, count: 3, cardio: false)
-    @State private var path: [PlanStep] = []
-    @State private var modeID: String?
-    /// 使用者在第三步點選的動作（位置 index → 動作 id）
-    @State private var picks: [Int: UUID] = [:]
+    @State private var answers = PlanAnswers(dayType: .meLower, count: 3, cardio: false)
+    @State private var showExercises = false
+    /// 使用者在第二步點選的動作（格子 → 動作 id）
+    @State private var picks: [Slot: UUID] = [:]
 
     var body: some View {
-        NavigationStack(path: $path) {
+        NavigationStack {
             Group {
                 if history != nil {
-                    QuestionsStep(answers: $answers, onNext: next)
+                    QuestionsStep(answers: $answers) {
+                        picks = [:]
+                        showExercises = true
+                    }
                 } else {
                     ProgressView()
                 }
@@ -45,21 +43,14 @@ struct PlanFlowView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
             }
-            .navigationDestination(for: PlanStep.self) { step in
+            .navigationDestination(isPresented: $showExercises) {
                 if let history {
-                    switch step {
-                    case .mode:
-                        ModeStep(modes: modes, recommended: PlanModes.recommended(modes, history: history),
-                                 selection: $modeID) { path.append(.exercises) }
-                    case .exercises:
-                        ExercisesStep(states: states(history), onPick: { index, id in picks[index] = id },
-                                      onStart: start)
-                    }
+                    ExercisesStep(states: states(history), history: history,
+                                  onPick: { slot, id in picks[slot] = id }, onStart: start)
                 }
             }
             .screenBackground()
         }
-        .onChange(of: modeID) { picks = [:] }
         .task {
             guard history == nil else { return }
             let snapshot = PlanHistory(sessions: endedSessions)
@@ -67,43 +58,18 @@ struct PlanFlowView: View {
             answers = initialAnswers ?? PlanDefaults.answers(snapshot)
             history = snapshot
             #if DEBUG
-            // 開發用：-planStep 2 或 3 直接跳到該步驟（截圖用）
-            // -planAnswers lower,3,1 指定三個問題的答案
+            // 開發用：-planStep 2 直接跳到選動作（截圖用）；-planAnswers deUpper,2,1 指定三個問題的答案
             let parts = UserDefaults.standard.string(forKey: "planAnswers")?.split(separator: ",") ?? []
-            if parts.count == 3, let region = Region(rawValue: String(parts[0])), let count = Int(parts[1]) {
-                answers = PlanAnswers(region: region, count: count, cardio: parts[2] == "1")
+            if parts.count == 3, let dayType = DayType(rawValue: String(parts[0])), let count = Int(parts[1]) {
+                answers = PlanAnswers(dayType: dayType, count: count, cardio: parts[2] == "1")
             }
-            let step = UserDefaults.standard.integer(forKey: "planStep")
-            if step >= 2 { next() }
-            if step >= 3, path.last == .mode { path.append(.exercises) }
+            if UserDefaults.standard.integer(forKey: "planStep") >= 2 { showExercises = true }
             #endif
         }
     }
 
-    private var modes: [PlanMode] {
-        PlanModes.modes(region: answers.region, count: answers.count)
-    }
-
-    private var slots: [Slot] {
-        let mode = modes.first { $0.id == modeID } ?? modes.first
-        return (mode?.slots ?? []) + (answers.cardio ? [.cardio] : [])
-    }
-
     private func states(_ history: PlanHistory) -> [PlanRanking.SlotState] {
-        PlanRanking.resolve(slots: slots, picks: picks, exercises: exercises, history: history)
-    }
-
-    /// 只有一個模式時直接進入第三步
-    private func next() {
-        guard let history else { return }
-        picks = [:]
-        if modes.count == 1 {
-            modeID = modes.first?.id
-            path.append(.exercises)
-        } else {
-            modeID = PlanModes.recommended(modes, history: history)?.id
-            path.append(.mode)
-        }
+        PlanRanking.resolve(answers: answers, picks: picks, exercises: exercises, history: history)
     }
 
     private func start() {
@@ -114,10 +80,10 @@ struct PlanFlowView: View {
         for state in states(history) {
             guard let pick = state.selected, let exercise = byID[pick.id] else { continue }
             chosen.append(exercise)
-            roles.append(state.slot.role(for: pick))
+            roles.append(state.slot.role)
         }
         guard !chosen.isEmpty else { return }
-        WorkoutActions.start(with: chosen, roles: roles, region: answers.region, modeID: modeID, in: context)
+        WorkoutActions.start(with: chosen, roles: roles, dayType: answers.dayType, in: context)
         onStarted()
         dismiss()
     }
@@ -132,15 +98,21 @@ private struct QuestionsStep: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                question("今天練哪裡？") {
-                    ForEach([Region.upper, .lower, .full]) { region in
-                        OptionButton(title: region.title, isSelected: answers.region == region) {
-                            answers.setRegion(region)
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("今天的日型").font(.title3.bold())
+                    ForEach([[DayType.meLower, .meUpper], [.deLower, .deUpper]], id: \.self) { row in
+                        HStack(spacing: 10) {
+                            ForEach(row) { dayType in
+                                OptionButton(title: dayType.title, isSelected: answers.dayType == dayType) {
+                                    answers.dayType = dayType
+                                }
+                            }
                         }
                     }
                 }
+                .card()
                 question("今天做幾個動作？") {
-                    ForEach(PlanAnswers.countOptions(for: answers.region), id: \.self) { count in
+                    ForEach(PlanAnswers.countOptions, id: \.self) { count in
                         OptionButton(title: "\(count) 個", isSelected: answers.count == count) {
                             answers.count = count
                         }
@@ -150,6 +122,11 @@ private struct QuestionsStep: View {
                     OptionButton(title: "加", isSelected: answers.cardio) { answers.cardio = true }
                     OptionButton(title: "不加", isSelected: !answers.cardio) { answers.cardio = false }
                 }
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("今天的順序").font(.headline).foregroundStyle(Theme.textSecondary)
+                    FlowSlots(slots: Slot.slots(for: answers, mainCategory: nil))
+                }
+                .card()
             }
             .padding(16)
         }
@@ -204,68 +181,58 @@ private struct PrimaryButton: View {
     }
 }
 
-// MARK: - 第二步
-
-private struct ModeStep: View {
-    var modes: [PlanMode]
-    var recommended: PlanMode?
-    @Binding var selection: String?
-    var onNext: () -> Void
-
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                ForEach(modes) { mode in
-                    Button { withAnimation(.tap) { selection = mode.id } } label: { card(mode) }
-                        .buttonStyle(.pressable)
-                }
-            }
-            .padding(16)
-        }
-        .navigationTitle("選擇組合")
-        .navigationBarTitleDisplayMode(.inline)
-        .safeAreaInset(edge: .bottom) {
-            PrimaryButton(title: "下一步", isEnabled: selection != nil, action: onNext)
-        }
-    }
-
-    private func card(_ mode: PlanMode) -> some View {
-        let selected = selection == mode.id
-        return VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 8) {
-                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
-                    .font(.title2)
-                    .foregroundStyle(selected ? Theme.accent : Theme.textSecondary)
-                    .contentTransition(.symbolEffect(.replace))
-                Text("模式 \(mode.variant ?? "")").font(.title2.bold())
-                if mode.id == recommended?.id { AccentChip(text: "建議") }
-                Spacer()
-            }
-            FlowSlots(slots: mode.slots)
-        }
-        .card()
-        .overlay(RoundedRectangle(cornerRadius: Theme.cardRadius).stroke(selected ? Theme.accent : .clear, lineWidth: 2))
-        .contentShape(.rect)
-    }
-}
-
-/// 「爆發 → 主項 → 單邊」
+/// 「ME 主項 → 下肢輔助 → 核心」，放不下時換行
 private struct FlowSlots: View {
     var slots: [Slot]
 
     var body: some View {
-        HStack(spacing: 6) {
+        WrapLayout(spacing: 6) {
             ForEach(Array(slots.enumerated()), id: \.offset) { index, slot in
-                if index > 0 {
-                    Image(systemName: "arrow.right").font(.caption.bold()).foregroundStyle(Theme.textSecondary)
+                HStack(spacing: 6) {
+                    if index > 0 {
+                        Image(systemName: "arrow.right").font(.caption.bold()).foregroundStyle(Theme.textSecondary)
+                    }
+                    Text(slot.title)
+                        .font(.headline)
+                        .padding(.horizontal, 12)
+                        .frame(minHeight: 36)
+                        .background(Theme.field, in: .capsule)
                 }
-                Text(slot.title)
-                    .font(.headline)
-                    .padding(.horizontal, 12)
-                    .frame(minHeight: 36)
-                    .background(Theme.field, in: .capsule)
             }
         }
+    }
+}
+
+/// 由左到右排，超過寬度就換行
+private struct WrapLayout: Layout {
+    var spacing: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let frames = arrange(width: proposal.width ?? .infinity, subviews: subviews)
+        return CGSize(width: frames.map(\.maxX).max() ?? 0, height: frames.map(\.maxY).max() ?? 0)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        for (subview, frame) in zip(subviews, arrange(width: bounds.width, subviews: subviews)) {
+            subview.place(at: CGPoint(x: bounds.minX + frame.minX, y: bounds.minY + frame.minY), proposal: .unspecified)
+        }
+    }
+
+    private func arrange(width: CGFloat, subviews: Subviews) -> [CGRect] {
+        var frames: [CGRect] = []
+        var x: CGFloat = 0, y: CGFloat = 0, rowHeight: CGFloat = 0
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if x > 0 && x + size.width > width {
+                x = 0
+                y += rowHeight + spacing
+                rowHeight = 0
+            }
+            frames.append(CGRect(origin: CGPoint(x: x, y: y), size: size))
+            x += size.width + spacing
+            rowHeight = max(rowHeight, size.height)
+        }
+        return frames
     }
 }
 
@@ -282,21 +249,25 @@ struct AccentChip: View {
     }
 }
 
-// MARK: - 第三步
+// MARK: - 第二步
 
 private struct ExercisesStep: View {
     var states: [PlanRanking.SlotState]
-    var onPick: (Int, UUID) -> Void
+    var history: PlanHistory
+    var onPick: (Slot, UUID) -> Void
     var onStart: () -> Void
 
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                ForEach(Array(states.enumerated()), id: \.offset) { index, state in
-                    SlotCard(state: state) { onPick(index, $0) }
+                ForEach(states, id: \.slot) { state in
+                    SlotCard(state: state, logs: state.selected.map { history.logs(for: $0.id) } ?? []) {
+                        onPick(state.slot, $0)
+                    }
                 }
             }
             .padding(16)
+            .animation(.tap, value: states.map(\.slot))
         }
         .navigationTitle("選動作")
         .navigationBarTitleDisplayMode(.inline)
@@ -306,13 +277,15 @@ private struct ExercisesStep: View {
     }
 }
 
+/// 一格：角色、預設參數、最多 5 個候選（第一個標「建議」和原因），選定動作的建議重量和提示
 private struct SlotCard: View {
     var state: PlanRanking.SlotState
+    /// 選定動作的歷次紀錄（建議重量用）
+    var logs: [ExerciseLog]
     var onPick: (UUID) -> Void
 
-    @State private var showAll = false
+    @AppStorage(WeightUnit.storageKey) private var unit: WeightUnit = .kg
     @State private var showGuide = false
-    private static let visibleCount = 5
 
     var body: some View {
         let items = state.candidates.items
@@ -331,36 +304,43 @@ private struct SlotCard: View {
                         .presentationCompactAdaptation(.popover)
                 }
             }
-            Text(state.slot.role.shortGuide)
-                .font(.subheadline)
-                .foregroundStyle(Theme.textSecondary)
-                .padding(.bottom, 8)
+            if let selected = state.selected {
+                advice(SlotAdvice.make(role: state.slot.role, exercise: selected, logs: logs, unit: unit))
+                    .padding(.bottom, 8)
+            }
 
             if items.isEmpty {
-                Text("沒有符合的動作，這個位置會略過")
+                Text("沒有符合的動作，這一格會略過")
                     .foregroundStyle(Theme.textSecondary)
                     .padding(.vertical, 8)
             } else if state.slot == .cardio {
                 // 有氧固定是跑步機
                 row(items[0], isFirst: false)
             } else {
-                let shown = showAll ? items : Array(items.prefix(Self.visibleCount))
-                ForEach(Array(shown.enumerated()), id: \.element.id) { index, candidate in
+                ForEach(Array(items.prefix(PlanRanking.visibleCount).enumerated()), id: \.element.id) { index, candidate in
                     if index > 0 { Divider().overlay(Theme.separator) }
                     row(candidate, isFirst: index == 0)
-                }
-                if items.count > Self.visibleCount {
-                    Button { withAnimation(.tap) { showAll.toggle() } } label: {
-                        Text(showAll ? "收起" : "顯示全部（\(items.count)）")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                    }
-                    .buttonStyle(.pressable)
-                    .foregroundStyle(Theme.accent)
                 }
             }
         }
         .card()
+    }
+
+    /// 「8 組 × 2 下・休息 45–60 秒」「建議 65 kg（…）」「設好安全槓」
+    private func advice(_ advice: SlotAdvice) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(advice.prescription.summary)
+                .font(.subheadline)
+                .foregroundStyle(Theme.textSecondary)
+            if let weight = advice.weightText {
+                Text(weight).font(.subheadline.weight(.semibold))
+            }
+            if let tip = advice.prescription.tip {
+                Label(tip, systemImage: "exclamationmark.triangle.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.warning)
+            }
+        }
     }
 
     private func row(_ candidate: PlanCandidate, isFirst: Bool) -> some View {

@@ -1,8 +1,8 @@
 import Foundation
 import SwiftData
 
-/// 備份檔格式（version 4：訓練 → 動作 → 組，加上 role、region、modeID）。
-/// 匯入時也能讀 version 3（沒有那三個欄位）與 version 2（seed.json 也是 v2），缺的欄位依動作推算。
+/// 備份檔格式（version 5：訓練 → 動作 → 組，加上 role、region、modeID、日型與主項輪替順序）。
+/// 匯入時也能讀 version 3、4（缺的欄位依動作推算或留空）與 version 2（seed.json 也是 v2）。
 nonisolated struct BackupFile: Codable {
     struct ExerciseRecord: Codable {
         var id: UUID
@@ -22,6 +22,9 @@ nonisolated struct BackupFile: Codable {
         var guideRegression: String?
         var guideProgression: String?
         var myNotes: String?
+        /// v5 新增
+        var meRotation: Int?
+        var deRotation: Int?
     }
 
     struct SetRecordData: Codable {
@@ -59,6 +62,8 @@ nonisolated struct BackupFile: Codable {
         /// v4 新增；舊版本為 nil，匯入時依動作推算
         var region: String?
         var modeID: String?
+        /// v5 新增；舊版本和沒有日型的訓練為 nil
+        var dayType: String?
         var items: [ItemRecord]
     }
 
@@ -67,7 +72,7 @@ nonisolated struct BackupFile: Codable {
         var kg: Double
     }
 
-    static let currentVersion = 4
+    static let currentVersion = 5
 
     var version: Int
     var exercises: [ExerciseRecord]
@@ -79,7 +84,7 @@ nonisolated struct BackupFile: Codable {
         decoder.dateDecodingStrategy = .iso8601
         let version = try decoder.decode(VersionProbe.self, from: data).version
         switch version {
-        case 3, 4:
+        case 3, 4, 5:
             return try decoder.decode(BackupFile.self, from: data)
         case 2:
             return try decoder.decode(V2.self, from: data).upgraded()
@@ -132,7 +137,7 @@ nonisolated struct BackupFile: Codable {
                 SessionRecord(
                     id: UUID(), startedAt: plan.startedAt, endedAt: plan.startedAt,
                     title: SessionTitle.automatic(plan.items.compactMap { names[$0.exerciseID] }),
-                    note: "", hasTime: false, region: nil, modeID: nil,
+                    note: "", hasTime: false, region: nil, modeID: nil, dayType: nil,
                     items: plan.items.enumerated().map { index, item in
                         ItemRecord(id: UUID(), exerciseId: item.exerciseID, order: index, note: item.note, role: nil,
                                    sets: item.sets.enumerated().map { order, s in
@@ -173,11 +178,12 @@ enum BackupService {
                       englishName: $0.englishName, equipment: $0.equipmentRaw, logType: $0.logTypeRaw,
                       note: $0.note, isArchived: $0.isArchived, restSeconds: $0.restSeconds,
                       guideCore: $0.guideCore, guideCues: $0.guideCues, guideMistakes: $0.guideMistakes,
-                      guideRegression: $0.guideRegression, guideProgression: $0.guideProgression, myNotes: $0.myNotes)
+                      guideRegression: $0.guideRegression, guideProgression: $0.guideProgression, myNotes: $0.myNotes,
+                      meRotation: $0.meRotation, deRotation: $0.deRotation)
             },
             sessions: sessions.map { s in
                 .init(id: s.id, startedAt: s.startedAt, endedAt: s.endedAt, title: s.title, note: s.note, hasTime: s.hasTime,
-                      region: s.regionRaw, modeID: s.modeID,
+                      region: s.regionRaw, modeID: s.modeID, dayType: s.dayTypeRaw,
                       items: s.orderedItems.compactMap { item in
                           guard let exerciseId = item.exercise?.id else { return nil }
                           return .init(id: item.id, exerciseId: exerciseId, order: item.order, note: item.note,
@@ -212,7 +218,8 @@ enum BackupService {
             let exercises = s.items.compactMap { byID[$0.exerciseId] }
             let region = s.region.flatMap(Region.init(rawValue:)) ?? Region.infer(exercises.map(\.category))
             let session = WorkoutSession(id: s.id, startedAt: s.startedAt, endedAt: s.endedAt, title: s.title,
-                                         note: s.note, hasTime: s.hasTime, region: region, modeID: s.modeID)
+                                         note: s.note, hasTime: s.hasTime, region: region, modeID: s.modeID,
+                                         dayType: s.dayType.flatMap(DayType.init(rawValue:)))
             context.insert(session)
             for i in s.items {
                 guard let exercise = byID[i.exerciseId] else { continue }
@@ -246,7 +253,9 @@ enum BackupService {
             logType: LogType(rawValue: r.logType) ?? .weight,
             note: r.note,
             isArchived: r.isArchived,
-            restSeconds: r.restSeconds
+            restSeconds: r.restSeconds,
+            meRotation: r.meRotation,
+            deRotation: r.deRotation
         )
         exercise.guideCore = r.guideCore ?? ""
         exercise.guideCues = r.guideCues ?? []
@@ -278,19 +287,27 @@ enum SeedImporter {
 /// 之後才加進動作庫的預設動作。已經有資料的 App 不會再匯入 seed，所以啟動時從 seed.json 補進來。
 /// 名稱或別名已經存在就略過；每一批只補一次，使用者之後刪掉也不會再出現。
 enum LibraryAdditions {
-    static let names = ["啞鈴上斜臥推"]
-    private static let appliedKey = "libraryAdditions.v1"
+    static let batches: [(key: String, names: [String])] = [
+        ("libraryAdditions.v1", ["啞鈴上斜臥推"]),
+        // 共軛訓練的動作庫 v2
+        ("libraryAdditions.v2", ConjugateLibrary.additions),
+    ]
+
+    static var names: [String] { batches.flatMap(\.names) }
 
     static func applyIfNeeded(into context: ModelContext, defaults: UserDefaults = .standard) {
-        guard !defaults.bool(forKey: appliedKey),
+        let pending = batches.filter { !defaults.bool(forKey: $0.key) }
+        guard !pending.isEmpty,
               let seed = try? SeedImporter.bundled(),
               let guides = GuideImporter.bundled()
         else { return }
-        do {
-            try apply(names, from: seed.exercises, guides: guides, into: context)
-            defaults.set(true, forKey: appliedKey)
-        } catch {
-            print("Library additions failed: \(error)")
+        for batch in pending {
+            do {
+                try apply(batch.names, from: seed.exercises, guides: guides, into: context)
+                defaults.set(true, forKey: batch.key)
+            } catch {
+                print("Library additions failed: \(error)")
+            }
         }
     }
 
@@ -308,6 +325,121 @@ enum LibraryAdditions {
         GuideImporter.apply(guides, to: added)
         try context.save()
         return added
+    }
+}
+
+/// 共軛訓練的動作庫 v2：各動作的標籤（主、單、爆）與 ME／DE 主項輪替表。
+/// 啟動時依名稱更新一次；只改動作的設定，不動任何訓練紀錄
+enum ConjugateLibrary {
+    nonisolated struct Entry: Sendable {
+        var name: String
+        var tags: [ExerciseTag]
+        /// 輪替表的順序；下肢動作屬於下肢輪替表，上肢動作屬於上肢輪替表
+        var me: Int?
+        var de: Int?
+    }
+
+    nonisolated static let entries: [Entry] = [
+        // 下肢推
+        Entry(name: "深蹲", tags: [.main], me: 1, de: 1),
+        Entry(name: "前蹲舉", tags: [.main], me: 3),
+        Entry(name: "後腳抬高蹲", tags: [.unilateral]),
+        Entry(name: "高背槓分腿蹲", tags: [.unilateral]),
+        Entry(name: "側蹲", tags: [.unilateral]),
+        Entry(name: "負重原地起跳", tags: [.explosive], de: 3),
+        // 下肢拉
+        Entry(name: "傳統硬舉", tags: [.main], me: 2, de: 4),
+        Entry(name: "六角槓硬舉", tags: [.main], me: 5),
+        Entry(name: "相撲硬舉", tags: [.main], me: 6),
+        Entry(name: "槓鈴早安式", tags: [.main], me: 4),
+        Entry(name: "羅馬尼亞式硬舉", tags: []),
+        Entry(name: "單腳 RDL", tags: [.unilateral]),
+        Entry(name: "臀推", tags: []),
+        Entry(name: "壺鈴擺盪", tags: [.explosive], de: 2),
+        Entry(name: "單手抓舉", tags: [.unilateral, .explosive], de: 5),
+        // 上肢水平推
+        Entry(name: "臥推", tags: [.main], me: 1, de: 1),
+        Entry(name: "上斜臥推", tags: [.main], me: 6),
+        Entry(name: "地板臥推", tags: [.main], me: 3),
+        Entry(name: "窄握臥推", tags: [.main], me: 4),
+        Entry(name: "啞鈴臥推", tags: []),
+        Entry(name: "啞鈴上斜臥推", tags: []),
+        Entry(name: "地板啞鈴臥推", tags: []),
+        // 上肢水平拉
+        Entry(name: "爆發划船", tags: [.explosive], de: 3),
+        Entry(name: "反式划船", tags: []),
+        Entry(name: "坐姿 Cable 划船", tags: []),
+        Entry(name: "槓鈴俯身划船", tags: []),
+        Entry(name: "單手啞鈴划船", tags: [.unilateral]),
+        Entry(name: "胸靠上斜椅啞鈴划船", tags: []),
+        // 上肢垂直推
+        Entry(name: "肩推", tags: [.main], me: 2),
+        Entry(name: "坐姿槓鈴肩推", tags: [.main], me: 5),
+        Entry(name: "坐姿啞鈴肩推", tags: []),
+        Entry(name: "雙槓撐", tags: []),
+        Entry(name: "借力推舉", tags: [.explosive], de: 2),
+        // 上肢垂直拉
+        Entry(name: "輔助引體向上", tags: []),
+        Entry(name: "滑輪下拉", tags: []),
+        // 核心
+        Entry(name: "腹前推", tags: []),
+        Entry(name: "地雷管抗旋轉", tags: []),
+        Entry(name: "坐姿分腿壺鈴三點搬移", tags: []),
+        Entry(name: "六角槓原地踏步", tags: []),
+        Entry(name: "仰臥拉舉", tags: []),
+        Entry(name: "單手啞鈴臥推", tags: [.unilateral]),
+        Entry(name: "棒式划船", tags: []),
+        Entry(name: "窄跪姿單手啞鈴肩推", tags: [.unilateral]),
+        Entry(name: "單手壺鈴擺盪", tags: [.unilateral, .explosive]),
+        Entry(name: "行李箱原地踏步", tags: [.unilateral]),
+        // 補強
+        Entry(name: "三頭肌滑輪下拉", tags: []),
+        Entry(name: "二頭彎舉", tags: []),
+        Entry(name: "面拉", tags: []),
+        Entry(name: "YTW", tags: []),
+        Entry(name: "仰臥啞鈴三頭伸展", tags: []),
+        Entry(name: "JM 推", tags: []),
+        // 有氧
+        Entry(name: "跑步機", tags: []),
+    ]
+
+    /// 新增的動作（從 seed.json 補進來）
+    nonisolated static let additions = ["槓鈴早安式", "窄握臥推", "槓鈴俯身划船", "單手啞鈴划船", "胸靠上斜椅啞鈴划船",
+                            "借力推舉", "行李箱原地踏步", "仰臥啞鈴三頭伸展", "JM 推"]
+
+    /// 輔助引體向上的新紀錄把輔助量記成負重（輔助 20 kg 記 −20 kg）；舊紀錄不轉換
+    static let negativeLoadExercise = "輔助引體向上"
+    static let negativeLoadNote = "輔助量記成負重：輔助 20 kg 記 −20 kg（鍵盤列的 ± 切換正負）。2026/10/26 以前的紀錄是輔助量，沒有轉換。"
+
+    private static let appliedKey = "conjugateLibrary.v1"
+
+    static func applyIfNeeded(into context: ModelContext, defaults: UserDefaults = .standard) {
+        guard !defaults.bool(forKey: appliedKey),
+              let exercises = try? context.fetch(FetchDescriptor<Exercise>()),
+              !exercises.isEmpty
+        else { return }
+        apply(to: exercises)
+        try? context.save()
+        defaults.set(true, forKey: appliedKey)
+    }
+
+    /// 清單裡的動作設成清單的標籤和輪替順序；其他動作不在輪替表裡
+    static func apply(to exercises: [Exercise]) {
+        let byName = Dictionary(entries.map { ($0.name, $0) }, uniquingKeysWith: { a, _ in a })
+        for exercise in exercises {
+            guard let entry = byName[exercise.name] else {
+                exercise.meRotation = nil
+                exercise.deRotation = nil
+                continue
+            }
+            exercise.tags = entry.tags
+            exercise.meRotation = entry.me
+            exercise.deRotation = entry.de
+            if exercise.name == negativeLoadExercise, exercise.logType == .assisted {
+                exercise.logType = .weight
+                if exercise.note.isEmpty { exercise.note = negativeLoadNote }
+            }
+        }
     }
 }
 

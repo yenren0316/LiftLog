@@ -15,8 +15,8 @@ struct WidgetSnapshotTests {
         calendar.date(from: DateComponents(year: 2026, month: 10, day: day, hour: hour, minute: minute))!
     }
 
-    private func session(_ day: Int, _ region: Region, _ roles: [Role]) -> PlanHistory.Session {
-        PlanHistory.Session(date: date(day), region: region, items: roles.map {
+    private func session(_ day: Int, _ region: Region, _ roles: [Role], dayType: DayType? = nil) -> PlanHistory.Session {
+        PlanHistory.Session(date: date(day), region: region, dayType: dayType, items: roles.map {
             PlanHistory.Item(exerciseID: UUID(), category: $0 == .cardio ? .cardio : .horizontalPush, role: $0)
         })
     }
@@ -26,8 +26,8 @@ struct WidgetSnapshotTests {
         #expect(snapshot.lastSessionDate == nil && snapshot.lastRegion == nil)
         #expect(snapshot.daysSinceLast(at: date(25), calendar: calendar) == nil)
         #expect(snapshot.lastSummary(calendar: calendar) == nil)
-        // 沒有紀錄時的建議：下半身、3 個動作、不做跑步機
-        #expect(snapshot.suggestedRegion == .lower)
+        // 沒有紀錄時的建議：ME 下肢、3 個動作、不做跑步機
+        #expect(snapshot.suggestedDayType == .meLower)
         #expect(snapshot.suggestedCount == 3)
         #expect(!snapshot.suggestsTreadmill)
         #expect(!snapshot.isInProgress && snapshot.startedAt == nil)
@@ -35,19 +35,22 @@ struct WidgetSnapshotTests {
 
     @Test func lastSessionAndTodaysSuggestion() {
         let history = PlanHistory([
-            session(23, .upper, [.push, .pull, .cardio]),
-            session(20, .lower, [.main, .unilateral, .core]),
+            session(23, .upper, [.maxEffort, .pull, .cardio], dayType: .meUpper),
+            session(20, .lower, [.maxEffort, .lowerAssist, .core], dayType: .meLower),
         ])
-        let snapshot = WidgetSnapshot.make(history: history, activeStartedAt: nil, theme: .graphiteOrange)
+        var snapshot = WidgetSnapshot.make(history: history, activeStartedAt: nil, theme: .graphiteOrange)
         #expect(snapshot.lastSessionDate == date(23))
-        #expect(snapshot.lastRegion == .upper)
-        #expect(snapshot.lastSummary(calendar: calendar) == "上半身・10/23")
-        // 和建立菜單的預設答案一致：部位相反、動作數同上次（不計有氧）、上次有跑步機就建議跑步機
-        #expect(snapshot.suggestedRegion == .lower)
+        #expect(snapshot.lastRegion == .upper && snapshot.lastDayType == .meUpper)
+        #expect(snapshot.lastSummary(calendar: calendar) == "ME 上肢・10/23")
+        // 和建立菜單的預設答案一致：下一個日型、動作數同上次（不計有氧）、上次有跑步機就建議跑步機
+        #expect(snapshot.suggestedDayType == .deLower)
         #expect(snapshot.suggestedCount == 2)
         #expect(snapshot.suggestsTreadmill)
         #expect(snapshot.daysSinceLast(at: date(25, 8), calendar: calendar) == 2)
         #expect(WidgetSnapshot.daysText(2) == "2 天前")
+        // 沒有日型的舊紀錄顯示部位
+        snapshot.lastDayType = nil
+        #expect(snapshot.lastSummary(calendar: calendar) == "上半身・10/23")
     }
 
     @Test func daysCountCalendarDays() {
@@ -110,15 +113,17 @@ struct WidgetSnapshotTests {
     }
 
     @Test func lockScreenTexts() {
-        var snapshot = WidgetSnapshot.make(history: PlanHistory([session(23, .upper, [.push])]),
+        var snapshot = WidgetSnapshot.make(history: PlanHistory([session(23, .upper, [.push], dayType: .deUpper)]),
                                            activeStartedAt: nil, theme: .graphiteOrange)
-        #expect(snapshot.inlineText(at: date(25), calendar: calendar) == "上次訓練 2 天前・今天下半身")
-        #expect(snapshot.rectangularFirstLine(days: 2) == "上次：2 天前・上半身")
+        #expect(snapshot.inlineText(at: date(25), calendar: calendar) == "上次訓練 2 天前・今天 ME 下肢")
+        #expect(snapshot.rectangularFirstLine(days: 2) == "上次：2 天前・DE 上肢")
         // 今天已經練過：建議是下一次的
-        #expect(snapshot.inlineText(at: date(23, 20), calendar: calendar) == "今天練過・下次下半身")
+        #expect(snapshot.inlineText(at: date(23, 20), calendar: calendar) == "今天練過・下次 ME 下肢")
         #expect(WidgetSnapshot.suggestionLabel(days: 0) == "下次")
         #expect(WidgetSnapshot.suggestionLabel(days: 2) == "今天")
-        // 部位未指定時只寫天數
+        // 沒有日型時寫部位，部位也未指定時只寫天數
+        snapshot.lastDayType = nil
+        #expect(snapshot.rectangularFirstLine(days: 2) == "上次：2 天前・上半身")
         snapshot.lastRegion = .unspecified
         #expect(snapshot.rectangularFirstLine(days: 2) == "上次：2 天前")
         // 沒有紀錄或訓練中，單行另外處理

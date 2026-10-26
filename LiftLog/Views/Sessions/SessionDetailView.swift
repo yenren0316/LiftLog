@@ -18,10 +18,11 @@ struct SessionDetailView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("再做一次", systemImage: "arrow.clockwise") {
-                    // 同樣的動作、順序、角色、部位與模式
+                    // 同樣的動作、順序、角色與日型；CHANGE_04 的舊角色改用動作的預設角色
                     let items = session.orderedItems.filter { $0.exercise != nil }
-                    coordinator.requestStart(StartRequest(exercises: items.compactMap(\.exercise), roles: items.map(\.role),
-                                                          region: session.region, modeID: session.modeID),
+                    let roles = items.map { $0.role.isLegacy ? $0.exercise!.defaultRole : $0.role }
+                    coordinator.requestStart(StartRequest(exercises: items.compactMap(\.exercise), roles: roles,
+                                                          dayType: session.dayType),
                                              context: context)
                 }
                 .labelStyle(.titleAndIcon)

@@ -1,6 +1,6 @@
 import Foundation
 
-// 建立菜單（CHANGE_04 第 3 節）：三個問題的預設值、組合模式、候選動作排序。
+// 建立菜單（共軛訓練）：三個問題的預設值、依日型和動作數決定的格子、每格的候選排序、主項輪替、ME 紀錄與建議重量。
 // 全部是純邏輯，輸入是訓練紀錄的快照，方便測試。
 
 // MARK: - 輸入
@@ -10,13 +10,20 @@ nonisolated struct PlanHistory: Sendable {
     struct Item: Sendable {
         var exerciseID: UUID
         var category: ExerciseCategory
+        var tags: [ExerciseTag] = []
         var role: Role
+        /// 已完成的組
+        var sets: [SetValues] = []
     }
 
     struct Session: Sendable {
         var date: Date
-        var region: Region
+        var region: Region = .unspecified
+        var dayType: DayType?
         var items: [Item]
+
+        /// 只做有氧的訓練不算重訓
+        var isStrength: Bool { items.contains { $0.category != .cardio } }
     }
 
     /// 由新到舊
@@ -36,10 +43,26 @@ nonisolated struct PlanHistory: Sendable {
         return sessions.filter { $0.date >= start && $0.items.contains(where: match) }.count
     }
 
-    /// 最近一次有符合條件的訓練日期
-    func lastDate(where match: (Item) -> Bool) -> Date? {
-        sessions.first { $0.items.contains(where: match) }?.date
+    /// 近 30 天符合條件的動作完成了幾組（不含熱身）
+    func setCount(within now: Date, where match: (Item) -> Bool) -> Int {
+        let start = Self.windowStart(now: now)
+        return sessions.filter { $0.date >= start }.flatMap(\.items).filter(match)
+            .reduce(0) { $0 + $1.sets.filter { $0.isCompleted && $0.kind != .warmup }.count }
     }
+
+    /// 某個動作每次訓練的紀錄，由新到舊
+    func logs(for exerciseID: UUID) -> [ExerciseLog] {
+        sessions.flatMap { s in
+            s.items.filter { $0.exerciseID == exerciseID }.map { ExerciseLog(date: s.date, role: $0.role, sets: $0.sets) }
+        }
+    }
+}
+
+/// 一個動作在一次訓練裡的紀錄
+nonisolated struct ExerciseLog: Sendable {
+    var date: Date
+    var role: Role
+    var sets: [SetValues]
 }
 
 /// 候選動作的快照
@@ -50,165 +73,88 @@ nonisolated struct PlanExercise: Sendable, Identifiable, Equatable {
     var tags: [ExerciseTag]
     var isArchived = false
     var lastDate: Date?
+    var meRotation: Int?
+    var deRotation: Int?
+    var logType: LogType = .weight
 
-    var role: Role { Role.of(category: category, tags: tags) }
+    func has(_ tag: ExerciseTag) -> Bool { tags.contains(tag) }
 }
 
 // MARK: - 第一步：三個問題
 
 nonisolated struct PlanAnswers: Equatable, Sendable {
-    var region: Region
+    var dayType: DayType
     var count: Int
     var cardio: Bool
 
-    /// 全身沒有 1 個動作
-    static func countOptions(for region: Region) -> [Int] {
-        region == .full ? [2, 3] : [1, 2, 3]
-    }
-
-    /// 換部位時，把動作數調整到可選的範圍
-    mutating func setRegion(_ region: Region) {
-        self.region = region
-        if !Self.countOptions(for: region).contains(count) { count = 2 }
-    }
+    static let countOptions = [1, 2, 3]
 }
 
 nonisolated enum PlanDefaults {
     /// 沒有任何紀錄時的動作數
     static let countWithoutHistory = 3
 
-    /// 上一次部位不是「未指定」的訓練
-    static func lastRegionSession(_ history: PlanHistory) -> PlanHistory.Session? {
-        history.sessions.first { $0.region != .unspecified }
-    }
-
     static func answers(_ history: PlanHistory) -> PlanAnswers {
-        var answers = PlanAnswers(region: region(history), count: countWithoutHistory, cardio: false)
-        // 動作數：上次的動作數，不計有氧，限制在 1–3
-        if let last = history.sessions.first(where: { $0.items.contains { $0.role != .cardio } }) {
-            answers.count = min(max(last.items.filter { $0.role != .cardio }.count, 1), 3)
+        var answers = PlanAnswers(dayType: dayType(history), count: countWithoutHistory, cardio: false)
+        // 動作數：上次重訓的動作數，不計有氧，限制在 1–3
+        if let last = history.sessions.first(where: \.isStrength) {
+            answers.count = min(max(last.items.filter { $0.category != .cardio }.count, 1), 3)
         }
-        if answers.region == .full && answers.count == 1 { answers.count = 2 }
-        answers.cardio = history.sessions.first?.items.contains { $0.role == .cardio } ?? false
+        answers.cardio = history.sessions.first?.items.contains { $0.category == .cardio } ?? false
         return answers
     }
 
-    /// 和上一次相反；上次全身就選上半身、下半身中比較久沒練的；沒有紀錄時下半身
-    static func region(_ history: PlanHistory) -> Region {
-        switch lastRegionSession(history)?.region {
-        case .upper: return .lower
-        case .lower: return .upper
-        case .full:
-            let upper = history.sessions.first { $0.region == .upper }?.date
-            let lower = history.sessions.first { $0.region == .lower }?.date
-            switch (upper, lower) {
-            case (nil, .some): return .upper
-            case let (.some(u), .some(l)) where u < l: return .upper
-            default: return .lower
-            }
-        default:
-            return .lower
-        }
+    /// 最近一次有日型的訓練的下一個日型；只做有氧的訓練和沒有日型的舊紀錄不算，都沒有時從 ME 下肢開始
+    static func dayType(_ history: PlanHistory) -> DayType {
+        history.sessions.lazy.compactMap(\.dayType).first?.next ?? .meLower
     }
 }
 
-// MARK: - 第二步：組合模式
+// MARK: - 第二步：格子
 
-/// 菜單裡的一個位置
-nonisolated enum Slot: String, Hashable, Sendable {
-    case explosive, main, unilateral, push, pull, pushOrPull, core, accessory, cardio
+/// 菜單裡的一格
+nonisolated enum Slot: String, Hashable, Sendable, CaseIterable {
+    case maxEffort, dynamicEffort, lowerAssist, pull, push, core, accessory, cardio
 
-    var title: String {
-        switch self {
-        case .pushOrPull: "推或拉"
-        default: role.title
-        }
-    }
-
-    /// 寫入 SessionExercise 的角色；「推或拉」依選到的動作決定
     var role: Role {
         switch self {
-        case .explosive: .explosive
-        case .main: .main
-        case .unilateral: .unilateral
-        case .push, .pushOrPull: .push
+        case .maxEffort: .maxEffort
+        case .dynamicEffort: .dynamicEffort
+        case .lowerAssist: .lowerAssist
         case .pull: .pull
+        case .push: .push
         case .core: .core
         case .accessory: .accessory
         case .cardio: .cardio
         }
     }
 
-    /// 訓練中換動作用：依卡片的角色找回位置；模式裡有「推或拉」時推、拉都算那個位置
-    init(role: Role, modeID: String?) {
-        if role == .push || role == .pull, PlanModes.mode(id: modeID)?.slots.contains(.pushOrPull) == true {
-            self = .pushOrPull
-            return
-        }
+    var title: String { role.title }
+
+    static func main(for dayType: DayType) -> Slot {
+        dayType.isMaxEffort ? .maxEffort : .dynamicEffort
+    }
+
+    /// 訓練中換動作：依卡片的角色找回格子；CHANGE_04 的舊角色當作下肢輔助
+    init(role: Role) {
         switch role {
-        case .explosive: self = .explosive
-        case .main: self = .main
-        case .unilateral: self = .unilateral
-        case .push: self = .push
+        case .maxEffort: self = .maxEffort
+        case .dynamicEffort: self = .dynamicEffort
+        case .lowerAssist, .main, .explosive, .unilateral: self = .lowerAssist
         case .pull: self = .pull
+        case .push: self = .push
         case .core: self = .core
         case .accessory: self = .accessory
         case .cardio: self = .cardio
         }
     }
 
-    func role(for exercise: PlanExercise) -> Role {
-        self == .pushOrPull ? exercise.role : role
-    }
-
-    func accepts(_ role: Role) -> Bool {
-        self == .pushOrPull ? (role == .push || role == .pull) : role == self.role
-    }
-}
-
-nonisolated struct PlanMode: Identifiable, Equatable, Sendable {
-    var id: String
-    /// "A"、"B"；只有一個模式時為 nil
-    var variant: String?
-    var slots: [Slot]
-}
-
-nonisolated enum PlanModes {
-    static func modes(region: Region, count: Int) -> [PlanMode] {
-        switch (region, count) {
-        case (.lower, 1): [PlanMode(id: "lower1", slots: [.main])]
-        case (.lower, 2): [PlanMode(id: "lower2", slots: [.main, .unilateral])]
-        case (.lower, 3): [PlanMode(id: "lower3A", variant: "A", slots: [.explosive, .main, .unilateral]),
-                           PlanMode(id: "lower3B", variant: "B", slots: [.main, .unilateral, .core])]
-        case (.upper, 1): [PlanMode(id: "upper1", slots: [.pushOrPull])]
-        case (.upper, 2): [PlanMode(id: "upper2", slots: [.push, .pull])]
-        case (.upper, 3): [PlanMode(id: "upper3A", variant: "A", slots: [.push, .pull, .core]),
-                           PlanMode(id: "upper3B", variant: "B", slots: [.push, .pull, .accessory])]
-        case (.full, 2): [PlanMode(id: "full2", slots: [.main, .pushOrPull])]
-        case (.full, 3): [PlanMode(id: "full3A", variant: "A", slots: [.main, .pushOrPull, .core]),
-                          PlanMode(id: "full3B", variant: "B", slots: [.explosive, .main, .pushOrPull])]
-        default: []
-        }
-    }
-
-    static let all: [PlanMode] = [Region.lower, .upper, .full].flatMap { region in
-        (1...3).flatMap { modes(region: region, count: $0) }
-    }
-
-    static func mode(id: String?) -> PlanMode? {
-        all.first { $0.id == id }
-    }
-
-    /// A、B 中不同的角色，近 30 天出現在比較少次訓練的那個模式；次數相同時 A
-    static func recommended(_ modes: [PlanMode], history: PlanHistory, now: Date = .now) -> PlanMode? {
-        guard modes.count == 2 else { return modes.first }
-        let (a, b) = (modes[0], modes[1])
-        let onlyA = Set(a.slots.map(\.role)).subtracting(b.slots.map(\.role))
-        let onlyB = Set(b.slots.map(\.role)).subtracting(a.slots.map(\.role))
-        func fewest(_ roles: Set<Role>) -> Int {
-            roles.map { role in history.sessionCount(within: now) { $0.role == role } }.min() ?? .max
-        }
-        return fewest(onlyB) < fewest(onlyA) ? b : a
+    /// 下肢日：主項 → 下肢輔助 → 核心；上肢日：主項 → 拉 → 補強；加跑步機時最後再一格有氧。
+    /// 主項本身是拉的動作（DE 上肢的爆發划船）時，「拉」改成「推」
+    static func slots(for answers: PlanAnswers, mainCategory: ExerciseCategory?) -> [Slot] {
+        let mainIsPull = mainCategory == .horizontalPull || mainCategory == .verticalPull
+        let rest: [Slot] = answers.dayType.isLower ? [.lowerAssist, .core] : [mainIsPull ? .push : .pull, .accessory]
+        return [main(for: answers.dayType)] + rest.prefix(max(answers.count - 1, 0)) + (answers.cardio ? [.cardio] : [])
     }
 }
 
@@ -229,21 +175,75 @@ nonisolated struct RankedCandidates: Equatable, Sendable {
 }
 
 nonisolated enum PlanRanking {
-    /// 排序的優先群組：rank 越小越前面；reason 是排第一的原因
-    private struct Preference {
-        var rank: (PlanExercise) -> Int
-        var reason: String?
+    /// 建立菜單每格最多顯示幾個候選
+    static let visibleCount = 5
+
+    /// 某一格的候選：已經選在其他格的動作（excluding）不列入；main 是這次選的主項（下肢輔助依它排序）
+    static func candidates(for slot: Slot, dayType: DayType?, exercises: [PlanExercise], history: PlanHistory,
+                           excluding: Set<UUID> = [], main: PlanExercise? = nil, now: Date = .now) -> RankedCandidates {
+        let pool = exercises.filter { !$0.isArchived && !excluding.contains($0.id) }
+        func ranked(_ list: [PlanExercise], reason: (PlanExercise) -> String?) -> RankedCandidates {
+            let items = list.map { PlanCandidate(exercise: $0, daysSince: Recency.daysSince($0.lastDate, now: now)) }
+            guard let first = items.first else { return RankedCandidates(items: [], reason: nil) }
+            return RankedCandidates(items: items, reason: reason(first.exercise) ?? stalenessReason(first))
+        }
+
+        switch slot {
+        case .maxEffort, .dynamicEffort:
+            guard let dayType else { return ranked(sortedByStaleness(pool.filter { $0.has(.main) })) { _ in nil } }
+            let rotation = Rotation(slot: slot, dayType: dayType, exercises: pool, history: history)
+            return ranked(rotation.order) { _ in rotation.reason }
+
+        case .lowerAssist:
+            let list = pool.filter { $0.category.isLower && !$0.has(.main) && !$0.has(.explosive) }
+            let mainCategory = main.map(\.category).flatMap { $0.isLower ? $0 : nil }
+            let sorted = sortedByStaleness(list) { e in
+                [mainCategory == nil || e.category != mainCategory ? 0 : 1, e.has(.unilateral) ? 0 : 1]
+            }
+            return ranked(sorted) { first in
+                var parts: [String] = []
+                if let mainCategory, first.category != mainCategory {
+                    parts.append("主項是\(mainCategory.subtitle ?? mainCategory.title)，換\(first.category.subtitle ?? first.category.title)")
+                }
+                if first.has(.unilateral) { parts.append("單邊") }
+                return parts.isEmpty ? nil : parts.joined(separator: "・")
+            }
+
+        case .pull:
+            let list = pool.filter { ($0.category == .horizontalPull || $0.category == .verticalPull) && !$0.has(.explosive) }
+            let last = lastPullDirection(history)
+            let preferred: ExerciseCategory = last == .horizontalPull ? .verticalPull : .horizontalPull
+            let sorted = sortedByStaleness(list) { [$0.category == preferred ? 0 : 1] }
+            return ranked(sorted) { first in
+                guard first.category == preferred else { return nil }
+                guard let last else { return "還沒有拉的紀錄，先做水平拉" }
+                return "上次是\(direction(last))拉，這次換\(direction(preferred))"
+            }
+
+        case .push:
+            let list = pool.filter {
+                ($0.category == .horizontalPush || $0.category == .verticalPush) && !$0.has(.main) && !$0.has(.explosive)
+            }
+            return ranked(sortedByStaleness(list)) { _ in nil }
+
+        case .core:
+            return ranked(sortedByStaleness(pool.filter { $0.category == .core })) { _ in nil }
+
+        case .accessory:
+            return ranked(sortedByStaleness(pool.filter { $0.category == .accessory })) { _ in nil }
+
+        case .cardio:
+            // 固定是跑步機
+            let list = pool.filter { $0.category == .cardio }.sorted { ($0.name == "跑步機" ? 0 : 1) < ($1.name == "跑步機" ? 0 : 1) }
+            return ranked(list) { _ in "固定是跑步機" }
+        }
     }
 
-    static func candidates(for slot: Slot, exercises: [PlanExercise], history: PlanHistory,
-                           excluding: Set<UUID> = [], mainCategory: ExerciseCategory? = nil,
-                           now: Date = .now) -> RankedCandidates {
-        let pool = exercises.filter { !$0.isArchived && slot.accepts($0.role) && !excluding.contains($0.id) }
-        let preference = preference(for: slot, history: history, mainCategory: mainCategory, now: now)
-        let sorted = pool.sorted { a, b in
-            let (ra, rb) = (preference.rank(a), preference.rank(b))
-            if ra != rb { return ra < rb }
-            // 同條件下最久沒做的在前；未練過的視為最久沒做
+    /// 依優先條件排序，條件相同時最久沒做的在前（沒練過算最久），再依名稱
+    static func sortedByStaleness(_ list: [PlanExercise], keys: (PlanExercise) -> [Int] = { _ in [] }) -> [PlanExercise] {
+        list.sorted { a, b in
+            let (ka, kb) = (keys(a), keys(b))
+            if ka != kb { return ka.lexicographicallyPrecedes(kb) }
             switch (a.lastDate, b.lastDate) {
             case (nil, nil): break
             case (nil, _): return true
@@ -253,122 +253,24 @@ nonisolated enum PlanRanking {
             }
             return a.name.localizedStandardCompare(b.name) == .orderedAscending
         }
-        let items = sorted.map { PlanCandidate(exercise: $0, daysSince: Recency.daysSince($0.lastDate, now: now)) }
-        guard let first = items.first else { return RankedCandidates(items: [], reason: nil) }
-        let reason: String
-        if preference.rank(first.exercise) == 0, let preferred = preference.reason {
-            reason = preferred
-        } else if let days = first.daysSince {
-            reason = "最久沒做：\(days) 天"
-        } else {
-            reason = "新動作：還沒練過"
-        }
-        return RankedCandidates(items: items, reason: reason)
     }
 
-    private static func preference(for slot: Slot, history: PlanHistory, mainCategory: ExerciseCategory?,
-                                   now: Date) -> Preference {
-        switch slot {
-        case .main:
-            return alternation(history)
-        case .push:
-            return direction([.horizontalPush, .verticalPush], history: history, now: now)
-        case .pull:
-            return direction([.horizontalPull, .verticalPull], history: history, now: now)
-        case .pushOrPull:
-            let push = direction([.horizontalPush, .verticalPush], history: history, now: now)
-            let pull = direction([.horizontalPull, .verticalPull], history: history, now: now)
-            let pushFirst = sideOrder(history: history, now: now)
-            let first = pushFirst.push ? push : pull
-            return Preference(
-                rank: { exercise in
-                    let isPush = exercise.role == .push
-                    let side = isPush == pushFirst.push ? 0 : 2
-                    return side + (isPush ? push : pull).rank(exercise)
-                },
-                reason: pushFirst.reason ?? first.reason
-            )
-        case .unilateral:
-            guard let mainCategory, mainCategory.isLower else { return Preference(rank: { _ in 0 }) }
-            let other: ExerciseCategory = mainCategory == .kneeDominant ? .hipDominant : .kneeDominant
-            return Preference(rank: { $0.category == mainCategory ? 1 : 0 },
-                              reason: "和主項不同：\(other.subtitle ?? other.title)")
-        case .cardio:
-            // 固定是跑步機
-            return Preference(rank: { $0.name == "跑步機" ? 0 : 1 })
-        case .explosive, .core, .accessory:
-            return Preference(rank: { _ in 0 })
-        }
+    private static func stalenessReason(_ candidate: PlanCandidate) -> String {
+        guard let days = candidate.daysSince else { return "還沒練過" }
+        return days == 0 ? "最久沒做（今天）" : "最久沒做（\(days) 天前）"
     }
 
-    /// 主項：和最近一次主項的方向（膝／髖主導）相反；沒有紀錄時最後練習日期比較舊的那一類
-    private static func alternation(_ history: PlanHistory) -> Preference {
-        let lastMain = history.sessions.lazy.compactMap { s in
-            s.items.first { $0.role == .main && $0.category.isLower }
-        }.first
-        if let last = lastMain?.category {
-            let other: ExerciseCategory = last == .kneeDominant ? .hipDominant : .kneeDominant
-            return Preference(rank: { $0.category == other ? 0 : 1 }, reason: "交替：上次是\(last.subtitle ?? last.title)")
+    /// 上次拉的方向：最近一筆角色為「拉」的紀錄的動作分類
+    static func lastPullDirection(_ history: PlanHistory) -> ExerciseCategory? {
+        for session in history.sessions {
+            if let pull = session.items.last(where: { $0.role == .pull }) { return pull.category }
         }
-        let knee = history.lastDate { $0.category == .kneeDominant }
-        let hip = history.lastDate { $0.category == .hipDominant }
-        guard let older = older(knee, .kneeDominant, hip, .hipDominant) else { return Preference(rank: { _ in 0 }) }
-        return Preference(rank: { $0.category == older ? 0 : 1 }, reason: "\(older.subtitle ?? older.title)比較久沒練")
+        return nil
     }
 
-    /// 推、拉：水平和垂直比較近 30 天出現在幾次訓練，少的優先；相同時最後練習日期比較舊的優先
-    private static func direction(_ pair: [ExerciseCategory], history: PlanHistory, now: Date) -> Preference {
-        let (a, b) = (pair[0], pair[1])
-        let countA = history.sessionCount(within: now) { $0.category == a }
-        let countB = history.sessionCount(within: now) { $0.category == b }
-        let preferred: ExerciseCategory?
-        let reason: String?
-        if countA != countB {
-            preferred = countA < countB ? a : b
-            reason = "輪替：近 30 天\(directionTitle(preferred!))比較少"
-        } else {
-            preferred = older(history.lastDate { $0.category == a }, a, history.lastDate { $0.category == b }, b)
-            reason = preferred.map { "輪替：\(directionTitle($0))比較久沒做" }
-        }
-        guard let preferred else { return Preference(rank: { _ in 0 }) }
-        return Preference(rank: { $0.category == preferred ? 0 : 1 }, reason: reason)
-    }
-
-    /// 「上肢水平推」→「水平推」
-    private static func directionTitle(_ category: ExerciseCategory) -> String {
-        category.title.replacingOccurrences(of: "上肢", with: "")
-    }
-
-    /// 推或拉：先比較推和拉近 30 天出現在幾次訓練，少的那一邊優先；相同時最後練習日期比較舊的那一邊
-    private static func sideOrder(history: PlanHistory, now: Date) -> (push: Bool, reason: String?) {
-        let isPush: (PlanHistory.Item) -> Bool = { [.horizontalPush, .verticalPush].contains($0.category) }
-        let isPull: (PlanHistory.Item) -> Bool = { [.horizontalPull, .verticalPull].contains($0.category) }
-        let pushCount = history.sessionCount(within: now, where: isPush)
-        let pullCount = history.sessionCount(within: now, where: isPull)
-        if pushCount != pullCount {
-            let push = pushCount < pullCount
-            return (push, "推拉平衡：近 30 天\(push ? "推" : "拉")比較少")
-        }
-        let pushDate = history.lastDate(where: isPush)
-        let pullDate = history.lastDate(where: isPull)
-        switch (pushDate, pullDate) {
-        case (nil, nil): return (true, nil)
-        case (nil, _): return (true, "推拉平衡：推比較久沒做")
-        case (_, nil): return (false, "推拉平衡：拉比較久沒做")
-        case let (p?, q?):
-            if p == q { return (true, nil) }
-            return (p < q, "推拉平衡：\(p < q ? "推" : "拉")比較久沒做")
-        }
-    }
-
-    /// 兩類中最後練習日期比較舊的（沒練過算最舊）；一樣時回傳 nil
-    private static func older(_ dateA: Date?, _ a: ExerciseCategory, _ dateB: Date?, _ b: ExerciseCategory) -> ExerciseCategory? {
-        switch (dateA, dateB) {
-        case (nil, nil): return nil
-        case (nil, _): return a
-        case (_, nil): return b
-        case let (x?, y?): return x == y ? nil : (x < y ? a : b)
-        }
+    /// 「上肢水平拉」→「水平」
+    private static func direction(_ category: ExerciseCategory) -> String {
+        category == .verticalPull || category == .verticalPush ? "垂直" : "水平"
     }
 
     // MARK: 整份菜單
@@ -376,46 +278,155 @@ nonisolated enum PlanRanking {
     struct SlotState: Equatable, Sendable {
         var slot: Slot
         var candidates: RankedCandidates
-        /// 目前選的動作；沒有候選時為 nil（這個位置略過）
+        /// 目前選的動作；沒有候選時為 nil（這一格略過）
         var selected: PlanExercise?
     }
 
-    /// 依位置順序決定每個位置的候選與選擇：使用者選過的照用，沒選過的用第一個建議。
-    /// 已經在其他位置選了的動作會排除；單邊依這次主項的分類排序
-    static func resolve(slots: [Slot], picks: [Int: UUID], exercises: [PlanExercise], history: PlanHistory,
+    /// 先決定主項，再依主項決定其他格子（主項是拉的動作時「拉」改成「推」）。
+    /// 使用者選過的照用，沒選過的用第一個建議；已經在其他格選了的動作會排除
+    static func resolve(answers: PlanAnswers, picks: [Slot: UUID], exercises: [PlanExercise], history: PlanHistory,
                         now: Date = .now) -> [SlotState] {
+        let mainSlot = Slot.main(for: answers.dayType)
         var states: [SlotState] = []
-        var taken = Set(picks.values)
-        for (index, slot) in slots.enumerated() {
-            let excluded = taken.subtracting([picks[index]].compactMap { $0 })
-            let mainCategory = zip(slots, states).first { $0.0 == .main }?.1.selected?.category
-            let ranked = candidates(for: slot, exercises: exercises, history: history, excluding: excluded,
-                                    mainCategory: mainCategory, now: now)
-            let selected = picks[index].flatMap { id in ranked.items.first { $0.id == id }?.exercise }
-                ?? ranked.items.first?.exercise
+        let mainRanked = candidates(for: mainSlot, dayType: answers.dayType, exercises: exercises, history: history,
+                                    excluding: Set(picks.filter { $0.key != mainSlot }.values), now: now)
+        let main = pick(picks[mainSlot], from: mainRanked)
+        states.append(SlotState(slot: mainSlot, candidates: mainRanked, selected: main))
+
+        let slots = Slot.slots(for: answers, mainCategory: main?.category)
+        var taken = Set(slots.compactMap { picks[$0] })
+        if let main { taken.insert(main.id) }
+        for slot in slots.dropFirst() {
+            let excluded = taken.subtracting([picks[slot]].compactMap { $0 })
+            let ranked = candidates(for: slot, dayType: answers.dayType, exercises: exercises, history: history,
+                                    excluding: excluded, main: main, now: now)
+            let selected = pick(picks[slot], from: ranked)
             if let selected { taken.insert(selected.id) }
             states.append(SlotState(slot: slot, candidates: ranked, selected: selected))
         }
         return states
     }
+
+    private static func pick(_ id: UUID?, from ranked: RankedCandidates) -> PlanExercise? {
+        id.flatMap { id in ranked.items.first { $0.id == id }?.exercise } ?? ranked.items.first?.exercise
+    }
+}
+
+// MARK: - 主項輪替
+
+/// 每個日型各自的主項輪替：從上次主項的下一個開始照順序排，上次用的排最後；沒有紀錄時從 1 開始
+nonisolated struct Rotation {
+    /// 輪替表，依順序
+    let table: [PlanExercise]
+    /// 同日型最近一次訓練的主項（不在輪替表裡時為 nil）
+    let last: PlanExercise?
+
+    init(slot: Slot, dayType: DayType, exercises: [PlanExercise], history: PlanHistory) {
+        let order: (PlanExercise) -> Int? = { slot == .maxEffort ? $0.meRotation : $0.deRotation }
+        table = exercises
+            .filter { order($0) != nil && (dayType.isLower ? $0.category.isLower : !$0.category.isLower) }
+            .sorted { order($0)! < order($1)! }
+        let lastID = Self.lastMainID(dayType: dayType, history: history)
+        last = table.first { $0.id == lastID }
+    }
+
+    /// 上次主項：同日型最近一次有主項的訓練中，角色為 ME 主項或 DE 主項的動作
+    static func lastMainID(dayType: DayType, history: PlanHistory) -> UUID? {
+        for session in history.sessions where session.dayType == dayType {
+            if let main = session.items.first(where: { $0.role == .maxEffort || $0.role == .dynamicEffort }) {
+                return main.exerciseID
+            }
+        }
+        return nil
+    }
+
+    var order: [PlanExercise] {
+        guard let last, let index = table.firstIndex(of: last) else { return table }
+        return Array(table[(index + 1)...] + table[...index])
+    }
+
+    var reason: String {
+        guard let last else { return "輪替從第 1 個開始" }
+        return "輪替的下一個（上次：\(last.name)）"
+    }
+}
+
+// MARK: - ME 紀錄與建議重量
+
+nonisolated enum MaxEffortRecords {
+    struct Record: Equatable, Sendable {
+        var date: Date
+        var weightKg: Double
+        var reps: Int
+        /// Epley 估算 1RM
+        var estimated1RM: Double { PersonalRecords.epley(weight: weightKg, reps: reps) }
+    }
+
+    /// 每次 ME 訓練一筆（角色為 ME 主項，重量最重的成功組），由新到舊
+    static func records(_ logs: [ExerciseLog]) -> [Record] {
+        logs.filter { $0.role == .maxEffort }.sorted { $0.date > $1.date }.compactMap { log in
+            let success = log.sets.filter { $0.isCompleted && $0.kind != .warmup && $0.weightKg != nil && ($0.reps ?? 0) >= 1 }
+            guard let best = success.max(by: { ($0.weightKg!, $0.reps!) < ($1.weightKg!, $1.reps!) }) else { return nil }
+            return Record(date: log.date, weightKg: best.weightKg!, reps: best.reps!)
+        }
+    }
+
+    /// DE 速度主項的建議重量：最近一次 ME 紀錄的估算 1RM × 60%，kg 四捨五入到 2.5 kg（lbs 到 5 lb）
+    static func speedWeightKg(estimated1RM: Double, unit: WeightUnit) -> Double {
+        let step = unit == .kg ? 2.5 : 5
+        return unit.toKg((unit.fromKg(estimated1RM * 0.6) / step).rounded() * step)
+    }
+}
+
+/// 某一格選定動作的建議：重量、參數、提示（建立菜單第三步和訓練中畫面共用）
+nonisolated struct SlotAdvice: Equatable, Sendable {
+    var prescription: Prescription
+    /// 「建議 65 kg（估算 1RM 110 kg × 60%）」「上次 60 kg」「用能做得很快的重量」
+    var weightText: String?
+    /// DE 速度主項的建議重量（kg）；沒有 ME 紀錄時為 nil
+    var speedWeightKg: Double?
+
+    static func make(role: Role, exercise: PlanExercise, logs: [ExerciseLog], unit: WeightUnit) -> SlotAdvice {
+        let prescription = Prescription.of(role: role, name: exercise.name, tags: exercise.tags)
+        if Prescription.isSpeed(role: role, tags: exercise.tags) {
+            guard let record = MaxEffortRecords.records(logs).first else {
+                return SlotAdvice(prescription: prescription, weightText: "用能做得很快的重量")
+            }
+            let weight = MaxEffortRecords.speedWeightKg(estimated1RM: record.estimated1RM, unit: unit)
+            return SlotAdvice(prescription: prescription,
+                              weightText: "建議 \(unit.formatWithUnit(kg: weight))（估算 1RM \(unit.formatWithUnit(kg: record.estimated1RM)) × 60%）",
+                              speedWeightKg: weight)
+        }
+        guard let last = logs.first(where: { $0.sets.contains(where: \.isCompleted) }) else {
+            return SlotAdvice(prescription: prescription)
+        }
+        let done = last.sets.filter { $0.isCompleted && $0.kind != .warmup }
+        if exercise.logType == .cardio {
+            return SlotAdvice(prescription: prescription, weightText: done.last.map { "上次 \(SetFormat.cardio($0))" })
+        }
+        guard let heaviest = done.compactMap(\.weightKg).max() else { return SlotAdvice(prescription: prescription) }
+        return SlotAdvice(prescription: prescription, weightText: "上次 \(unit.formatWithUnit(kg: heaviest))")
+    }
 }
 
 // MARK: - 從資料庫建立快照
 
-extension PlanHistory {
+nonisolated extension PlanHistory {
     init(sessions: [WorkoutSession]) {
         self.init(sessions.filter { !$0.isActive }.map { s in
-            Session(date: s.startedAt, region: s.region, items: s.orderedItems.compactMap { item in
+            Session(date: s.startedAt, region: s.region, dayType: s.dayType, items: s.orderedItems.compactMap { item in
                 guard let exercise = item.exercise else { return nil }
-                return Item(exerciseID: exercise.id, category: exercise.category, role: item.role)
+                return Item(exerciseID: exercise.id, category: exercise.category, tags: exercise.tags, role: item.role,
+                            sets: item.completedSets.map(\.values))
             })
         })
     }
 }
 
-extension PlanExercise {
+nonisolated extension PlanExercise {
     init(_ exercise: Exercise) {
         self.init(id: exercise.id, name: exercise.name, category: exercise.category, tags: exercise.tags,
-                  isArchived: exercise.isArchived, lastDate: exercise.lastCompletedDate)
+                  isArchived: exercise.isArchived, lastDate: exercise.lastCompletedDate,
+                  meRotation: exercise.meRotation, deRotation: exercise.deRotation, logType: exercise.logType)
     }
 }

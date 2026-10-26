@@ -148,9 +148,7 @@ struct WorkoutEditor<Header: View>: View {
             }
             .id(item.id)
 
-            Text(item.role.shortGuide)
-                .font(.footnote)
-                .foregroundStyle(Theme.textSecondary)
+            AdviceLine(advice: item.advice(unit: unit))
 
             if !item.note.isEmpty {
                 Text(item.note).font(.subheadline).foregroundStyle(Theme.textSecondary)
@@ -328,6 +326,9 @@ struct WorkoutEditor<Header: View>: View {
     private var keyboardToolbar: some ToolbarContent {
         ToolbarItemGroup(placement: .keyboard) {
             if focus?.field.acceptsWeightSteps == true {
+                if focusedAllowsNegative {
+                    Button("±", action: flipWeightSign)
+                }
                 Button("-2.5") { stepWeight(-2.5) }
                 Button("+2.5") { stepWeight(2.5) }
                 Button("+5") { stepWeight(5) }
@@ -339,14 +340,30 @@ struct WorkoutEditor<Header: View>: View {
         }
     }
 
-    /// 以目前輸入（沒輸入就用預填）為基準加減，單位跟著全域設定（lbs 模式就是 ±2.5 lb）
+    /// 以目前輸入（沒輸入就用預填）為基準加減，單位跟著全域設定（lbs 模式就是 ±2.5 lb）；
+    /// 只有可以記負重的動作會減到 0 以下
     private func stepWeight(_ delta: Double) {
         guard let id = focus, let (set, placeholder) = locate(id.set) else { return }
         let base = unit.displayRounded(unit.fromKg(set.weightKg ?? placeholder?.weightKg ?? 0))
-        let value = max(0, base + delta)
+        let value = focusedAllowsNegative ? base + delta : max(0, base + delta)
         drafts.texts[id] = Units.number(value)
         set.weightKg = unit.toKg(value)
         WorkoutActions.save(context)
+    }
+
+    /// 正負切換（數字鍵盤沒有負號）：以目前輸入（沒輸入就用預填）為基準
+    private func flipWeightSign() {
+        guard let id = focus, let (set, placeholder) = locate(id.set),
+              let kg = set.weightKg ?? placeholder?.weightKg, kg != 0 else { return }
+        let value = -unit.displayRounded(unit.fromKg(kg))
+        drafts.texts[id] = Units.number(value)
+        set.weightKg = unit.toKg(value)
+        WorkoutActions.save(context)
+    }
+
+    private var focusedAllowsNegative: Bool {
+        guard let id = focus, let exercise = locate(id.set)?.0.sessionExercise?.exercise else { return false }
+        return SetLogic.allowsNegativeLoad(logType: exercise.logType, equipment: exercise.equipment)
     }
 
     private func focusNext() {
@@ -372,6 +389,25 @@ struct WorkoutEditor<Header: View>: View {
 
     private func isPresented<T>(_ binding: Binding<T?>) -> Binding<Bool> {
         Binding(get: { binding.wrappedValue != nil }, set: { if !$0 { binding.wrappedValue = nil } })
+    }
+}
+
+/// 動作卡片的預設參數：「8 組 × 2 下・休息 45–60 秒」，DE 速度主項加上建議重量，ME 和 DE（爆）加上提示
+private struct AdviceLine: View {
+    var advice: SlotAdvice
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(advice.prescription.summary)
+                .foregroundStyle(Theme.textSecondary)
+            if advice.prescription.fixedReps != nil, let weight = advice.weightText {
+                Text(weight).foregroundStyle(Theme.textSecondary)
+            }
+            if let tip = advice.prescription.tip {
+                Label(tip, systemImage: "exclamationmark.triangle.fill").foregroundStyle(Theme.warning)
+            }
+        }
+        .font(.footnote)
     }
 }
 

@@ -5,7 +5,9 @@
    "id": "F5C7B1CC-8B0E-5352-9D8F-0A2DE7B89B39",
    "name": "深蹲",
    "category": "kneeDominant",
-   "tags": [],
+   "tags": [
+    "main"
+   ],
    "aliases": [
     "背蹲舉",
     "高背深蹲",
@@ -21,7 +23,9 @@
    "id": "3C1EA460-BA04-5043-BD5C-408016D54ABE",
    "name": "前蹲舉",
    "category": "kneeDominant",
-   "tags": [],
+   "tags": [
+    "main"
+   ],
    "aliases": [],
    "englishName": "",
    "equipment": "barbell",
@@ -98,7 +102,9 @@
    "id": "4E95E5D8-1703-5B98-823F-DF00C22EB3AF",
    "name": "傳統硬舉",
    "category": "hipDominant",
-   "tags": [],
+   "tags": [
+    "main"
+   ],
    "aliases": [
     "硬舉"
    ],
@@ -112,7 +118,9 @@
    "id": "7AE896B4-0623-519C-8E29-CD7411BCE42C",
    "name": "六角槓硬舉",
    "category": "hipDominant",
-   "tags": [],
+   "tags": [
+    "main"
+   ],
    "aliases": [],
    "englishName": "",
    "equipment": "barbell",
@@ -124,7 +132,9 @@
    "id": "FDA1A21A-6987-5D20-A0E3-E4E51C2891EF",
    "name": "相撲硬舉",
    "category": "hipDominant",
-   "tags": [],
+   "tags": [
+    "main"
+   ],
    "aliases": [],
    "englishName": "",
    "equipment": "barbell",
@@ -216,7 +226,9 @@
    "id": "69903A6B-205B-55B8-BEBE-189342CF8EFA",
    "name": "臥推",
    "category": "horizontalPush",
-   "tags": [],
+   "tags": [
+    "main"
+   ],
    "aliases": [
     "槓鈴臥推"
    ],
@@ -230,7 +242,9 @@
    "id": "D8FFB3BD-36DC-5423-89FF-CD06D02BC08E",
    "name": "上斜臥推",
    "category": "horizontalPush",
-   "tags": [],
+   "tags": [
+    "main"
+   ],
    "aliases": [],
    "englishName": "",
    "equipment": "barbell",
@@ -242,7 +256,9 @@
    "id": "E9633D01-52B8-5164-AC88-C16816777FC0",
    "name": "地板臥推",
    "category": "horizontalPush",
-   "tags": [],
+   "tags": [
+    "main"
+   ],
    "aliases": [],
    "englishName": "",
    "equipment": "barbell",
@@ -337,7 +353,9 @@
    "id": "2AD8BFD9-70E7-5148-B4E3-5B760DBCC6C8",
    "name": "肩推",
    "category": "verticalPush",
-   "tags": [],
+   "tags": [
+    "main"
+   ],
    "aliases": [
     "站姿槓鈴肩推",
     "槓鈴肩推"
@@ -352,7 +370,9 @@
    "id": "3F210B95-FB0F-5EB5-BDCB-EE304E5A39CF",
    "name": "坐姿槓鈴肩推",
    "category": "verticalPush",
-   "tags": [],
+   "tags": [
+    "main"
+   ],
    "aliases": [],
    "englishName": "",
    "equipment": "barbell",
@@ -488,7 +508,9 @@
    "id": "50DCCECC-FC86-506D-A9C5-6E8E3211BAB4",
    "name": "單手啞鈴臥推",
    "category": "core",
-   "tags": [],
+   "tags": [
+    "unilateral"
+   ],
    "aliases": [
     "半椅單手臥推"
    ],
@@ -517,7 +539,9 @@
    "id": "D66E16C2-F24C-5F40-B5F2-5EA34F4A6D62",
    "name": "窄跪姿單手啞鈴肩推",
    "category": "core",
-   "tags": [],
+   "tags": [
+    "unilateral"
+   ],
    "aliases": [],
    "englishName": "",
    "equipment": "dumbbell",
@@ -530,6 +554,7 @@
    "name": "單手壺鈴擺盪",
    "category": "core",
    "tags": [
+    "unilateral",
     "explosive"
    ],
    "aliases": [],
@@ -804,6 +829,141 @@
    "logType": "weight",
    "note": "",
    "isArchived": true
+  },
+  {
+   "id": "37CED11C-AAC7-59FA-9829-C754A5BC7AC8",
+   "name": "槓鈴早安式",
+   "category": "hipDominant",
+   "tags": [
+    "main"
+   ],
+   "aliases": [
+    "早安式"
+   ],
+   "englishName": "Good Morning",
+   "equipment": "barbell",
+   "logType": "weight",
+   "note": "",
+   "isArchived": false
+  },
+  {
+   "id": "165F0A00-7BB9-5EBE-8B8E-F4C806B9097A",
+   "name": "窄握臥推",
+   "category": "horizontalPush",
+   "tags": [
+    "main"
+   ],
+   "aliases": [
+    "窄距臥推"
+   ],
+   "englishName": "Close-Grip Bench Press",
+   "equipment": "barbell",
+   "logType": "weight",
+   "note": "",
+   "isArchived": false
+  },
+  {
+   "id": "59484138-77FD-5E5B-B5E3-043CCB15DE4C",
+   "name": "槓鈴俯身划船",
+   "category": "horizontalPull",
+   "tags": [],
+   "aliases": [
+    "俯身划船",
+    "槓鈴划船"
+   ],
+   "englishName": "Barbell Bent-Over Row",
+   "equipment": "barbell",
+   "logType": "weight",
+   "note": "",
+   "isArchived": false
+  },
+  {
+   "id": "76656944-1697-5491-BCD8-A02EA3CA1ED5",
+   "name": "單手啞鈴划船",
+   "category": "horizontalPull",
+   "tags": [
+    "unilateral"
+   ],
+   "aliases": [],
+   "englishName": "One-Arm Dumbbell Row",
+   "equipment": "dumbbell",
+   "logType": "weight",
+   "note": "",
+   "isArchived": false
+  },
+  {
+   "id": "8272C9DB-84A7-5332-8386-92A2F362AF81",
+   "name": "胸靠上斜椅啞鈴划船",
+   "category": "horizontalPull",
+   "tags": [],
+   "aliases": [
+    "胸靠划船"
+   ],
+   "englishName": "Chest-Supported Dumbbell Row",
+   "equipment": "dumbbell",
+   "logType": "weight",
+   "note": "",
+   "isArchived": false
+  },
+  {
+   "id": "2FF01C93-2CA7-540B-B1C8-9E3514C99073",
+   "name": "借力推舉",
+   "category": "verticalPush",
+   "tags": [
+    "explosive"
+   ],
+   "aliases": [
+    "借力推"
+   ],
+   "englishName": "Push Press",
+   "equipment": "barbell",
+   "logType": "weight",
+   "note": "",
+   "isArchived": false
+  },
+  {
+   "id": "5B4C2B2F-7DC7-59D3-8B81-59A4D6649394",
+   "name": "行李箱原地踏步",
+   "category": "core",
+   "tags": [
+    "unilateral"
+   ],
+   "aliases": [
+    "行李箱踏步"
+   ],
+   "englishName": "Suitcase March",
+   "equipment": "dumbbell",
+   "logType": "weight",
+   "note": "",
+   "isArchived": false
+  },
+  {
+   "id": "44C1637A-3E82-550C-9C70-EA0B12A90974",
+   "name": "仰臥啞鈴三頭伸展",
+   "category": "accessory",
+   "tags": [],
+   "aliases": [
+    "啞鈴三頭伸展"
+   ],
+   "englishName": "Dumbbell Skull Crusher",
+   "equipment": "dumbbell",
+   "logType": "weight",
+   "note": "",
+   "isArchived": false
+  },
+  {
+   "id": "2606A8C6-ECC0-509A-A7D7-FF45ED2D4696",
+   "name": "JM 推",
+   "category": "accessory",
+   "tags": [],
+   "aliases": [
+    "JM 推舉"
+   ],
+   "englishName": "JM Press",
+   "equipment": "barbell",
+   "logType": "weight",
+   "note": "",
+   "isArchived": false
   }
  ],
  "entries": [

@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-/// 換動作：候選規則和排序都和建立菜單第三步同一個位置相同，這次訓練已有的動作排除
+/// 換動作：候選規則和排序都和建立菜單同一格相同，這次訓練已有的動作排除
 struct ReplaceExerciseSheet: View {
     let item: SessionExercise
     var onPick: (Exercise, Role) -> Void
@@ -11,7 +11,7 @@ struct ReplaceExerciseSheet: View {
     @Query(filter: #Predicate<WorkoutSession> { $0.endedAt != nil }) private var endedSessions: [WorkoutSession]
     @State private var ranked: RankedCandidates?
 
-    private var slot: Slot { Slot(role: item.role, modeID: item.session?.modeID) }
+    private var slot: Slot { Slot(role: item.role) }
 
     var body: some View {
         NavigationStack {
@@ -19,7 +19,7 @@ struct ReplaceExerciseSheet: View {
                 Section {
                     Text(item.role.shortGuide).foregroundStyle(Theme.textSecondary)
                 } header: {
-                    Text("位置：\(slot.title)")
+                    Text("格子：\(slot.title)")
                 }
                 .listRowBackground(Theme.card)
 
@@ -53,16 +53,16 @@ struct ReplaceExerciseSheet: View {
     private func rank() -> RankedCandidates {
         let session = item.session
         let inSession = Set(session?.items.compactMap { $0.exercise?.id } ?? [])
-        // 單邊依這次主項的分類排序
-        let mainCategory = session?.orderedItems.first { $0 !== item && $0.role == .main }?.exercise?.category
-        return PlanRanking.candidates(for: slot, exercises: exercises.map(PlanExercise.init),
-                                      history: PlanHistory(sessions: endedSessions),
-                                      excluding: inSession, mainCategory: mainCategory)
+        // 下肢輔助依這次主項的分類排序
+        let main = session?.orderedItems.first { $0 !== item && ($0.role == .maxEffort || $0.role == .dynamicEffort) }?
+            .exercise.map(PlanExercise.init)
+        return PlanRanking.candidates(for: slot, dayType: session?.dayType, exercises: exercises.map(PlanExercise.init),
+                                      history: PlanHistory(sessions: endedSessions), excluding: inSession, main: main)
     }
 
     private func pick(_ candidate: PlanCandidate) {
         guard let exercise = exercises.first(where: { $0.id == candidate.id }) else { return }
-        onPick(exercise, slot.role(for: candidate.exercise))
+        onPick(exercise, slot.role)
         dismiss()
     }
 }

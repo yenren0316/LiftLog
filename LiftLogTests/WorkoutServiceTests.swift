@@ -24,7 +24,7 @@ struct WorkoutServiceTests {
         var pulldown: Exercise
     }
 
-    /// 臥推上次做了 60 kg × 5 兩組；滑輪下拉從沒做過。開一次訓練：臥推（2 組）＋滑輪下拉（5 組）
+    /// 臥推上次做了 60 kg × 5 兩組；滑輪下拉從沒做過。開一次訓練：臥推（2 組）＋滑輪下拉（3 組）
     private func makeFixture() throws -> Fixture {
         let container = try ModelContainer(for: LiftLogStore.schema,
                                            configurations: ModelConfiguration(isStoredInMemoryOnly: true))
@@ -89,9 +89,9 @@ struct WorkoutServiceTests {
         let first = f.session.orderedItems[0].orderedSets[0]
         #expect(first.isCompleted && first.completedAt != nil)
         #expect(first.weightKg == 60 && first.reps == 5)
-        // 臥推的角色是「推」：休息 180 秒，並排程休息結束的通知
+        // 臥推的角色是「推」：休息 90 秒，並排程休息結束的通知
         let end = try #require(f.service.restTimer.endDate)
-        #expect(f.service.restTimer.duration == 180)
+        #expect(f.service.restTimer.duration == 90)
         #expect(f.notifications.scheduled == [end])
 
         // 第二次完成第二組
@@ -169,7 +169,7 @@ struct WorkoutServiceTests {
         #expect(state.exerciseName == "臥推" && state.roleTitle == "推")
         #expect(state.setText == "第 1／2 組")
         #expect(state.target == "60 kg × 5" && state.canComplete)
-        #expect(state.completedSets == 0 && state.totalSets == 7)
+        #expect(state.completedSets == 0 && state.totalSets == 5)
         #expect(state.restInterval(isStale: false) == nil)
 
         #expect(f.service.completeCurrentSet())
@@ -187,7 +187,7 @@ struct WorkoutServiceTests {
         let f = try makeFixture()
         for set in f.session.orderedItems[0].orderedSets { set.isCompleted = true }
         let state = WorkoutActivityState.make(session: f.session, rest: nil, unit: .kg)
-        #expect(state.exerciseName == "滑輪下拉" && state.setText == "第 1／5 組")
+        #expect(state.exerciseName == "滑輪下拉" && state.setText == "第 1／3 組")
         #expect(state.target == nil && !state.canComplete)
     }
 

@@ -111,7 +111,10 @@ private struct SessionRow: View {
             Text(session.title.isEmpty ? "訓練" : session.title)
                 .font(.body.weight(.semibold))
                 .lineLimit(2)
-            Text("\(session.items.count) 個動作").font(.footnote).foregroundStyle(Theme.textSecondary)
+            // 有日型時一起顯示：「ME 下肢・3 個動作」
+            Text(([session.dayType?.title].compactMap { $0 } + ["\(session.items.count) 個動作"]).joined(separator: "・"))
+                .font(.footnote)
+                .foregroundStyle(Theme.textSecondary)
         }
         .padding(.vertical, 4)
     }

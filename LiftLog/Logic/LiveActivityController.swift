@@ -97,7 +97,7 @@ final class LiveActivityController {
             let palette = AppTheme.load().palette
             let timer = RestTimer.shared
             let rest = timer.startDate.flatMap { start in timer.endDate.map { start...$0 } }
-            let unit = WeightUnit(rawValue: UserDefaults.standard.string(forKey: WeightUnit.storageKey) ?? "") ?? .kg
+            let unit = WeightUnit.current
             desired = (WorkoutActivityAttributes(sessionID: session.id.uuidString, accent: palette.accent, done: palette.done),
                        WorkoutActivityState.make(session: session, rest: rest, unit: unit))
         }

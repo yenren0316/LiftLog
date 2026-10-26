@@ -224,7 +224,8 @@ struct WidgetGalleryView: View {
     private static func snapshot(daysAgo: Int?, inProgressMinutes: Int? = nil) -> WidgetSnapshot {
         var s = WidgetSnapshot.sample
         s.lastSessionDate = daysAgo.flatMap { Calendar.current.date(byAdding: .day, value: -$0, to: .now) }
-        s.lastRegion = daysAgo == nil ? nil : .upper
+        s.lastRegion = daysAgo == nil ? nil : .lower
+        s.lastDayType = daysAgo == nil ? nil : .meLower
         if let minutes = inProgressMinutes {
             s.isInProgress = true
             s.startedAt = Date.now.addingTimeInterval(TimeInterval(-minutes * 60 - 17))

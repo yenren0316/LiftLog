@@ -150,7 +150,8 @@ struct ExerciseEditView: View {
         note = exercise.note
         isArchived = exercise.isArchived
         customRest = exercise.restSeconds != nil
-        restSeconds = exercise.restSeconds ?? exercise.defaultRole.restSeconds
+        restSeconds = exercise.restSeconds
+            ?? Prescription.of(role: exercise.defaultRole, name: exercise.name, tags: exercise.tags).restSeconds
     }
 
     private func save() {

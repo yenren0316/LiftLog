@@ -10,7 +10,8 @@ extension WidgetSnapshot {
         return WidgetSnapshot(
             lastSessionDate: last?.date,
             lastRegion: last?.region,
-            suggestedRegion: suggestion.region,
+            lastDayType: last?.dayType,
+            suggestedDayType: suggestion.dayType,
             suggestedCount: suggestion.count,
             suggestsTreadmill: suggestion.cardio,
             isInProgress: activeStartedAt != nil,

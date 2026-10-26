@@ -105,11 +105,13 @@ struct SetLogicTests {
         #expect(SessionTitle.automatic(["A", "B", "C", "D"]) == "A＋B 等 4 項")
     }
 
-    @Test func restAndSetsByRole() {
-        #expect([Role.main, .explosive, .push, .pull].map(\.restSeconds) == [180, 180, 180, 180])
-        #expect([Role.unilateral, .core].map(\.restSeconds) == [90, 90])
-        #expect(Role.accessory.restSeconds == 60)
-        #expect([Role.main, .explosive, .push, .pull].map(\.defaultSets) == [5, 5, 5, 5])
-        #expect([Role.unilateral, .core, .accessory, .cardio].map(\.defaultSets) == [3, 3, 3, 1])
+    @Test func onlyBodyweightLoadsCanBeNegative() {
+        // 輔助引體向上：輔助 20 kg 記 −20 kg
+        #expect(SetLogic.allowsNegativeLoad(logType: .weight, equipment: .bodyweight))
+        #expect(!SetLogic.allowsNegativeLoad(logType: .weight, equipment: .barbell))
+        #expect(!SetLogic.allowsNegativeLoad(logType: .assisted, equipment: .bodyweight))
+        // 負重可以不填，負數照樣能完成
+        #expect(SetLogic.canComplete(SetValues(weightKg: -20, reps: 5), logType: .weight, equipment: .bodyweight))
+        #expect(SetFormat.compact([SetValues(weightKg: -20, reps: 5)], logType: .weight) == "-20 kg × 5 下")
     }
 }

@@ -47,13 +47,18 @@ nonisolated enum ExerciseCategory: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+/// 標籤可多選，也可以沒有：
+/// - 主：可以安全衝大重量的槓鈴雙邊動作，ME 主項只從這裡選
+/// - 單：左右分開做，下肢輔助優先，紀錄以單邊計
+/// - 爆：DE 主項的候選，輔助格都排除
 nonisolated enum ExerciseTag: String, Codable, CaseIterable, Identifiable {
-    case unilateral, explosive
+    case main, unilateral, explosive
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
+        case .main: "主項"
         case .unilateral: "單邊"
         case .explosive: "爆發"
         }

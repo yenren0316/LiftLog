@@ -11,7 +11,8 @@ struct FilterTests {
     }
 
     @Test func filterOptionsInOrder() {
-        #expect(TagFilter.allCases.map(\.title) == ["全部", "單邊", "爆發"])
+        #expect(TagFilter.allCases.map(\.title) == ["全部", "主項", "單邊", "爆發"])
+        #expect(TagFilter.tag(.main).matches([.main]) && !TagFilter.tag(.main).matches([.explosive]))
     }
 
     @Test func searchMatchesNameAliasAndEnglish() {

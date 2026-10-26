@@ -33,7 +33,7 @@ struct WorkoutActionsTests {
         let session = WorkoutActions.start(with: [bench, row], in: context)
         #expect(session.title == "臥推＋爆發划船")
         #expect(session.orderedItems[0].sets.count == 3)   // 照最近一次
-        #expect(session.orderedItems[1].sets.count == 5)   // 沒有歷史 → 依角色（拉 5 組）
+        #expect(session.orderedItems[1].sets.count == 3)   // 沒有歷史 → 依角色（拉 3 組）
         #expect(bench.lastSets(excluding: session).map(\.weightKg) == [40, 42.6, 42.6])
 
         // 重複加入同一個動作：回傳既有卡片
@@ -69,7 +69,7 @@ struct WorkoutActionsTests {
         let session = WorkoutActions.start(with: [bench], in: context)
         WorkoutActions.addSet(to: session.orderedItems[0], in: context)
         #expect(WorkoutActions.finish(session, choice: .completeAll, in: context))
-        #expect(session.orderedItems[0].sets.count == 6)   // 推 5 組＋新增 1 組
+        #expect(session.orderedItems[0].sets.count == 4)   // 推 3 組＋新增 1 組
         #expect(session.orderedItems[0].sets.allSatisfy { $0.isCompleted && $0.completedAt != nil })
     }
 
@@ -97,21 +97,31 @@ struct WorkoutActionsTests {
         #expect(session.title == "推日")
     }
 
-    @Test func rolesAndRegionFromPlanAreKept() throws {
+    @Test func rolesAndDayTypeFromPlanAreKept() throws {
         let context = try makeContext()
-        let squat = Exercise(name: "深蹲", category: .kneeDominant, equipment: .barbell)
-        let bench = Exercise(name: "臥推", category: .horizontalPush, equipment: .barbell)
+        let squat = Exercise(name: "深蹲", category: .kneeDominant, tags: [.main], equipment: .barbell)
+        let rdl = Exercise(name: "單腳 RDL", category: .hipDominant, tags: [.unilateral], equipment: .dumbbell)
         context.insert(squat)
-        context.insert(bench)
-        let session = WorkoutActions.start(with: [squat, bench], roles: [.main, .push], region: .full,
-                                           modeID: "full2", in: context)
-        #expect(session.orderedItems.map(\.role) == [.main, .push])
-        let item = session.orderedItems[1]
-        WorkoutActions.remove(item, in: context)
-        session.orderedItems[0].sets.forEach { $0.isCompleted = true }
+        context.insert(rdl)
+        let session = WorkoutActions.start(with: [squat, rdl], roles: [.maxEffort, .lowerAssist], dayType: .meLower, in: context)
+        #expect(session.orderedItems.map(\.role) == [.maxEffort, .lowerAssist])
+        #expect(session.dayType == .meLower && session.modeID == nil)
+        session.items.flatMap(\.sets).forEach { $0.isCompleted = true }
         #expect(WorkoutActions.finish(session, choice: .deleteIncomplete, in: context))
-        // 從流程建立的訓練，部位以使用者選的為準
-        #expect(session.region == .full && session.modeID == "full2")
+        // 日型照建立菜單選的，部位依動作推算
+        #expect(session.dayType == .meLower && session.region == .lower)
+    }
+
+    @Test func cardioOnlySessionsHaveNoDayType() throws {
+        let context = try makeContext()
+        let bench = Exercise(name: "臥推", category: .horizontalPush, tags: [.main], equipment: .barbell)
+        let treadmill = Exercise(name: "跑步機", category: .cardio, equipment: .other, logType: .cardio)
+        [bench, treadmill].forEach(context.insert)
+        let session = WorkoutActions.start(with: [bench, treadmill], roles: [.maxEffort, .cardio], dayType: .meUpper, in: context)
+        // 只完成跑步機：主項被移除，這次不算日型
+        session.orderedItems[1].sets.forEach { $0.minutes = 30; $0.isCompleted = true }
+        #expect(WorkoutActions.finish(session, choice: .deleteIncomplete, in: context))
+        #expect(session.orderedItems.count == 1 && session.dayType == nil)
     }
 
     @Test func freeSessionsInferRegionWhenFinished() throws {
@@ -121,7 +131,7 @@ struct WorkoutActionsTests {
         context.insert(bench)
         context.insert(curl)
         let session = WorkoutActions.start(with: [bench, curl], in: context)
-        #expect(session.region == .unspecified)
+        #expect(session.region == .unspecified && session.dayType == nil)
         #expect(session.orderedItems.map(\.role) == [.push, .accessory])
         #expect(WorkoutActions.finish(session, choice: .completeAll, in: context))
         #expect(session.region == .upper)
@@ -129,77 +139,117 @@ struct WorkoutActionsTests {
 
     @Test func defaultSetsByRoleWhenNoHistory() throws {
         let context = try makeContext()
-        let cases: [(Exercise, Int)] = [
-            (Exercise(name: "深蹲", category: .kneeDominant, equipment: .barbell), 5),
-            (Exercise(name: "壺鈴擺盪", category: .hipDominant, tags: [.explosive], equipment: .kettlebell), 5),
-            (Exercise(name: "臥推", category: .horizontalPush, equipment: .barbell), 5),
-            (Exercise(name: "滑輪下拉", category: .verticalPull, equipment: .cable), 5),
-            (Exercise(name: "側蹲", category: .kneeDominant, tags: [.unilateral], equipment: .dumbbell), 3),
-            (Exercise(name: "腹前推", category: .core, equipment: .cable), 3),
-            (Exercise(name: "面拉", category: .accessory, equipment: .cable), 3),
-            (Exercise(name: "跑步機", category: .cardio, equipment: .other, logType: .cardio), 1),
+        let squat = Exercise(name: "深蹲", category: .kneeDominant, tags: [.main], equipment: .barbell)
+        let deadlift = Exercise(name: "傳統硬舉", category: .hipDominant, tags: [.main], equipment: .barbell)
+        let bench = Exercise(name: "臥推", category: .horizontalPush, tags: [.main], equipment: .barbell)
+        let swing = Exercise(name: "壺鈴擺盪", category: .hipDominant, tags: [.explosive], equipment: .kettlebell)
+        let lunge = Exercise(name: "側蹲", category: .kneeDominant, tags: [.unilateral], equipment: .dumbbell)
+        let core = Exercise(name: "腹前推", category: .core, equipment: .cable)
+        let treadmill = Exercise(name: "跑步機", category: .cardio, equipment: .other, logType: .cardio)
+        [squat, deadlift, bench, swing, lunge, core, treadmill].forEach(context.insert)
+        // ME 5 組；DE 速度深蹲 8、硬舉 6、臥推 8；DE（爆）6；輔助、核心 3；有氧 1
+        let cases: [(Exercise, Role, Int)] = [
+            (squat, .maxEffort, 5), (deadlift, .dynamicEffort, 6), (bench, .dynamicEffort, 8), (swing, .dynamicEffort, 6),
+            (lunge, .lowerAssist, 3), (core, .core, 3), (treadmill, .cardio, 1),
         ]
-        cases.forEach { context.insert($0.0) }
-        let session = WorkoutActions.start(with: cases.map(\.0), in: context)
-        #expect(session.orderedItems.map(\.sets.count) == cases.map(\.1))
-        // 有上一次紀錄就照上次的組數，不看角色
-        let lunge = cases[4].0
-        history(lunge, sets: [(10, 8), (10, 8), (10, 8), (10, 8)], daysAgo: 3, in: context)
+        let session = WorkoutActions.start(with: cases.map(\.0), roles: cases.map(\.1), in: context)
+        #expect(session.orderedItems.map(\.sets.count) == cases.map(\.2))
+        // 不是從建立菜單加入的動作依分類：下肢輔助 3 組
         WorkoutActions.discard(session, in: context)
-        let next = WorkoutActions.start(with: [lunge], in: context)
-        #expect(next.orderedItems[0].sets.count == 4)
+        #expect(WorkoutActions.start(with: [squat], in: context).orderedItems[0].sets.count == 3)
+    }
+
+    @Test func setCountFollowsLastSessionExceptSpeedLifts() throws {
+        let context = try makeContext()
+        let squat = Exercise(name: "深蹲", category: .kneeDominant, tags: [.main], equipment: .barbell)
+        let lunge = Exercise(name: "側蹲", category: .kneeDominant, tags: [.unilateral], equipment: .dumbbell)
+        [squat, lunge].forEach(context.insert)
+        history(lunge, sets: [(10, 8), (10, 8), (10, 8), (10, 8)], daysAgo: 3, in: context)
+        history(squat, sets: [(60, 5), (80, 3), (100, 3)], daysAgo: 5, in: context)
+        // 有上一次紀錄就照上次的組數；DE 速度主項固定 8 組，不看上一次
+        let session = WorkoutActions.start(with: [lunge, squat], roles: [.lowerAssist, .dynamicEffort], in: context)
+        #expect(session.orderedItems.map(\.sets.count) == [4, 8])
     }
 
     @Test func restSecondsByRoleUnlessExerciseOverrides() throws {
         let context = try makeContext()
-        let squat = Exercise(name: "深蹲", category: .kneeDominant, equipment: .barbell)
+        let squat = Exercise(name: "深蹲", category: .kneeDominant, tags: [.main], equipment: .barbell)
         let lunge = Exercise(name: "側蹲", category: .kneeDominant, tags: [.unilateral], equipment: .dumbbell)
         let core = Exercise(name: "腹前推", category: .core, equipment: .cable)
         let curl = Exercise(name: "二頭彎舉", category: .accessory, equipment: .dumbbell)
         let custom = Exercise(name: "臥推", category: .horizontalPush, equipment: .barbell, restSeconds: 120)
         [squat, lunge, core, curl, custom].forEach(context.insert)
-        let session = WorkoutActions.start(with: [squat, lunge, core, curl, custom], in: context)
-        #expect(session.orderedItems.map(\.restSeconds) == [180, 90, 90, 60, 120])
-        // 同一個動作放在不同角色的位置，休息跟著角色
+        let session = WorkoutActions.start(with: [squat, lunge, core, curl, custom],
+                                           roles: [.maxEffort, .lowerAssist, .core, .accessory, .push], in: context)
+        #expect(session.orderedItems.map(\.restSeconds) == [180, 90, 60, 60, 120])
+        // 同一個動作放在不同角色，休息跟著角色：DE 速度 60 秒
         let item = session.orderedItems[0]
-        item.role = .accessory
+        item.role = .dynamicEffort
         #expect(item.restSeconds == 60)
     }
 
-    @Test func replaceKeepsRoleOrTakesPushOrPull() throws {
+    @Test func replaceKeepsRoleAndSlotFollowsRole() throws {
         let context = try makeContext()
-        let squat = Exercise(name: "深蹲", category: .kneeDominant, equipment: .barbell)
-        let bench = Exercise(name: "臥推", category: .horizontalPush, equipment: .barbell)
+        let squat = Exercise(name: "深蹲", category: .kneeDominant, tags: [.main], equipment: .barbell)
+        let front = Exercise(name: "前蹲舉", category: .kneeDominant, tags: [.main], equipment: .barbell)
         let row = Exercise(name: "坐姿 Cable 划船", category: .horizontalPull, equipment: .cable)
-        let front = Exercise(name: "前蹲舉", category: .kneeDominant, equipment: .barbell)
-        [squat, bench, row, front].forEach(context.insert)
-        let session = WorkoutActions.start(with: [squat, bench], roles: [.main, .push], region: .full,
-                                           modeID: "full2", in: context)
-        let pushItem = session.orderedItems[1]
-        #expect(Slot(role: pushItem.role, modeID: session.modeID) == .pushOrPull)
-        #expect(Slot(role: .push, modeID: "upper2") == .push)
-        #expect(Slot(role: .main, modeID: nil) == .main)
-        WorkoutActions.replace(pushItem, with: row, role: .pull, in: context)
-        #expect(pushItem.role == .pull && session.title == "深蹲＋坐姿 Cable 划船")
+        let pulldown = Exercise(name: "滑輪下拉", category: .verticalPull, equipment: .cable)
+        [squat, front, row, pulldown].forEach(context.insert)
+        let session = WorkoutActions.start(with: [squat, row], roles: [.maxEffort, .pull], dayType: .meUpper, in: context)
+        #expect(session.orderedItems.map { Slot(role: $0.role) } == [.maxEffort, .pull])
+        // 舊角色換動作時當作下肢輔助
+        #expect([Role.main, .explosive, .unilateral].map(Slot.init(role:)) == [.lowerAssist, .lowerAssist, .lowerAssist])
+        WorkoutActions.replace(session.orderedItems[1], with: pulldown, role: .pull, in: context)
+        #expect(session.orderedItems[1].role == .pull && session.title == "深蹲＋滑輪下拉")
         WorkoutActions.replace(session.orderedItems[0], with: front, in: context)
-        #expect(session.orderedItems[0].role == .main)
+        #expect(session.orderedItems[0].role == .maxEffort)
     }
 
-    @Test func repeatCarriesRolesRegionAndMode() throws {
+    @Test func repeatCarriesRolesAndDayType() throws {
         let context = try makeContext()
-        let squat = Exercise(name: "深蹲", category: .kneeDominant, equipment: .barbell)
+        let squat = Exercise(name: "深蹲", category: .kneeDominant, tags: [.main], equipment: .barbell)
         let curl = Exercise(name: "二頭彎舉", category: .accessory, equipment: .dumbbell)
         [squat, curl].forEach(context.insert)
-        // 把補強動作放在核心的位置，再做一次時照原本的位置
-        let session = WorkoutActions.start(with: [curl, squat], roles: [.core, .main], region: .lower,
-                                           modeID: "lower3B", in: context)
+        // 把補強動作放在核心的位置，再做一次時照原本的角色
+        let session = WorkoutActions.start(with: [squat, curl], roles: [.dynamicEffort, .core], dayType: .deLower, in: context)
         let request = StartRequest(exercises: session.orderedItems.compactMap(\.exercise),
-                                   roles: session.orderedItems.map(\.role), region: session.region, modeID: session.modeID)
+                                   roles: session.orderedItems.map(\.role), dayType: session.dayType)
         WorkoutActions.discard(session, in: context)
-        let again = WorkoutActions.start(with: request.exercises, roles: request.roles, region: request.region,
-                                         modeID: request.modeID, in: context)
-        #expect(again.orderedItems.map { $0.exercise?.name } == ["二頭彎舉", "深蹲"])
-        #expect(again.orderedItems.map(\.role) == [.core, .main])
-        #expect(again.region == .lower && again.modeID == "lower3B")
+        let again = WorkoutActions.start(with: request.exercises, roles: request.roles, dayType: request.dayType, in: context)
+        #expect(again.orderedItems.map { $0.exercise?.name } == ["深蹲", "二頭彎舉"])
+        #expect(again.orderedItems.map(\.role) == [.dynamicEffort, .core])
+        #expect(again.dayType == .deLower)
+    }
+
+    @Test func previousSetsDependOnMainRole() throws {
+        let context = try makeContext()
+        let squat = Exercise(name: "深蹲", category: .kneeDominant, tags: [.main], equipment: .barbell)
+        context.insert(squat)
+        func record(_ role: Role, _ sets: [(Double, Int)], daysAgo: Double) {
+            let date = Date.now.addingTimeInterval(-daysAgo * 86_400)
+            let session = WorkoutSession(startedAt: date, endedAt: date)
+            context.insert(session)
+            let item = SessionExercise(session: session, exercise: squat, order: 0, role: role)
+            context.insert(item)
+            for (i, s) in sets.enumerated() {
+                context.insert(SetRecord(sessionExercise: item, order: i, weightKg: s.0, reps: s.1, isCompleted: true, completedAt: date))
+            }
+        }
+        record(.maxEffort, [(100, 3)], daysAgo: 10)
+        record(.lowerAssist, [(60, 10)], daysAgo: 6)
+        // DE 主項沒有上次 DE 紀錄：上一次是空的，預填建議重量（ME 100 × 3 → 估算 1RM 110 × 60% = 65）和固定次數
+        let de = WorkoutActions.start(with: [squat], roles: [.dynamicEffort], in: context)
+        let hints = de.orderedItems[0].setHints()
+        #expect(hints.count == 8 && hints.allSatisfy { $0.previous == nil })
+        let expected = MaxEffortRecords.speedWeightKg(estimated1RM: 110, unit: .current)  // kg 單位時是 65
+        #expect(hints.allSatisfy { $0.placeholder?.weightKg == expected && $0.placeholder?.reps == 2 })
+        // ME 主項先看上次 ME；其他角色看最近一次
+        #expect(squat.lastSets(role: .maxEffort).map(\.weightKg) == [100])
+        #expect(squat.lastSets(role: .lowerAssist).map(\.weightKg) == [60])
+        WorkoutActions.discard(de, in: context)
+        record(.dynamicEffort, [(60, 2), (60, 2)], daysAgo: 3)
+        #expect(squat.lastSets(role: .dynamicEffort).map(\.weightKg) == [60, 60])
+        #expect(squat.lastSets(role: .maxEffort).map(\.weightKg) == [100])
+        #expect(squat.lastSets().map(\.weightKg) == [60, 60])
     }
 }

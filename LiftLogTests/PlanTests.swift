@@ -2,205 +2,291 @@ import Foundation
 import Testing
 @testable import LiftLog
 
+/// 共軛訓練的建立菜單：日型預設、格子、候選排序、主項輪替、建議重量（含規格的 8 個驗收情境）
 struct PlanTests {
     private let now = Date(timeIntervalSince1970: 1_800_000_000)
     private func day(_ daysAgo: Double) -> Date { now.addingTimeInterval(-daysAgo * 86_400) }
 
-    private func ex(_ name: String, _ category: ExerciseCategory, _ tags: [ExerciseTag] = [], last: Double? = nil,
-                    archived: Bool = false) -> PlanExercise {
-        PlanExercise(id: UUID(), name: name, category: category, tags: tags, isArchived: archived,
-                     lastDate: last.map(day))
+    /// 動作庫 v2 的分類；標籤和輪替順序取自 ConjugateLibrary.entries
+    private static let categories: [String: ExerciseCategory] = {
+        var map: [String: ExerciseCategory] = [:]
+        let groups: [(ExerciseCategory, [String])] = [
+            (.kneeDominant, ["深蹲", "前蹲舉", "後腳抬高蹲", "高背槓分腿蹲", "側蹲", "負重原地起跳"]),
+            (.hipDominant, ["傳統硬舉", "六角槓硬舉", "相撲硬舉", "槓鈴早安式", "羅馬尼亞式硬舉", "單腳 RDL", "臀推", "壺鈴擺盪", "單手抓舉"]),
+            (.horizontalPush, ["臥推", "上斜臥推", "地板臥推", "窄握臥推", "啞鈴臥推", "啞鈴上斜臥推", "地板啞鈴臥推"]),
+            (.horizontalPull, ["爆發划船", "反式划船", "坐姿 Cable 划船", "槓鈴俯身划船", "單手啞鈴划船", "胸靠上斜椅啞鈴划船"]),
+            (.verticalPush, ["肩推", "坐姿槓鈴肩推", "坐姿啞鈴肩推", "雙槓撐", "借力推舉"]),
+            (.verticalPull, ["輔助引體向上", "滑輪下拉"]),
+            (.core, ["腹前推", "地雷管抗旋轉", "坐姿分腿壺鈴三點搬移", "六角槓原地踏步", "仰臥拉舉", "單手啞鈴臥推",
+                     "棒式划船", "窄跪姿單手啞鈴肩推", "單手壺鈴擺盪", "行李箱原地踏步"]),
+            (.accessory, ["三頭肌滑輪下拉", "二頭彎舉", "面拉", "YTW", "仰臥啞鈴三頭伸展", "JM 推"]),
+            (.cardio, ["跑步機"]),
+        ]
+        for (category, names) in groups { for name in names { map[name] = category } }
+        return map
+    }()
+
+    /// 全部動作；lastDates 指定幾天前做過（沒指定就是沒練過）
+    private func library(_ lastDates: [String: Double] = [:]) -> [PlanExercise] {
+        ConjugateLibrary.entries.map { entry in
+            PlanExercise(id: Self.id(entry.name), name: entry.name, category: Self.categories[entry.name]!, tags: entry.tags,
+                         lastDate: lastDates[entry.name].map(day), meRotation: entry.me, deRotation: entry.de,
+                         logType: entry.name == "跑步機" ? .cardio : .weight)
+        }
     }
 
-    private func session(_ daysAgo: Double, _ region: Region, _ items: [PlanExercise], roles: [Role]? = nil) -> PlanHistory.Session {
-        PlanHistory.Session(date: day(daysAgo), region: region, items: items.enumerated().map { i, e in
-            PlanHistory.Item(exerciseID: e.id, category: e.category, role: roles?[i] ?? e.role)
-        })
+    private static let ids = Dictionary(uniqueKeysWithValues: categories.keys.map { ($0, UUID()) })
+    private static func id(_ name: String) -> UUID { ids[name]! }
+
+    private func item(_ name: String, _ role: Role, sets: [SetValues] = []) -> PlanHistory.Item {
+        PlanHistory.Item(exerciseID: Self.id(name), category: Self.categories[name]!, tags: [], role: role, sets: sets)
     }
 
-    private let squat = PlanExercise(id: UUID(), name: "深蹲", category: .kneeDominant, tags: [])
-    private let deadlift = PlanExercise(id: UUID(), name: "傳統硬舉", category: .hipDominant, tags: [])
-    private let bench = PlanExercise(id: UUID(), name: "臥推", category: .horizontalPush, tags: [])
-    private let row = PlanExercise(id: UUID(), name: "坐姿 Cable 划船", category: .horizontalPull, tags: [])
-    private let treadmill = PlanExercise(id: UUID(), name: "跑步機", category: .cardio, tags: [])
-    private let curl = PlanExercise(id: UUID(), name: "二頭彎舉", category: .accessory, tags: [])
-    private let plank = PlanExercise(id: UUID(), name: "腹前推", category: .core, tags: [])
-    private let swing = PlanExercise(id: UUID(), name: "壺鈴擺盪", category: .hipDominant, tags: [.explosive])
-
-    // MARK: 三個問題的預設值
-
-    @Test func regionAlternatesUpperAndLower() {
-        let afterUpper = PlanHistory([session(2, .upper, [bench, row]), session(5, .lower, [squat])])
-        #expect(PlanDefaults.answers(afterUpper).region == .lower)
-        let afterLower = PlanHistory([session(2, .lower, [squat]), session(5, .upper, [bench])])
-        #expect(PlanDefaults.answers(afterLower).region == .upper)
-        // 「未指定」的訓練（例如只有跑步機）不算
-        let cardioOnly = PlanHistory([session(1, .unspecified, [treadmill]), session(3, .upper, [bench])])
-        #expect(PlanDefaults.answers(cardioOnly).region == .lower)
+    private func session(_ daysAgo: Double, _ dayType: DayType?, _ items: [PlanHistory.Item]) -> PlanHistory.Session {
+        PlanHistory.Session(date: day(daysAgo), dayType: dayType, items: items)
     }
 
-    @Test func afterFullBodyPicksTheLongerNeglectedHalf() {
-        let upperOlder = PlanHistory([session(1, .full, [squat, bench]), session(4, .lower, [squat]), session(9, .upper, [bench])])
-        #expect(PlanDefaults.answers(upperOlder).region == .upper)
-        let lowerOlder = PlanHistory([session(1, .full, [squat, bench]), session(4, .upper, [bench]), session(9, .lower, [squat])])
-        #expect(PlanDefaults.answers(lowerOlder).region == .lower)
-        let neverUpper = PlanHistory([session(1, .full, [squat, bench]), session(4, .lower, [squat])])
-        #expect(PlanDefaults.answers(neverUpper).region == .upper)
+    private func names(_ ranked: RankedCandidates) -> [String] { ranked.items.map(\.exercise.name) }
+
+    private func candidates(_ slot: Slot, _ dayType: DayType, history: PlanHistory = PlanHistory([]),
+                            lastDates: [String: Double] = [:], main: String? = nil) -> RankedCandidates {
+        let all = library(lastDates)
+        return PlanRanking.candidates(for: slot, dayType: dayType, exercises: all, history: history,
+                                      excluding: main.map { [Self.id($0)] } ?? [],
+                                      main: main.flatMap { m in all.first { $0.name == m } }, now: now)
     }
 
-    @Test func noHistoryDefaults() {
-        let answers = PlanDefaults.answers(PlanHistory([]))
-        #expect(answers == PlanAnswers(region: .lower, count: PlanDefaults.countWithoutHistory, cardio: false))
+    // MARK: 動作庫 v2
+
+    @Test func libraryTablesFollowTheSpec() {
+        let all = library()
+        #expect(all.count == 52)  // 51 個重訓動作＋跑步機
+        #expect(all.filter { $0.has(.main) }.count == 12)
+        func table(_ slot: Slot, _ dayType: DayType) -> [String] {
+            Rotation(slot: slot, dayType: dayType, exercises: all, history: PlanHistory([])).table.map(\.name)
+        }
+        #expect(table(.maxEffort, .meLower) == ["深蹲", "傳統硬舉", "前蹲舉", "槓鈴早安式", "六角槓硬舉", "相撲硬舉"])
+        #expect(table(.maxEffort, .meUpper) == ["臥推", "肩推", "地板臥推", "窄握臥推", "坐姿槓鈴肩推", "上斜臥推"])
+        #expect(table(.dynamicEffort, .deLower) == ["深蹲", "壺鈴擺盪", "負重原地起跳", "傳統硬舉", "單手抓舉"])
+        #expect(table(.dynamicEffort, .deUpper) == ["臥推", "借力推舉", "爆發划船"])
+        // ME 主項只從「主」裡選
+        #expect(all.filter { $0.meRotation != nil }.allSatisfy { $0.has(.main) })
     }
 
-    @Test func countAndCardioFromLastSession() {
-        let history = PlanHistory([session(1, .upper, [bench, row, curl, treadmill]), session(4, .lower, [squat])])
+    @Test func assistancePoolsExcludeMainAndExplosive() {
+        #expect(Set(names(candidates(.lowerAssist, .meLower)))
+                == ["後腳抬高蹲", "高背槓分腿蹲", "側蹲", "羅馬尼亞式硬舉", "單腳 RDL", "臀推"])
+        #expect(Set(names(candidates(.pull, .meUpper)))
+                == ["反式划船", "坐姿 Cable 划船", "槓鈴俯身划船", "單手啞鈴划船", "胸靠上斜椅啞鈴划船", "輔助引體向上", "滑輪下拉"])
+        #expect(names(candidates(.core, .meLower)).count == 10)
+        #expect(names(candidates(.accessory, .meUpper)).count == 6)
+        #expect(names(candidates(.cardio, .meUpper)) == ["跑步機"])
+    }
+
+    // MARK: 驗收情境
+
+    @Test func scenario1NoHistory() {
+        let history = PlanHistory([])
         let answers = PlanDefaults.answers(history)
-        #expect(answers.count == 3)          // 不計有氧
-        #expect(answers.cardio)
-        let single = PlanHistory([session(1, .lower, [squat])])
-        #expect(PlanDefaults.answers(single).count == 1 && !PlanDefaults.answers(single).cardio)
+        #expect(answers == PlanAnswers(dayType: .meLower, count: PlanDefaults.countWithoutHistory, cardio: false))
+        let main = candidates(.maxEffort, .meLower, history: history)
+        #expect(names(main).first == "深蹲")
+        #expect(main.reason == "輪替從第 1 個開始")
     }
 
-    @Test func fullBodyHasNoSingleExercise() {
-        #expect(PlanAnswers.countOptions(for: .full) == [2, 3])
-        #expect(PlanAnswers.countOptions(for: .upper) == [1, 2, 3])
-        // 預設是 1 個動作時改選全身 → 2
-        var answers = PlanAnswers(region: .lower, count: 1, cardio: false)
-        answers.setRegion(.full)
-        #expect(answers.count == 2)
-        answers.count = 3
-        answers.setRegion(.upper)
-        #expect(answers.count == 3)
+    @Test func scenario2RotationContinuesAfterLastMain() {
+        let history = PlanHistory([session(2, .meLower, [item("深蹲", .maxEffort), item("單腳 RDL", .lowerAssist)])])
+        #expect(PlanDefaults.dayType(history) == .meUpper)
+        let main = candidates(.maxEffort, .meLower, history: history)
+        #expect(names(main) == ["傳統硬舉", "前蹲舉", "槓鈴早安式", "六角槓硬舉", "相撲硬舉", "深蹲"])
+        #expect(main.reason == "輪替的下一個（上次：深蹲）")
+        // 最多顯示 5 個，深蹲排第 6 不顯示
+        #expect(!main.items.prefix(PlanRanking.visibleCount).contains { $0.exercise.name == "深蹲" })
     }
 
-    // MARK: 模式
-
-    @Test func modesTable() {
-        #expect(PlanModes.modes(region: .lower, count: 3).map(\.slots) == [[.explosive, .main, .unilateral], [.main, .unilateral, .core]])
-        #expect(PlanModes.modes(region: .upper, count: 1).map(\.slots) == [[.pushOrPull]])
-        #expect(PlanModes.modes(region: .full, count: 1).isEmpty)
-        #expect(PlanModes.modes(region: .full, count: 3).map(\.id) == ["full3A", "full3B"])
+    @Test func scenario3CardioOnlyDoesNotAdvance() {
+        let history = PlanHistory([
+            session(1, nil, [item("跑步機", .cardio)]),
+            session(3, .meLower, [item("深蹲", .maxEffort)]),
+        ])
+        #expect(PlanDefaults.dayType(history) == .meUpper)
     }
 
-    @Test func recommendsModeWithLeastUsedRole() {
-        let modes = PlanModes.modes(region: .lower, count: 3)   // A 有爆發，B 有核心
-        let moreCore = PlanHistory([session(2, .lower, [squat, plank]), session(5, .lower, [squat, plank]),
-                                    session(8, .lower, [swing, squat])])
-        #expect(PlanModes.recommended(modes, history: moreCore, now: now)?.id == "lower3A")
-        let moreExplosive = PlanHistory([session(2, .lower, [swing, squat]), session(5, .lower, [swing, plank])])
-        #expect(PlanModes.recommended(modes, history: moreExplosive, now: now)?.id == "lower3B")
-        // 超過 30 天的不算
-        let old = PlanHistory([session(40, .lower, [swing, squat]), session(41, .lower, [swing, squat])])
-        #expect(PlanModes.recommended(modes, history: old, now: now)?.id == "lower3A")
+    @Test func scenario4DEUpperIsFollowedByMELower() {
+        let history = PlanHistory([session(1, .deUpper, [item("臥推", .dynamicEffort)]),
+                                   session(4, .meLower, [item("深蹲", .maxEffort)])])
+        #expect(PlanDefaults.dayType(history) == .meLower)
+        // 沒有日型的舊紀錄不算：只有舊紀錄時從 ME 下肢開始
+        let legacy = PlanHistory([session(1, nil, [item("臥推", .main)])])
+        #expect(PlanDefaults.dayType(legacy) == .meLower)
     }
 
-    @Test func tieRecommendsA() {
-        let modes = PlanModes.modes(region: .upper, count: 3)   // A 核心、B 補強
-        let tie = PlanHistory([session(2, .upper, [bench, row, plank]), session(5, .upper, [bench, row, curl])])
-        #expect(PlanModes.recommended(modes, history: tie, now: now)?.id == "upper3A")
-        #expect(PlanModes.recommended(modes, history: PlanHistory([]), now: now)?.id == "upper3A")
+    @Test func scenario5LowerAssistPrefersOtherPatternThenUnilateral() {
+        let answers = PlanAnswers(dayType: .meLower, count: 2, cardio: false)
+        let states = PlanRanking.resolve(answers: answers, picks: [:], exercises: library(), history: PlanHistory([]), now: now)
+        #expect(states.map(\.slot) == [.maxEffort, .lowerAssist])
+        #expect(states[0].selected?.name == "深蹲")
+        let assist = states[1].candidates
+        let shown = assist.items.prefix(PlanRanking.visibleCount).map(\.exercise)
+        #expect(shown.prefix(3).allSatisfy { $0.category == .hipDominant })
+        #expect(shown.first?.name == "單腳 RDL")
+        #expect(shown.suffix(2).allSatisfy { $0.category == .kneeDominant && $0.has(.unilateral) })
+        #expect(assist.reason == "主項是膝主導，換髖主導・單邊")
     }
 
-    // MARK: 候選排序
-
-    @Test func mainAlternatesFromLastMain() {
-        let squat = ex("深蹲", .kneeDominant, last: 3), front = ex("前蹲舉", .kneeDominant)
-        let deadlift = ex("傳統硬舉", .hipDominant, last: 10), hex = ex("六角槓硬舉", .hipDominant, last: 30)
-        let history = PlanHistory([session(3, .lower, [squat])])
-        let ranked = PlanRanking.candidates(for: .main, exercises: [squat, front, deadlift, hex], history: history, now: now)
-        #expect(ranked.items.map(\.exercise.name) == ["六角槓硬舉", "傳統硬舉", "前蹲舉", "深蹲"])
-        #expect(ranked.reason == "交替：上次是膝主導")
+    @Test func scenario6PullAlternatesDirection() {
+        let history = PlanHistory([session(3, .meUpper, [item("臥推", .maxEffort), item("槓鈴俯身划船", .pull)])])
+        let pull = candidates(.pull, .meUpper, history: history)
+        #expect(names(pull).prefix(2).sorted() == ["滑輪下拉", "輔助引體向上"])
+        #expect(pull.reason == "上次是水平拉，這次換垂直")
+        // 沒有拉的紀錄：先水平
+        let fresh = candidates(.pull, .meUpper)
+        #expect(fresh.items.first?.exercise.category == .horizontalPull)
+        #expect(fresh.reason == "還沒有拉的紀錄，先做水平拉")
     }
 
-    @Test func mainWithoutHistoryPrefersOlderCategory() {
-        let squat = ex("深蹲", .kneeDominant), deadlift = ex("傳統硬舉", .hipDominant)
-        // 兩類都沒練過：沒有優先的一類
-        let ranked = PlanRanking.candidates(for: .main, exercises: [squat, deadlift], history: PlanHistory([]), now: now)
-        #expect(ranked.items.count == 2 && ranked.reason == "新動作：還沒練過")
-        // 只有單邊的紀錄（不是主項）：膝主導練過，髖主導比較久沒練
-        let lunge = ex("側蹲", .kneeDominant, [.unilateral], last: 2)
-        let history = PlanHistory([session(2, .lower, [lunge])])
-        let next = PlanRanking.candidates(for: .main, exercises: [squat, deadlift, lunge], history: history, now: now)
-        #expect(next.items.map(\.exercise.name) == ["傳統硬舉", "深蹲"])
-        #expect(next.reason == "髖主導比較久沒練")
+    @Test func scenario7PowerRowAsMainTurnsPullIntoPush() {
+        let answers = PlanAnswers(dayType: .deUpper, count: 3, cardio: true)
+        let all = library()
+        let row = all.first { $0.name == "爆發划船" }!
+        let states = PlanRanking.resolve(answers: answers, picks: [.dynamicEffort: row.id], exercises: all,
+                                         history: PlanHistory([]), now: now)
+        #expect(states.map(\.slot) == [.dynamicEffort, .push, .accessory, .cardio])
+        #expect(Set(names(states[1].candidates)) == ["啞鈴臥推", "啞鈴上斜臥推", "地板啞鈴臥推", "坐姿啞鈴肩推", "雙槓撐"])
+        // 改回臥推：即時變回「拉」
+        let bench = PlanRanking.resolve(answers: answers, picks: [:], exercises: all, history: PlanHistory([]), now: now)
+        #expect(bench[0].selected?.name == "臥推")
+        #expect(bench.map(\.slot) == [.dynamicEffort, .pull, .accessory, .cardio])
     }
 
-    @Test func pushPrefersLessUsedDirection() {
-        let bench = ex("臥推", .horizontalPush, last: 2), dbBench = ex("啞鈴臥推", .horizontalPush, last: 20)
-        let press = ex("肩推", .verticalPush, last: 6), dip = ex("雙槓撐", .verticalPush, last: 15)
-        let history = PlanHistory([session(2, .upper, [bench]), session(6, .upper, [press]), session(20, .upper, [dbBench])])
-        // 近 30 天：水平推 2 次、垂直推 1 次 → 垂直優先
-        let ranked = PlanRanking.candidates(for: .push, exercises: [bench, dbBench, press, dip], history: history, now: now)
-        #expect(ranked.items.map(\.exercise.name) == ["雙槓撐", "肩推", "啞鈴臥推", "臥推"])
-        #expect(ranked.reason == "輪替：近 30 天垂直推比較少")
-        // 次數相同：最後練習日期比較舊的方向優先
-        let tie = PlanHistory([session(2, .upper, [press]), session(6, .upper, [bench])])
-        let tied = PlanRanking.candidates(for: .push, exercises: [bench, press], history: tie, now: now)
-        #expect(tied.items.map(\.exercise.name) == ["臥推", "肩推"])
-        #expect(tied.reason == "輪替：水平推比較久沒做")
+    @Test func scenario8SpeedSquatIsSixtyPercentOfEstimatedMax() {
+        let squat = library().first { $0.name == "深蹲" }!
+        let logs = [ExerciseLog(date: day(5), role: .maxEffort, sets: [
+            SetValues(kind: .warmup, weightKg: 60, reps: 5, isCompleted: true),
+            SetValues(weightKg: 90, reps: 3, isCompleted: true),
+            SetValues(weightKg: 100, reps: 3, isCompleted: true),
+            SetValues(weightKg: 105, reps: 1, isCompleted: false),
+        ])]
+        let advice = SlotAdvice.make(role: .dynamicEffort, exercise: squat, logs: logs, unit: .kg)
+        #expect(advice.speedWeightKg == 65)
+        #expect(advice.weightText == "建議 65 kg（估算 1RM 110 kg × 60%）")
+        #expect(advice.prescription.summary == "8 組 × 2 下・休息 45–60 秒")
+        // 沒有 ME 紀錄：不顯示重量
+        let none = SlotAdvice.make(role: .dynamicEffort, exercise: squat,
+                                   logs: [ExerciseLog(date: day(3), role: .lowerAssist, sets: [SetValues(weightKg: 80, reps: 8, isCompleted: true)])],
+                                   unit: .kg)
+        #expect(none.speedWeightKg == nil && none.weightText == "用能做得很快的重量")
     }
 
-    @Test func pushOrPullComparesSidesThenDirections() {
-        let bench = ex("臥推", .horizontalPush, last: 2), press = ex("肩推", .verticalPush, last: 9)
-        let row = ex("坐姿 Cable 划船", .horizontalPull, last: 12), pulldown = ex("滑輪下拉", .verticalPull, last: 4)
-        let history = PlanHistory([session(2, .upper, [bench, pulldown]), session(9, .upper, [press]),
-                                   session(12, .upper, [row])])
-        let more = PlanHistory(history.sessions + [session(20, .upper, [bench])])
-        let ranked = PlanRanking.candidates(for: .pushOrPull, exercises: [bench, press, row, pulldown], history: more, now: now)
-        // 拉比較少 → 拉先；拉裡面水平 1 次、垂直 1 次 → 水平比較久沒做
-        #expect(ranked.items.map(\.exercise.name) == ["坐姿 Cable 划船", "滑輪下拉", "肩推", "臥推"])
-        #expect(ranked.reason == "推拉平衡：近 30 天拉比較少")
+    // MARK: 其他規則
+
+    @Test func manualMainContinuesFromWhatWasActuallyUsed() {
+        // 建議硬舉卻做了前蹲舉：下一次從前蹲舉往下接
+        let history = PlanHistory([
+            session(3, .meLower, [item("前蹲舉", .maxEffort)]),
+            session(10, .meLower, [item("深蹲", .maxEffort)]),
+            session(6, .deLower, [item("壺鈴擺盪", .dynamicEffort)]),
+        ])
+        #expect(names(candidates(.maxEffort, .meLower, history: history)).first == "槓鈴早安式")
+        // 每個日型各自記：DE 下肢從壺鈴擺盪往下
+        #expect(names(candidates(.dynamicEffort, .deLower, history: history)).first == "負重原地起跳")
+        // 排到最後再回到 1
+        let wrap = PlanHistory([session(2, .deUpper, [item("爆發划船", .dynamicEffort)])])
+        #expect(names(candidates(.dynamicEffort, .deUpper, history: wrap)) == ["臥推", "借力推舉", "爆發划船"])
     }
 
-    @Test func unilateralPrefersOtherCategoryThanMain() {
-        let bss = ex("後腳抬高蹲", .kneeDominant, [.unilateral], last: 50)
-        let sl = ex("單腳 RDL", .hipDominant, [.unilateral], last: 5)
-        let kneeMain = PlanRanking.candidates(for: .unilateral, exercises: [bss, sl], history: PlanHistory([]),
-                                              mainCategory: .kneeDominant, now: now)
-        #expect(kneeMain.items.map(\.exercise.name) == ["單腳 RDL", "後腳抬高蹲"])
-        #expect(kneeMain.reason == "和主項不同：髖主導")
-        let hipMain = PlanRanking.candidates(for: .unilateral, exercises: [bss, sl], history: PlanHistory([]),
-                                             mainCategory: .hipDominant, now: now)
-        #expect(hipMain.items.map(\.exercise.name) == ["後腳抬高蹲", "單腳 RDL"])
+    @Test func slotsByDayTypeAndCount() {
+        func slots(_ dayType: DayType, _ count: Int, cardio: Bool = false) -> [Slot] {
+            Slot.slots(for: PlanAnswers(dayType: dayType, count: count, cardio: cardio), mainCategory: nil)
+        }
+        #expect(slots(.meLower, 1) == [.maxEffort])
+        #expect(slots(.deLower, 2) == [.dynamicEffort, .lowerAssist])
+        #expect(slots(.meLower, 3, cardio: true) == [.maxEffort, .lowerAssist, .core, .cardio])
+        #expect(slots(.meUpper, 2) == [.maxEffort, .pull])
+        #expect(slots(.deUpper, 3) == [.dynamicEffort, .pull, .accessory])
+        #expect(Slot.slots(for: PlanAnswers(dayType: .deUpper, count: 2, cardio: false), mainCategory: .horizontalPull)
+                == [.dynamicEffort, .push])
     }
 
-    @Test func unilateralFollowsMainSelection() {
-        let squat = ex("深蹲", .kneeDominant, last: 20), deadlift = ex("傳統硬舉", .hipDominant, last: 3)
-        let bss = ex("後腳抬高蹲", .kneeDominant, [.unilateral], last: 50)
-        let sl = ex("單腳 RDL", .hipDominant, [.unilateral], last: 5)
-        let all = [squat, deadlift, bss, sl]
-        let history = PlanHistory([session(3, .lower, [deadlift])])
-        // 預設主項交替成膝主導（深蹲）→ 單邊優先髖主導
-        let auto = PlanRanking.resolve(slots: [.main, .unilateral], picks: [:], exercises: all, history: history, now: now)
-        #expect(auto.map { $0.selected?.name } == ["深蹲", "單腳 RDL"])
-        // 改選傳統硬舉 → 單邊改成膝主導優先
-        let changed = PlanRanking.resolve(slots: [.main, .unilateral], picks: [0: deadlift.id], exercises: all,
-                                          history: history, now: now)
-        #expect(changed.map { $0.selected?.name } == ["傳統硬舉", "後腳抬高蹲"])
+    @Test func countAndCardioDefaultsFromLastSession() {
+        let history = PlanHistory([
+            session(1, .meUpper, [item("臥推", .maxEffort), item("滑輪下拉", .pull), item("面拉", .accessory), item("跑步機", .cardio)]),
+            session(4, .meLower, [item("深蹲", .maxEffort)]),
+        ])
+        let answers = PlanDefaults.answers(history)
+        #expect(answers == PlanAnswers(dayType: .deLower, count: 3, cardio: true))  // 有氧不算在動作數
+        // 上次只做有氧：動作數看上一次重訓，跑步機看上一次訓練
+        let cardioLast = PlanHistory([session(0, nil, [item("跑步機", .cardio)]), session(4, .meLower, [item("深蹲", .maxEffort)])])
+        #expect(PlanDefaults.answers(cardioLast) == PlanAnswers(dayType: .meUpper, count: 1, cardio: true))
     }
 
-    @Test func untrainedFirstWithNewLabelAndArchivedExcluded() {
-        let face = ex("面拉", .accessory, last: 87), ytw = ex("YTW", .accessory)
-        let curl = ex("二頭彎舉", .accessory, last: 100), old = ex("垂直舉肩訓練機", .accessory, last: 400, archived: true)
-        let ranked = PlanRanking.candidates(for: .accessory, exercises: [face, ytw, curl, old], history: PlanHistory([]), now: now)
-        #expect(ranked.items.map(\.exercise.name) == ["YTW", "二頭彎舉", "面拉"])
-        #expect(ranked.items.map(\.isNew) == [true, false, false])
-        #expect(ranked.reason == "新動作：還沒練過")
-        let trained = PlanRanking.candidates(for: .accessory, exercises: [face, curl], history: PlanHistory([]), now: now)
-        #expect(trained.reason == "最久沒做：100 天")
+    @Test func stalestFirstWithNewAndReasons() {
+        let core = candidates(.core, .meLower, lastDates: Dictionary(uniqueKeysWithValues:
+            ["腹前推", "地雷管抗旋轉", "坐姿分腿壺鈴三點搬移", "六角槓原地踏步", "仰臥拉舉", "單手啞鈴臥推",
+             "棒式划船", "窄跪姿單手啞鈴肩推", "單手壺鈴擺盪"].enumerated().map { ($1, Double($0 + 3)) }))
+        // 沒練過的視為最久沒做，標「新」
+        #expect(core.items.first?.exercise.name == "行李箱原地踏步" && core.items.first?.isNew == true)
+        #expect(core.reason == "還沒練過")
+        #expect(core.items[1].exercise.name == "單手壺鈴擺盪")
+        let accessory = candidates(.accessory, .meUpper, lastDates: ["三頭肌滑輪下拉": 9, "二頭彎舉": 2, "面拉": 4, "YTW": 5,
+                                                                    "仰臥啞鈴三頭伸展": 1, "JM 推": 3])
+        #expect(accessory.items.first?.exercise.name == "三頭肌滑輪下拉")
+        #expect(accessory.reason == "最久沒做（9 天前）")
     }
 
-    @Test func selectedElsewhereIsExcluded() {
-        let bench = ex("臥推", .horizontalPush), row = ex("坐姿 Cable 划船", .horizontalPull)
-        let ranked = PlanRanking.candidates(for: .pushOrPull, exercises: [bench, row], history: PlanHistory([]),
-                                            excluding: [bench.id], now: now)
-        #expect(ranked.items.map(\.exercise.name) == ["坐姿 Cable 划船"])
-        // 整份菜單：使用者在後面的位置選了某個動作，前面的位置就不會再選它
-        let states = PlanRanking.resolve(slots: [.pushOrPull, .pushOrPull], picks: [1: bench.id],
-                                         exercises: [bench, row], history: PlanHistory([]), now: now)
-        #expect(states.map { $0.selected?.name } == ["坐姿 Cable 划船", "臥推"])
-        let none = PlanRanking.candidates(for: .core, exercises: [bench], history: PlanHistory([]), now: now)
-        #expect(none.items.isEmpty && none.reason == nil)
+    @Test func picksAreNotRepeatedAcrossSlots() {
+        let all = library()
+        let rdl = all.first { $0.name == "單腳 RDL" }!
+        let answers = PlanAnswers(dayType: .meLower, count: 3, cardio: false)
+        let states = PlanRanking.resolve(answers: answers, picks: [.lowerAssist: rdl.id], exercises: all,
+                                         history: PlanHistory([]), now: now)
+        #expect(states[1].selected?.name == "單腳 RDL")
+        let chosen = states.compactMap(\.selected?.id)
+        #expect(Set(chosen).count == chosen.count)
+        #expect(!states[2].candidates.items.contains { $0.id == states[0].selected?.id })
+    }
+
+    @Test func lastPullDirectionReadsTheMostRecentPullRole() {
+        let history = PlanHistory([
+            session(1, .meLower, [item("深蹲", .maxEffort)]),
+            session(3, nil, [item("滑輪下拉", .pull), item("坐姿 Cable 划船", .pull)]),
+        ])
+        #expect(PlanRanking.lastPullDirection(history) == .horizontalPull)
+        #expect(PlanRanking.lastPullDirection(PlanHistory([])) == nil)
+    }
+
+    // MARK: ME 紀錄與首頁統計
+
+    @Test func maxEffortRecordsUseOnlyMERoleAndHeaviestSuccessfulSet() {
+        let logs = [
+            ExerciseLog(date: day(1), role: .dynamicEffort, sets: [SetValues(weightKg: 65, reps: 2, isCompleted: true)]),
+            ExerciseLog(date: day(8), role: .maxEffort, sets: [SetValues(weightKg: 100, reps: 3, isCompleted: true),
+                                                              SetValues(weightKg: 100, reps: 2, isCompleted: true)]),
+            ExerciseLog(date: day(20), role: .maxEffort, sets: [SetValues(weightKg: 95, reps: 3, isCompleted: true)]),
+            ExerciseLog(date: day(30), role: .main, sets: [SetValues(weightKg: 120, reps: 1, isCompleted: true)]),
+        ]
+        let records = MaxEffortRecords.records(logs)
+        #expect(records.map(\.weightKg) == [100, 95])
+        #expect(records[0].reps == 3 && abs(records[0].estimated1RM - 110) < 0.001)
+        let summary = MainLiftSummary(logs: logs)
+        #expect(summary.latest == records[0])
+        #expect(abs(summary.change! - (110 - 104.5)) < 0.001)
+        #expect(MainLiftSummary(logs: []).latest == nil)
+        #expect(MainLiftSummary(logs: Array(logs.prefix(2))).change == nil)
+    }
+
+    @Test func recentVolumeCountsSetsAndPushPull() {
+        let done = SetValues(weightKg: 40, reps: 10, isCompleted: true)
+        let warmup = SetValues(kind: .warmup, weightKg: 20, reps: 10, isCompleted: true)
+        let history = PlanHistory([
+            session(2, .meUpper, [item("臥推", .maxEffort, sets: [warmup, done, done, done]),
+                                  item("肩推", .push, sets: [done, done]),
+                                  item("滑輪下拉", .pull, sets: [done, done, done])]),
+            session(40, .meUpper, [item("坐姿 Cable 划船", .pull, sets: [done, done, done, done, done])]),
+        ])
+        let volume = RecentVolume(history: history, now: now)
+        #expect(volume[.horizontalPush] == 3 && volume[.verticalPush] == 2 && volume[.verticalPull] == 3)
+        #expect(volume[.horizontalPull] == 0)  // 超過 30 天不算
+        #expect(volume.push == 5 && volume.pull == 3 && volume.pullIsShort)
     }
 }

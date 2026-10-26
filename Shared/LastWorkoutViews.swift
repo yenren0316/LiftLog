@@ -28,17 +28,16 @@ nonisolated extension WidgetSnapshot {
         days == 0 ? "下次" : "今天"
     }
 
-    /// 鎖定畫面單行：「上次訓練 2 天前・今天下半身」
+    /// 鎖定畫面單行：「上次訓練 2 天前・今天 ME 上肢」
     func inlineText(at date: Date, calendar: Calendar = .current) -> String? {
         guard case .trained(let days) = status(at: date, calendar: calendar) else { return nil }
-        let suggestion = "\(Self.suggestionLabel(days: days))\(suggestedRegion.title)"
+        let suggestion = "\(Self.suggestionLabel(days: days)) \(suggestedDayType.title)"
         return days == 0 ? "今天練過・\(suggestion)" : "上次訓練 \(Self.daysText(days))・\(suggestion)"
     }
 
-    /// 鎖定畫面矩形第一行：「上次：2 天前・上半身」
+    /// 鎖定畫面矩形第一行：「上次：2 天前・ME 下肢」
     func rectangularFirstLine(days: Int) -> String {
-        let region = lastRegion.flatMap { $0 == .unspecified ? nil : $0.title }
-        return "上次：" + [Self.daysText(days), region].compactMap { $0 }.joined(separator: "・")
+        "上次：" + [Self.daysText(days), lastTitle].compactMap { $0 }.joined(separator: "・")
     }
 
     /// timeline 的時間點：現在，加上之後 7 天每天的午夜（天數自己往上加，不需要 App 喚醒）
@@ -49,8 +48,8 @@ nonisolated extension WidgetSnapshot {
 
     /// 小工具清單的預覽用
     static var sample: WidgetSnapshot {
-        WidgetSnapshot(lastSessionDate: Calendar.current.date(byAdding: .day, value: -2, to: .now), lastRegion: .upper,
-                       suggestedRegion: .lower, suggestedCount: 3, suggestsTreadmill: true,
+        WidgetSnapshot(lastSessionDate: Calendar.current.date(byAdding: .day, value: -2, to: .now), lastRegion: .lower,
+                       lastDayType: .meLower, suggestedDayType: .meUpper, suggestedCount: 3, suggestsTreadmill: true,
                        isInProgress: false, startedAt: nil, themeID: nil)
     }
 }
@@ -102,7 +101,7 @@ struct LastWorkoutSmallView: View {
                 }
                 Spacer(minLength: 4)
                 if let snapshot {
-                    caption("\(WidgetSnapshot.suggestionLabel(days: days))建議：\(snapshot.suggestedRegion.title)", p)
+                    caption("\(WidgetSnapshot.suggestionLabel(days: days))建議：\(snapshot.suggestedDayType.title)", p)
                 }
             }
         }
@@ -183,7 +182,7 @@ struct LastWorkoutRectangularView: View {
             case .trained(let days):
                 if let snapshot {
                     Text(snapshot.rectangularFirstLine(days: days)).font(.headline).widgetAccentable()
-                    Text("\(WidgetSnapshot.suggestionLabel(days: days))：\(snapshot.suggestedRegion.title)")
+                    Text("\(WidgetSnapshot.suggestionLabel(days: days))：\(snapshot.suggestedDayType.title)")
                 }
             }
         }

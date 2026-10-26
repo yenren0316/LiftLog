@@ -6,6 +6,11 @@ nonisolated enum WeightUnit: String, CaseIterable, Identifiable, Sendable {
 
     static let storageKey = "weightUnit"
 
+    /// 設定頁選的單位（不在畫面裡、拿不到 AppStorage 時用）
+    static var current: WeightUnit {
+        WeightUnit(rawValue: UserDefaults.standard.string(forKey: storageKey) ?? "") ?? .kg
+    }
+
     var id: String { rawValue }
     var symbol: String { rawValue }
 

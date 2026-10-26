@@ -2,24 +2,27 @@ import Foundation
 import Testing
 @testable import LiftLog
 
-/// CHANGE_04 1-6：使用中的動作、分類與標籤（42 個，之後加了啞鈴上斜臥推）
+/// 使用中的動作、分類與標籤：CHANGE_06 的動作庫 v2（51 個重訓動作＋跑步機）
 @MainActor
 struct LibraryLayoutTests {
     private static let expected: [(ExerciseCategory, [(String, [ExerciseTag])])] = [
-        (.kneeDominant, [("深蹲", []), ("前蹲舉", []), ("後腳抬高蹲", [.unilateral]), ("高背槓分腿蹲", [.unilateral]),
+        (.kneeDominant, [("深蹲", [.main]), ("前蹲舉", [.main]), ("後腳抬高蹲", [.unilateral]), ("高背槓分腿蹲", [.unilateral]),
                          ("側蹲", [.unilateral]), ("負重原地起跳", [.explosive])]),
-        (.hipDominant, [("傳統硬舉", []), ("六角槓硬舉", []), ("相撲硬舉", []), ("羅馬尼亞式硬舉", []),
-                        ("單腳 RDL", [.unilateral]), ("臀推", []), ("壺鈴擺盪", [.explosive]),
+        (.hipDominant, [("傳統硬舉", [.main]), ("六角槓硬舉", [.main]), ("相撲硬舉", [.main]), ("槓鈴早安式", [.main]),
+                        ("羅馬尼亞式硬舉", []), ("單腳 RDL", [.unilateral]), ("臀推", []), ("壺鈴擺盪", [.explosive]),
                         ("單手抓舉", [.unilateral, .explosive])]),
-        (.horizontalPush, [("臥推", []), ("上斜臥推", []), ("地板臥推", []), ("啞鈴臥推", []), ("啞鈴上斜臥推", []),
-                           ("地板啞鈴臥推", [])]),
-        (.horizontalPull, [("爆發划船", [.explosive]), ("反式划船", []), ("坐姿 Cable 划船", [])]),
-        (.verticalPush, [("肩推", []), ("坐姿槓鈴肩推", []), ("坐姿啞鈴肩推", []), ("雙槓撐", [])]),
+        (.horizontalPush, [("臥推", [.main]), ("上斜臥推", [.main]), ("地板臥推", [.main]), ("窄握臥推", [.main]),
+                           ("啞鈴臥推", []), ("啞鈴上斜臥推", []), ("地板啞鈴臥推", [])]),
+        (.horizontalPull, [("爆發划船", [.explosive]), ("反式划船", []), ("坐姿 Cable 划船", []), ("槓鈴俯身划船", []),
+                           ("單手啞鈴划船", [.unilateral]), ("胸靠上斜椅啞鈴划船", [])]),
+        (.verticalPush, [("肩推", [.main]), ("坐姿槓鈴肩推", [.main]), ("坐姿啞鈴肩推", []), ("雙槓撐", []),
+                         ("借力推舉", [.explosive])]),
         (.verticalPull, [("輔助引體向上", []), ("滑輪下拉", [])]),
         (.core, [("腹前推", []), ("地雷管抗旋轉", []), ("坐姿分腿壺鈴三點搬移", []), ("六角槓原地踏步", []),
-                 ("仰臥拉舉", []), ("單手啞鈴臥推", []), ("棒式划船", []), ("窄跪姿單手啞鈴肩推", []),
-                 ("單手壺鈴擺盪", [.explosive])]),
-        (.accessory, [("三頭肌滑輪下拉", []), ("二頭彎舉", []), ("面拉", []), ("YTW", [])]),
+                 ("仰臥拉舉", []), ("單手啞鈴臥推", [.unilateral]), ("棒式划船", []), ("窄跪姿單手啞鈴肩推", [.unilateral]),
+                 ("單手壺鈴擺盪", [.unilateral, .explosive]), ("行李箱原地踏步", [.unilateral])]),
+        (.accessory, [("三頭肌滑輪下拉", []), ("二頭彎舉", []), ("面拉", []), ("YTW", []), ("仰臥啞鈴三頭伸展", []),
+                      ("JM 推", [])]),
         (.cardio, [("跑步機", [])]),
     ]
 
@@ -30,7 +33,10 @@ struct LibraryLayoutTests {
 
     @Test func activeExercisesMatchTheList() throws {
         let active = try seed().exercises.filter { !$0.isArchived }
-        #expect(active.count == 43)
+        #expect(active.count == 52)
+        #expect(Self.expected.flatMap(\.1).count == 52)
+        // 和啟動時套用的 ConjugateLibrary 一致
+        #expect(Set(ConjugateLibrary.entries.map(\.name)) == Set(active.map(\.name)))
         let actual = Dictionary(uniqueKeysWithValues: active.map { ($0.name, $0) })
         for (category, list) in Self.expected {
             for (name, tags) in list {

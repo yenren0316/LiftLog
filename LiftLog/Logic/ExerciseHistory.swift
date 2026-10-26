@@ -14,14 +14,28 @@ extension Exercise {
         SetLogic.lastCompletedDate(sessionItems.flatMap { $0.sets.map(\.values) })
     }
 
-    /// 上次紀錄：最近一次「已結束」訓練中的這個動作（排除指定的訓練，例如進行中的這次）
-    func lastItem(excluding session: WorkoutSession? = nil) -> SessionExercise? {
-        completedItems.first { $0.session !== session && $0.session?.isActive == false }
+    /// 上次紀錄：最近一次「已結束」訓練中的這個動作（排除指定的訓練，例如進行中的這次）。
+    /// 速度和最大重量的數字差很多：DE 主項只看上次 DE；ME 主項先看上次 ME，沒有就看 DE 以外的紀錄
+    func lastItem(excluding session: WorkoutSession? = nil, role: Role? = nil) -> SessionExercise? {
+        let ended = completedItems.filter { $0.session !== session && $0.session?.isActive == false }
+        switch role {
+        case .dynamicEffort?: return ended.first { $0.role == .dynamicEffort }
+        case .maxEffort?: return ended.first { $0.role == .maxEffort } ?? ended.first { $0.role != .dynamicEffort }
+        default: return ended.first
+        }
     }
 
     /// 「上一次」欄與預填用的組：上次紀錄中已完成的組，依順序
-    func lastSets(excluding session: WorkoutSession? = nil) -> [SetValues] {
-        lastItem(excluding: session)?.completedSets.map(\.values) ?? []
+    func lastSets(excluding session: WorkoutSession? = nil, role: Role? = nil) -> [SetValues] {
+        lastItem(excluding: session, role: role)?.completedSets.map(\.values) ?? []
+    }
+
+    /// 已結束訓練裡的紀錄，由新到舊（ME 紀錄、建議重量用）
+    func logs(excluding session: WorkoutSession? = nil) -> [ExerciseLog] {
+        completedItems.compactMap { item in
+            guard let s = item.session, s !== session, !s.isActive else { return nil }
+            return ExerciseLog(date: s.startedAt, role: item.role, sets: item.completedSets.map(\.values))
+        }
     }
 
     /// 首頁與詳情用的精簡上次紀錄
@@ -82,10 +96,14 @@ nonisolated struct SetHint {
 }
 
 extension SessionExercise {
-    /// 依組的順序算出每一組的「上一次」和預填值（訓練中畫面和即時動態共用）
+    /// 依組的順序算出每一組的「上一次」和預填值（訓練中畫面和即時動態共用）。
+    /// DE 速度主項沒有上次 DE 紀錄時，預填建議重量和固定次數
     func setHints() -> [SetHint] {
-        let last = exercise?.lastSets(excluding: session) ?? []
+        let last = exercise?.lastSets(excluding: session, role: role) ?? []
         var prior: SetValues?
+        if last.isEmpty, let reps = prescription.fixedReps {
+            prior = SetValues(weightKg: advice(unit: .current).speedWeightKg, reps: reps)
+        }
         return orderedSets.enumerated().map { index, set in
             let previous = SetLogic.previous(at: index, lastSets: last)
             let placeholder = SetLogic.placeholder(previous: previous, priorInSession: prior)
@@ -102,5 +120,22 @@ extension WorkoutSession {
         guard let position = SetLogic.currentSet(items.map { $0.orderedSets.map(\.isCompleted) }) else { return nil }
         let item = items[position.item]
         return (item, item.orderedSets[position.set], position.set)
+    }
+}
+
+extension SessionExercise {
+    /// 預設參數和建議重量（訓練中畫面、預填用）
+    func advice(unit: WeightUnit) -> SlotAdvice {
+        guard let exercise else { return SlotAdvice(prescription: prescription) }
+        return SlotAdvice.make(role: role, exercise: PlanExercise(exercise), logs: exercise.logs(excluding: session), unit: unit)
+    }
+}
+
+extension Exercise {
+    /// 首頁動作清單：上次日期，加上「主」動作的最近一次 ME 紀錄（還沒有 ME 紀錄時和其他動作一樣顯示上次紀錄）
+    func homeSummary(unit: WeightUnit) -> (date: Date, text: String)? {
+        guard let last = lastSummary(unit: unit) else { return nil }
+        guard tags.contains(.main), let record = MaxEffortRecords.records(logs()).first else { return last }
+        return (last.date, "ME \(unit.formatWithUnit(kg: record.weightKg)) × \(record.reps)・估 1RM \(unit.formatWithUnit(kg: record.estimated1RM))")
     }
 }

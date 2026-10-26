@@ -6,8 +6,10 @@ nonisolated struct WidgetSnapshot: Codable, Equatable, Sendable {
     /// 最後一次已完成的訓練；從來沒有紀錄時為 nil
     var lastSessionDate: Date?
     var lastRegion: Region?
+    /// 最後一次訓練的日型；舊紀錄、空白訓練和只做有氧為 nil，這時顯示部位
+    var lastDayType: DayType?
     /// 今天的建議，和建立菜單的預設答案一致
-    var suggestedRegion: Region
+    var suggestedDayType: DayType
     var suggestedCount: Int
     var suggestsTreadmill: Bool
     /// 進行中的訓練
@@ -28,13 +30,18 @@ nonisolated struct WidgetSnapshot: Codable, Equatable, Sendable {
         days == 0 ? "今天" : "\(days) 天前"
     }
 
-    /// 「上半身・10/23」；部位未指定時只有日期
+    /// 「ME 下肢・10/23」；沒有日型時用部位，部位未指定時只有日期
     func lastSummary(calendar: Calendar = .current) -> String? {
         guard let lastSessionDate else { return nil }
         let parts = calendar.dateComponents([.month, .day], from: lastSessionDate)
         let date = "\(parts.month ?? 0)/\(parts.day ?? 0)"
-        guard let lastRegion, lastRegion != .unspecified else { return date }
-        return "\(lastRegion.title)・\(date)"
+        guard let title = lastTitle else { return date }
+        return "\(title)・\(date)"
+    }
+
+    /// 上次訓練的日型；沒有日型時用部位（未指定時為 nil）
+    var lastTitle: String? {
+        lastDayType?.title ?? lastRegion.flatMap { $0 == .unspecified ? nil : $0.title }
     }
 
     /// 快照裡主題的配色；沒有快照時用石墨橙

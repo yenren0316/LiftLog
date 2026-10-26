@@ -122,6 +122,7 @@ struct RootView: View {
             SeedImporter.importIfNeeded(into: context)
             GuideImporter.importIfNeeded(into: context)
             LibraryAdditions.applyIfNeeded(into: context)
+            ConjugateLibrary.applyIfNeeded(into: context)
             SnapshotWriter.shared.start(context: context)
             LiveActivityController.shared.start()
             #if DEBUG

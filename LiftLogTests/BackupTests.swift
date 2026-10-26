@@ -75,7 +75,7 @@ struct BackupTests {
          "bodyWeights":[]}
         """
         let file = try BackupFile.decode(Data(json.utf8))
-        #expect(file.version == 4)
+        #expect(file.version == BackupFile.currentVersion)
         #expect(file.sessions.count == 2)
         #expect(file.sessions.allSatisfy { !$0.hasTime && $0.endedAt == $0.startedAt })
         #expect(file.sessions[0].title == "臥推")
@@ -115,16 +115,17 @@ struct BackupTests {
         try BackupService.restore(BackupFile.decode(Data(json.utf8)), into: context)
         let sessions = try context.fetch(FetchDescriptor<WorkoutSession>()).sorted { $0.items.count > $1.items.count }
         #expect(sessions.map(\.region) == [.lower, .full, .unspecified])
-        #expect(sessions[0].orderedItems.map(\.roleRaw) == ["main", "unilateral", "core"])
-        #expect(sessions[1].orderedItems.map(\.roleRaw) == ["main", "pull"])
-        #expect(sessions.allSatisfy { $0.modeID == nil })
+        // 沒有 role 時依分類判定（CHANGE_06：下肢一律下肢輔助）
+        #expect(sessions[0].orderedItems.map(\.roleRaw) == ["lowerAssist", "lowerAssist", "core"])
+        #expect(sessions[1].orderedItems.map(\.roleRaw) == ["lowerAssist", "pull"])
+        #expect(sessions.allSatisfy { $0.modeID == nil && $0.dayType == nil })
     }
 
     @Test func bundledSeedConvertsToSessions() throws {
         let url = try #require(Bundle.main.url(forResource: "seed", withExtension: "json"))
         let file = try BackupFile.decode(Data(contentsOf: url))
         let ids = Set(file.exercises.map(\.id))
-        #expect(file.exercises.count == 59)
+        #expect(file.exercises.count == 68)
         #expect(file.exercises.filter(\.isArchived).count == 16)
         #expect(file.sessions.count > 200)
         #expect(file.sessions.allSatisfy { s in s.items.allSatisfy { ids.contains($0.exerciseId) && !$0.sets.isEmpty } })
