@@ -195,6 +195,15 @@ struct PlanTests {
         #expect(names(candidates(.dynamicEffort, .deUpper, history: wrap)) == ["臥推", "借力推舉", "爆發划船"])
     }
 
+    @Test func previewSlotsFollowTheSuggestedMain() {
+        // 上次 DE 上肢做借力推舉：這次預設主項是爆發划船，第一步的順序預覽就要顯示「推」（和第二步一致）
+        let history = PlanHistory([session(4, .deUpper, [item("借力推舉", .dynamicEffort)])])
+        let answers = PlanAnswers(dayType: .deUpper, count: 2, cardio: false)
+        let preview = PlanRanking.resolve(answers: answers, picks: [:], exercises: library(), history: history, now: now)
+        #expect(preview[0].selected?.name == "爆發划船")
+        #expect(preview.map(\.slot) == [.dynamicEffort, .push])
+    }
+
     @Test func slotsByDayTypeAndCount() {
         func slots(_ dayType: DayType, _ count: Int, cardio: Bool = false) -> [Slot] {
             Slot.slots(for: PlanAnswers(dayType: dayType, count: count, cardio: cardio), mainCategory: nil)

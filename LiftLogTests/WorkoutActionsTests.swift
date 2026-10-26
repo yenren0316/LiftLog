@@ -62,15 +62,82 @@ struct WorkoutActionsTests {
         #expect(row.lastCompletedDate == nil)
     }
 
-    @Test func finishCompletingAllKeepsEverything() throws {
+    @Test func finishCompletingAllUsesPrefillAndDropsEmptySets() throws {
+        let context = try makeContext()
+        let bench = Exercise(name: "臥推", category: .horizontalPush, equipment: .barbell)
+        let row = Exercise(name: "坐姿 Cable 划船", category: .horizontalPull, equipment: .cable)
+        [bench, row].forEach(context.insert)
+        history(bench, sets: [(40, 5), (42.6, 5)], daysAgo: 3, in: context)
+        let session = WorkoutActions.start(with: [bench, row], in: context)
+        let benchItem = session.orderedItems[0]
+        WorkoutActions.addSet(to: benchItem, in: context)
+        // 第一組只改了重量，次數沿用預填；第三組沒有上一次，沿用本次前一組
+        benchItem.orderedSets[0].weightKg = 45
+        #expect(WorkoutActions.finish(session, choice: .completeAll, in: context))
+        let sets = benchItem.orderedSets
+        #expect(sets.map(\.weightKg) == [45, 42.6, 42.6] && sets.map(\.reps) == [5, 5, 5])
+        #expect(sets.allSatisfy { $0.isCompleted && $0.completedAt != nil })
+        // 划船沒做過也沒填：連預填都沒有，組被刪掉，動作也一起移除（不會留下沒有數字的完成組）
+        #expect(session.orderedItems.map { $0.exercise?.name } == ["臥推"])
+        #expect(try context.fetch(FetchDescriptor<SetRecord>()).allSatisfy { $0.weightKg != nil && $0.reps != nil })
+    }
+
+    @Test func finishCompletingAllWithNothingToFillDeletesSession() throws {
         let context = try makeContext()
         let bench = Exercise(name: "臥推", category: .horizontalPush, equipment: .barbell)
         context.insert(bench)
         let session = WorkoutActions.start(with: [bench], in: context)
-        WorkoutActions.addSet(to: session.orderedItems[0], in: context)
-        #expect(WorkoutActions.finish(session, choice: .completeAll, in: context))
-        #expect(session.orderedItems[0].sets.count == 4)   // 推 3 組＋新增 1 組
-        #expect(session.orderedItems[0].sets.allSatisfy { $0.isCompleted && $0.completedAt != nil })
+        #expect(!WorkoutActions.finish(session, choice: .completeAll, in: context))
+        #expect(try context.fetchCount(FetchDescriptor<WorkoutSession>()) == 0)
+    }
+
+    @Test func checkingASetInAPastSessionUsesThatSessionsDate() throws {
+        let context = try makeContext()
+        let bench = Exercise(name: "臥推", category: .horizontalPush, equipment: .barbell)
+        context.insert(bench)
+        history(bench, sets: [(40, 5), (42.6, 5)], daysAgo: 10, in: context)
+        let past = try #require(bench.completedItems.first?.session)
+        let set = try #require(past.orderedItems.first?.orderedSets.last)
+        // 在歷史訓練裡取消打勾再打勾：完成時間是那次訓練，「幾天前」不會變成今天
+        set.isCompleted = false
+        set.completedAt = nil
+        #expect(WorkoutActions.complete(set, placeholder: nil, in: context))
+        #expect(set.completedAt == past.endedAt)
+        #expect(Recency.daysSince(bench.lastCompletedDate) == 10)
+        // 進行中的訓練是現在
+        let now = Date.now
+        #expect(WorkoutActions.completionDate(in: past, now: now) == past.endedAt)
+        let active = WorkoutActions.start(with: [bench], in: context)
+        #expect(WorkoutActions.completionDate(in: active, now: now) == now)
+    }
+
+    @Test func startingANewWorkoutOverTheCurrentOneStopsTheRest() throws {
+        final class SilentNotifications: RestNotifying {
+            func schedule(at endDate: Date) {}
+            func cancel() {}
+        }
+        let context = try makeContext()
+        let defaults = try #require(UserDefaults(suiteName: "WorkoutActionsTests.\(UUID().uuidString)"))
+        let timer = RestTimer(defaults: defaults, notifications: SilentNotifications())
+        let coordinator = WorkoutCoordinator(restTimer: timer)
+        let bench = Exercise(name: "臥推", category: .horizontalPush, equipment: .barbell)
+        let row = Exercise(name: "坐姿 Cable 划船", category: .horizontalPull, equipment: .cable)
+        [bench, row].forEach(context.insert)
+        let current = WorkoutActions.start(with: [bench], in: context)
+        current.orderedItems[0].orderedSets[0].weightKg = 40
+        current.orderedItems[0].orderedSets[0].reps = 5
+        current.orderedItems[0].orderedSets[0].isCompleted = true
+        timer.start(seconds: 90)
+        // 「結束目前的訓練並開始新的」：舊訓練結束，休息倒數不會延續到新訓練
+        coordinator.requestStart([row], context: context)
+        coordinator.finishCurrentAndStartNew(context: context)
+        #expect(!timer.isRunning)
+        #expect(current.endedAt != nil)
+        #expect(WorkoutActions.activeSession(in: context)?.orderedItems.first?.exercise === row)
+        // 首頁「結束並建立新菜單」走同一個 finishActive
+        timer.start(seconds: 90)
+        coordinator.finishActive(context: context)
+        #expect(!timer.isRunning)
     }
 
     @Test func finishWithNothingCompletedDeletesSession() throws {
@@ -133,6 +200,7 @@ struct WorkoutActionsTests {
         let session = WorkoutActions.start(with: [bench, curl], in: context)
         #expect(session.region == .unspecified && session.dayType == nil)
         #expect(session.orderedItems.map(\.role) == [.push, .accessory])
+        for set in session.items.flatMap(\.sets) { set.weightKg = 20; set.reps = 10 }
         #expect(WorkoutActions.finish(session, choice: .completeAll, in: context))
         #expect(session.region == .upper)
     }

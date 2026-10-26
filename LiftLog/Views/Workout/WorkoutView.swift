@@ -63,6 +63,8 @@ struct WorkoutView: View {
                 Button("刪除未完成的組", role: .destructive) { finish(.deleteIncomplete) }
                 Button("全部標為完成") { finish(.completeAll) }
                 Button("取消", role: .cancel) {}
+            } message: {
+                Text("全部標為完成時，沒填的欄位用灰字的預填值；連預填值都沒有的組會刪除。")
             }
         }
     }

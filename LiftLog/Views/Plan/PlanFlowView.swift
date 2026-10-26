@@ -29,8 +29,10 @@ struct PlanFlowView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if history != nil {
-                    QuestionsStep(answers: $answers) {
+                if let history {
+                    // 預覽和第二步一樣依預設的主項決定格子（主項是爆發划船時「拉」會變成「推」）
+                    let preview = PlanRanking.resolve(answers: answers, picks: [:], exercises: exercises, history: history)
+                    QuestionsStep(answers: $answers, slots: preview.map(\.slot)) {
                         picks = [:]
                         showExercises = true
                     }
@@ -93,6 +95,8 @@ struct PlanFlowView: View {
 
 private struct QuestionsStep: View {
     @Binding var answers: PlanAnswers
+    /// 「今天的順序」
+    var slots: [Slot]
     var onNext: () -> Void
 
     var body: some View {
@@ -124,7 +128,7 @@ private struct QuestionsStep: View {
                 }
                 VStack(alignment: .leading, spacing: 10) {
                     Text("今天的順序").font(.headline).foregroundStyle(Theme.textSecondary)
-                    FlowSlots(slots: Slot.slots(for: answers, mainCategory: nil))
+                    FlowSlots(slots: slots)
                 }
                 .card()
             }

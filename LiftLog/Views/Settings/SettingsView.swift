@@ -54,7 +54,7 @@ struct SettingsView: View {
                     Toggle(isOn: $autoRestTimer) {
                         Label("打勾後自動開始休息計時", systemImage: "timer").font(.headline)
                     }
-                    Text("預設依角色：主項、爆發、推、拉 180 秒；單邊、核心 90 秒；補強 60 秒。每個動作可以在動作詳情的「編輯」裡自訂。")
+                    Text("預設依角色：ME 主項 180 秒；DE 速度主項 60 秒；DE 爆發、下肢輔助、推、拉 90 秒；核心、補強 60 秒。每個動作可以在動作詳情的「編輯」裡自訂。")
                         .font(.footnote)
                         .foregroundStyle(Theme.textSecondary)
                 }

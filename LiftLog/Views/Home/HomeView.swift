@@ -95,9 +95,7 @@ struct HomeView: View {
         ) { request in
             Button("繼續目前訓練") { coordinator.isExpanded = true }
             Button("結束並建立新菜單", role: .destructive) {
-                if let session = WorkoutActions.activeSession(in: context) {
-                    WorkoutActions.finish(session, choice: .deleteIncomplete, in: context)
-                }
+                coordinator.finishActive(context: context)
                 planRequest = request
             }
             Button("取消", role: .cancel) {}

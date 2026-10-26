@@ -48,9 +48,23 @@ enum WorkoutActions {
     }
 
     /// 打勾：沒輸入的欄位用預填值；必要欄位不齊時不完成，回傳 false。
-    /// 訓練中畫面的 ✓ 和即時動態的「完成這組」都走這裡
+    /// 訓練中畫面的 ✓、即時動態的「完成這組」和歷史訓練的 ✓ 都走這裡
     @discardableResult
     static func complete(_ set: SetRecord, placeholder: SetValues?, in context: ModelContext) -> Bool {
+        guard apply(placeholder, toComplete: set, at: completionDate(in: set.sessionExercise?.session)) else { return false }
+        save(context)
+        return true
+    }
+
+    /// 完成時間：進行中的訓練是現在；在已結束的歷史訓練裡打勾，記成那次訓練的時間，
+    /// 不然那個動作的「幾天前」會變成今天
+    static func completionDate(in session: WorkoutSession?, now: Date = .now) -> Date {
+        guard let session, !session.isActive else { return now }
+        return session.endedAt ?? session.startedAt
+    }
+
+    /// 用輸入（沒輸入的欄位用預填值）把這組標成完成；必要欄位不齊時不改任何東西，回傳 false
+    private static func apply(_ placeholder: SetValues?, toComplete set: SetRecord, at date: Date) -> Bool {
         guard let exercise = set.sessionExercise?.exercise else { return false }
         let values = SetLogic.resolved(entered: set.values, placeholder: placeholder)
         guard SetLogic.canComplete(values, logType: exercise.logType, equipment: exercise.equipment) else { return false }
@@ -61,8 +75,7 @@ enum WorkoutActions {
         set.minutes = values.minutes
         set.seconds = values.seconds
         set.isCompleted = true
-        set.completedAt = .now
-        save(context)
+        set.completedAt = date
         return true
     }
 
@@ -111,6 +124,7 @@ enum WorkoutActions {
     }
 
     /// 完成訓練：處理未打勾的組、移除沒有完成組的動作、寫入 endedAt。
+    /// 「全部標為完成」和直接按 ✓ 一樣，沒輸入的欄位用灰字預填；連預填都不夠的組（例如第一次做的動作沒填數字）刪除。
     /// 回傳 false 代表沒有任何完成的組，整次訓練已刪除。
     @discardableResult
     static func finish(_ session: WorkoutSession, choice: SetLogic.IncompleteChoice, in context: ModelContext) -> Bool {
@@ -118,18 +132,15 @@ enum WorkoutActions {
         var remaining: [SessionExercise] = []
         for item in session.orderedItems {
             let sets = item.orderedSets
-            let kept: [SetRecord]
-            switch choice {
-            case .deleteIncomplete:
-                for set in sets where !set.isCompleted { context.delete(set) }
-                kept = sets.filter(\.isCompleted)
-            case .completeAll:
+            if choice == .completeAll {
+                // 預填要在改動之前算好：後面的組會沿用前一組的值
+                let placeholders = Dictionary(uniqueKeysWithValues: item.setHints().map { ($0.set.id, $0.placeholder) })
                 for set in sets where !set.isCompleted {
-                    set.isCompleted = true
-                    set.completedAt = now
+                    _ = apply(placeholders[set.id] ?? nil, toComplete: set, at: now)
                 }
-                kept = sets
             }
+            for set in sets where !set.isCompleted { context.delete(set) }
+            let kept = sets.filter(\.isCompleted)
             if kept.isEmpty {
                 context.delete(item)
             } else {

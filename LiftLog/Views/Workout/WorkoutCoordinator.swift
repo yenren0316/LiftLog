@@ -22,6 +22,12 @@ final class WorkoutCoordinator {
     /// 深層連結 liftlog://new 要求打開建立菜單；首頁收到後開啟並清掉
     var planRequestedByLink = false
 
+    @ObservationIgnored private let restTimer: RestTimer
+
+    init(restTimer: RestTimer = .shared) {
+        self.restTimer = restTimer
+    }
+
     /// 開始訓練的唯一入口：沒有進行中的訓練就直接開始；有的話先問
     func requestStart(_ exercises: [Exercise], context: ModelContext) {
         requestStart(StartRequest(exercises: exercises), context: context)
@@ -52,11 +58,17 @@ final class WorkoutCoordinator {
     /// 結束目前的訓練（刪掉未完成的組）並開始新的
     func finishCurrentAndStartNew(context: ModelContext) {
         guard let request = pendingStart else { return }
+        finishActive(context: context)
+        pendingStart = nil
+        start(request, context: context)
+    }
+
+    /// 為了開始新的訓練而結束目前的訓練：刪掉未完成的組，休息倒數一起停掉（不然會延續到新訓練）
+    func finishActive(context: ModelContext) {
+        restTimer.skip()
         if let session = WorkoutActions.activeSession(in: context) {
             WorkoutActions.finish(session, choice: .deleteIncomplete, in: context)
         }
-        pendingStart = nil
-        start(request, context: context)
     }
 }
 
