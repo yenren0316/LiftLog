@@ -5,6 +5,8 @@ import Charts
 /// 歷程的「統計」（CHANGE_07 D-1）：主項進步、體重、有氧、訓練頻率、平衡。統計從 StatsCache 讀
 struct HistoryStatsView: View {
     @Environment(StatsCache.self) private var stats
+    /// 每週目標：設定過就用設定的，沒設定過用近 12 週的平均（CHANGE_09 §1）
+    @AppStorage(WeeklyGoal.goalKey) private var storedGoal = 0
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -13,7 +15,9 @@ struct HistoryStatsView: View {
                     MainLiftProgressCard(trends: stats.snapshot.mainLifts).id("mainLifts")
                     BodyWeightCard().id("weight")
                     CardioCard(minutes: stats.snapshot.weeklyCardioMinutes).id("cardio")
-                    FrequencyCard(weeks: stats.snapshot.frequencyWeeks, months: stats.snapshot.frequencyMonths).id("frequency")
+                    FrequencyCard(weeks: stats.snapshot.frequencyWeeks, months: stats.snapshot.frequencyMonths,
+                                  goal: WeeklyGoal.goal(stored: storedGoal, automatic: stats.snapshot.automaticWeeklyGoal))
+                        .id("frequency")
                     BalanceCard(balance: stats.snapshot.balance).id("balance")
                 }
                 .padding(.horizontal, 16)
@@ -162,11 +166,13 @@ private struct CardioCard: View {
     }
 }
 
-/// 訓練頻率（CHANGE_08 §3）：近 12 週或近 12 個月的訓練次數長條，依部位分段疊色，虛線是平均（只算過完的週或月）。
+/// 訓練頻率（CHANGE_08 §3）：近 12 週或近 12 個月的訓練天數長條（TrainingCount 的規則：以天為單位，同一天的部位合併後疊色），
+/// 虛線是平均（只算過完的週或月），「週」另外有一條實線是每週目標（CHANGE_09 §4）。
 /// 點一下長條顯示那一段的次數和日期範圍（2 秒後消失），按住拖曳時跟著手指；不導向其他頁面
 private struct FrequencyCard: View {
     var weeks: TrainingFrequency.Series
     var months: TrainingFrequency.Series
+    var goal: Int
 
     @AppStorage("history.frequencyPeriod") private var period: TrainingFrequency.Period = .week
     @State private var selected: Date?
@@ -180,9 +186,10 @@ private struct FrequencyCard: View {
             HStack(alignment: .firstTextBaseline) {
                 Text("訓練頻率").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.textSecondary)
                 Spacer()
-                Text("本週 \(weeks.buckets.last?.total ?? 0) 次・近 12 週平均 \(weeks.average.formatted(.number.precision(.fractionLength(1)))) 次")
+                Text("本週 \(weeks.buckets.last?.total ?? 0)/\(goal)・近 12 週平均 \(Self.format(weeks.average)) 次")
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
             }
             Picker("期間", selection: $period.animation(.tap)) {
                 ForEach(TrainingFrequency.Period.allCases) { Text($0.title).tag($0) }
@@ -195,22 +202,17 @@ private struct FrequencyCard: View {
                     .frame(maxWidth: .infinity, minHeight: 80)
             } else {
                 chart(buckets, average: average)
-                HStack(spacing: 12) {
-                    RegionLegend(forBars: true)
-                    Spacer(minLength: 0)
-                    // 虛線＝平均
-                    HStack(spacing: 4) {
-                        Path { path in
-                            path.move(to: CGPoint(x: 0, y: 0.5))
-                            path.addLine(to: CGPoint(x: 14, y: 0.5))
-                        }
-                        .stroke(Theme.textSecondary, style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
-                        .frame(width: 14, height: 1)
-                        Text("平均 \(average.formatted(.number.precision(.fractionLength(1))))").monospacedDigit()
+                // 放得下就一列，放不下時線的圖例換到第二列
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 12) {
+                        RegionLegend(forBars: true)
+                        Spacer(minLength: 0)
+                        lineLegend(average: average)
                     }
-                    .font(.caption2)
-                    .foregroundStyle(Theme.textSecondary)
-                    .lineLimit(1)
+                    VStack(alignment: .leading, spacing: 6) {
+                        RegionLegend(forBars: true)
+                        lineLegend(average: average)
+                    }
                 }
             }
         }
@@ -236,8 +238,39 @@ private struct FrequencyCard: View {
     /// 週一開始的週（和 StatsSnapshot 的分段一致）
     private let calendar = TrainingCount.weekCalendar()
 
+    /// 「━ 目標 3　┄ 平均 3.8」（月只有平均）
+    private func lineLegend(average: Double) -> some View {
+        HStack(spacing: 12) {
+            if period == .week {
+                legendLine("目標 \(goal)", style: StrokeStyle(lineWidth: 1.5))
+            }
+            legendLine("平均 \(Self.format(average))", style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
+        }
+        .font(.caption2)
+        .foregroundStyle(Theme.textSecondary)
+        .lineLimit(1)
+        .fixedSize()
+    }
+
+    private func legendLine(_ title: String, style: StrokeStyle) -> some View {
+        HStack(spacing: 4) {
+            Path { path in
+                path.move(to: CGPoint(x: 0, y: 1))
+                path.addLine(to: CGPoint(x: 14, y: 1))
+            }
+            .stroke(Theme.textSecondary, style: style)
+            .frame(width: 14, height: 2)
+            Text(title).monospacedDigit()
+        }
+    }
+
+    static func format(_ value: Double) -> String {
+        value.formatted(.number.precision(.fractionLength(1)))
+    }
+
     private func chart(_ buckets: [TrainingFrequency.Bucket], average: Double) -> some View {
-        let top = Double(max(buckets.map(\.total).max() ?? 0, 1))
+        // 目標線也要在圖裡
+        let top = Double(max(buckets.map(\.total).max() ?? 0, period == .week ? goal : 0, 1))
         let current = selected.flatMap { date in buckets.first { $0.start <= date && date < $0.end } }
         return Chart {
             ForEach(buckets) { bucket in
@@ -251,6 +284,12 @@ private struct FrequencyCard: View {
             RuleMark(y: .value("平均", average))
                 .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
                 .foregroundStyle(Theme.textPrimary.opacity(0.7))
+            // 每週目標：實線，只在「週」
+            if period == .week {
+                RuleMark(y: .value("目標", goal))
+                    .lineStyle(StrokeStyle(lineWidth: 1.5))
+                    .foregroundStyle(Theme.textPrimary)
+            }
             if let current {
                 RuleMark(x: .value("期間", current.start, unit: unit, calendar: calendar))
                     .foregroundStyle(Theme.textSecondary.opacity(0.25))
@@ -261,6 +300,8 @@ private struct FrequencyCard: View {
                     }
             }
         }
+        // 本週或本月還沒有紀錄時也留它的位置（沒有長條的段落不會自己出現在 x 軸上）
+        .chartXScale(domain: (buckets.first?.start ?? .now)...(buckets.last?.end ?? .now))
         // 上面留空間給標籤
         .chartYScale(domain: 0...(top * 1.45))
         // 刻度只到最高的長條，上面留給標籤
