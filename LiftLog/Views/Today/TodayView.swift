@@ -9,9 +9,6 @@ struct TodayView: View {
     @Environment(WorkoutLauncher.self) private var launcher
     @Environment(StatsCache.self) private var stats
 
-    /// 同一天有多次訓練時，先列出來讓使用者選
-    @State private var dayChoices: [WorkoutSession] = []
-
     var body: some View {
         @Bindable var coordinator = coordinator
         NavigationStack(path: $coordinator.todayPath) {
@@ -21,8 +18,8 @@ struct TodayView: View {
                     NextPlanCard(answers: stats.snapshot.nextPlan, suggestedMain: stats.snapshot.suggestedMain) {
                         launcher.requestPlan($0, context: context)
                     }
-                    TrainingCalendar(days: stats.snapshot.days, emptyText: "還沒有訓練紀錄。點上面的「下一次」建立第一份菜單。",
-                                     onSelectDay: open)
+                    TrainingCalendar(days: stats.snapshot.days, weekSessions: stats.snapshot.weeklySessions.last ?? 0,
+                                     emptyText: "還沒有訓練紀錄。點上面的「下一次」建立第一份菜單。")
                     RecentSetsCard(sets: stats.snapshot.recentSets) { coordinator.todayPath.append($0) }
                 }
                 .padding(.horizontal, 16)
@@ -41,11 +38,6 @@ struct TodayView: View {
             }
             #endif
         }
-        .modifier(DaySessionChooser(choices: $dayChoices))
-    }
-
-    private func open(_ day: StatsSnapshot.DayStat) {
-        DaySessionChooser.open(day, context: context, coordinator: coordinator, choices: &dayChoices)
     }
 }
 

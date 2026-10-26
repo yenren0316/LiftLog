@@ -4,9 +4,9 @@ import SwiftData
 
 /// 開發用的資料（CHANGE_07 截圖驗證）：
 /// - 啟動參數 -emptyData YES：清空所有資料，而且不匯入 seed，檢查空狀態
-/// - 啟動參數 -demoData YES：在 seed 之外加幾筆有時間、日型、角色和備註的示範訓練，以及近期的體重（只加一次）
+/// - 啟動參數 -demoData YES：在 seed 之外加幾筆有時間、日型、角色和備註的示範訓練（其中一次是全身），以及近期的體重（只加一次）
 enum DemoData {
-    static let addedKey = "debug.demoData.v1"
+    static let addedKey = "debug.demoData.v2"
 
     /// 有 -emptyData 時清空，回傳 true 表示這次啟動不要匯入 seed
     static func wipeIfRequested(in context: ModelContext, defaults: UserDefaults = .standard) -> Bool {
@@ -64,6 +64,11 @@ enum DemoData {
             Item(name: "後腳抬高蹲", role: .lowerAssist, sets: lifts(16, 8, times: 3)),
             Item(name: "地雷管抗旋轉", role: .core, sets: lifts(10, 10, times: 3)),
             Item(name: "跑步機", role: .cardio, sets: [.cardio(minutes: 20, speed: 6, incline: 10)]),
+        ]),
+        // 全身（CHANGE_08：日曆的全身格子和訓練頻率的斜紋）
+        Plan(daysAgo: 10, hour: 18, minute: 0, minutes: 50, dayType: nil, items: [
+            Item(name: "深蹲", role: .lowerAssist, sets: lifts(70, 8, times: 3)),
+            Item(name: "臥推", role: .push, sets: lifts(55, 8, times: 3)),
         ]),
         Plan(daysAgo: 8, hour: 10, minute: 0, minutes: 60, dayType: .deUpper, items: [
             Item(name: "臥推", role: .dynamicEffort, sets: lifts(50, 3, times: 8)),
