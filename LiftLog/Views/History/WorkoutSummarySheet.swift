@@ -14,6 +14,8 @@ struct WorkoutSummarySheet: View {
 
     @State private var editing = false
     @State private var confirmingDelete = false
+    @State private var weightEntry: BodyWeightEntryRequest?
+    @Query(sort: \BodyWeight.date) private var weights: [BodyWeight]
 
     var body: some View {
         NavigationStack {
@@ -65,6 +67,7 @@ struct WorkoutSummarySheet: View {
         } message: {
             Text("這次訓練的所有組都會刪除，無法復原。")
         }
+        .sheet(item: $weightEntry) { BodyWeightEntrySheet(date: $0.date) }
         .fullScreenCover(isPresented: $editing) {
             SessionEditorView(session: session, openAddOnAppear: coordinator.openAddInEditor) {
                 coordinator.openAddInEditor = false
@@ -89,6 +92,17 @@ struct WorkoutSummarySheet: View {
             Text(Self.timeText(session))
                 .font(.subheadline.monospacedDigit())
                 .foregroundStyle(Theme.textSecondary)
+            // 當天的體重；沒有紀錄時可以補記
+            if let weight = weights.last(where: { Calendar.current.isDate($0.date, inSameDayAs: session.startedAt) }) {
+                Label("體重 \(unit.formatWithUnit(kg: weight.kg))", systemImage: "scalemass")
+                    .font(.subheadline.monospacedDigit())
+                    .foregroundStyle(Theme.textSecondary)
+            } else {
+                Button("＋ 記錄當天體重") { weightEntry = BodyWeightEntryRequest(date: session.startedAt) }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.accent)
+                    .buttonStyle(.pressable)
+            }
         }
     }
 

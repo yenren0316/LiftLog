@@ -43,7 +43,11 @@ enum WorkoutIntentActions {
 extension StartWorkoutIntent {
     /// App 已經被系統帶到前景，交給深層連結導向
     nonisolated func perform() async throws -> some IntentResult {
-        await MainActor.run { DeepLinkRouter.shared.pending = .new }
+        await MainActor.run {
+            // 小工具那邊如果也留了連結，一起清掉，避免重複打開
+            _ = PendingDeepLink.consume()
+            DeepLinkRouter.shared.pending = .new
+        }
         return .result()
     }
 }

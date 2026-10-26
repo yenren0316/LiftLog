@@ -95,7 +95,8 @@ struct WidgetSnapshotTests {
     @Test func statusAndLink() {
         var snapshot = WidgetSnapshot.make(history: PlanHistory([]), activeStartedAt: nil, theme: .graphiteOrange)
         #expect(snapshot.status(at: date(25), calendar: calendar) == .neverTrained)
-        #expect(snapshot.link == .new)
+        // 沒有訓練時點小工具回到「今天」；建立菜單用右上角的＋
+        #expect(snapshot.link == .today)
         snapshot.lastSessionDate = date(23)
         #expect(snapshot.status(at: date(25), calendar: calendar) == .trained(days: 2))
         snapshot.isInProgress = true

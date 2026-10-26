@@ -528,7 +528,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LiftLog/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = LiftLog;
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "讀取健身 App／Apple Watch 記錄的室內步行與跑步，帶入跑步機的時間與速度。";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "讀取健身 App／Apple Watch 記錄的室內步行與跑步，帶入跑步機的時間與速度；以及健康 App 的體重，帶入體重紀錄。";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -564,7 +564,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LiftLog/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = LiftLog;
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "讀取健身 App／Apple Watch 記錄的室內步行與跑步，帶入跑步機的時間與速度。";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "讀取健身 App／Apple Watch 記錄的室內步行與跑步，帶入跑步機的時間與速度；以及健康 App 的體重，帶入體重紀錄。";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

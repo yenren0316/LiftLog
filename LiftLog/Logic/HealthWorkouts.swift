@@ -68,3 +68,33 @@ enum HealthWorkouts {
             }
     }
 }
+
+/// 健康 App 裡的一筆體重
+struct HealthBodyMass: Identifiable, Equatable {
+    var id: UUID
+    var date: Date
+    var kg: Double
+    var source: String
+}
+
+extension HealthWorkouts {
+    private static let bodyMassType = HKQuantityType(.bodyMass)
+
+    /// 體重的讀取權限（CHANGE_07 D-2）；第一次會跳出健康權限視窗
+    static func requestBodyMassAuthorization() async throws {
+        try await store.requestAuthorization(toShare: [], read: [bodyMassType])
+    }
+
+    /// 最近 days 天的體重，由新到舊
+    static func recentBodyMass(days: Int = 30) async throws -> [HealthBodyMass] {
+        let start = Calendar.current.date(byAdding: .day, value: -days, to: .now) ?? .now
+        let descriptor = HKSampleQueryDescriptor(
+            predicates: [.quantitySample(type: bodyMassType, predicate: HKQuery.predicateForSamples(withStart: start, end: nil))],
+            sortDescriptors: [SortDescriptor(\.startDate, order: .reverse)]
+        )
+        return try await descriptor.result(for: store).map { sample in
+            HealthBodyMass(id: sample.uuid, date: sample.startDate,
+                           kg: sample.quantity.doubleValue(for: .gramUnit(with: .kilo)), source: sample.sourceRevision.source.name)
+        }
+    }
+}

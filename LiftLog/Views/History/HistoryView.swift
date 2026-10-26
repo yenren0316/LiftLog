@@ -214,12 +214,3 @@ private struct BackfillSheet: View {
         }
     }
 }
-
-/// 統計（D-1 完成）
-struct HistoryStatsView: View {
-    var body: some View {
-        ScrollView {
-            Text("統計").foregroundStyle(Theme.textSecondary).padding()
-        }
-    }
-}

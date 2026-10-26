@@ -32,28 +32,11 @@ struct TodayView: View {
             .navigationDestination(for: ExerciseCategory.self) { CategoryTodoList(category: $0) }
             .navigationDestination(for: Exercise.self) { ExerciseDetailView(exercise: $0) }
         }
-        .confirmationDialog("這天有 \(dayChoices.count) 次訓練", isPresented: Binding(
-            get: { !dayChoices.isEmpty }, set: { if !$0 { dayChoices = [] } }
-        ), titleVisibility: .visible) {
-            ForEach(dayChoices) { session in
-                Button("\(session.startedAt.formatted(date: .omitted, time: .shortened))　\(session.title)") {
-                    coordinator.showSummary(of: session)
-                }
-            }
-            Button("取消", role: .cancel) {}
-        }
+        .modifier(DaySessionChooser(choices: $dayChoices))
     }
 
-    /// 點日曆上有訓練的那天：一次就直接打開摘要浮窗，多次先選
     private func open(_ day: StatsSnapshot.DayStat) {
-        let sessions = day.sessionIDs.compactMap { id in
-            try? context.fetch(FetchDescriptor<WorkoutSession>(predicate: #Predicate { $0.id == id })).first
-        }
-        if sessions.count == 1 {
-            coordinator.showSummary(of: sessions[0])
-        } else if sessions.count > 1 {
-            dayChoices = sessions
-        }
+        DaySessionChooser.open(day, context: context, coordinator: coordinator, choices: &dayChoices)
     }
 }
 

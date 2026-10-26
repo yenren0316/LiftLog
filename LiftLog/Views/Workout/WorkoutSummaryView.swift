@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 /// 完成訓練後的摘要
 struct WorkoutSummary: Identifiable {
@@ -39,6 +40,12 @@ struct WorkoutSummary: Identifiable {
 struct WorkoutSummaryView: View {
     let summary: WorkoutSummary
     var onClose: () -> Void
+
+    @Environment(\.modelContext) private var context
+    @AppStorage(WeightUnit.storageKey) private var unit: WeightUnit = .kg
+    /// 選填的「今天體重」（CHANGE_07 D-2）
+    @State private var weightText = ""
+    @State private var confirmingOverwrite: BodyWeight?
 
     var body: some View {
         ScrollView {
@@ -92,11 +99,49 @@ struct WorkoutSummaryView: View {
                 }
                 .card()
 
-                PrimaryButton(title: "完成", action: onClose)
+                HStack {
+                    Label("今天體重", systemImage: "scalemass").font(.headline)
+                    Text("選填").font(.caption).foregroundStyle(Theme.textSecondary)
+                    Spacer()
+                    TextField(BodyWeightLog.existing(on: .now, in: context).map { unit.format(kg: $0.kg) } ?? "—", text: $weightText)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                        .font(.title3.weight(.semibold).monospacedDigit())
+                        .frame(width: 90)
+                    Text(unit.symbol).foregroundStyle(Theme.textSecondary)
+                }
+                .card(padding: 16)
+
+                PrimaryButton(title: "完成", action: finish)
             }
             .padding(16)
         }
         .screenBackground()
+        .alert("覆蓋今天的體重？", isPresented: Binding(get: { confirmingOverwrite != nil }, set: { if !$0 { confirmingOverwrite = nil } }),
+               presenting: confirmingOverwrite) { existing in
+            Button("覆蓋") {
+                if let kg = weightKg { BodyWeightLog.save(kg: kg, on: .now, in: context) }
+                onClose()
+            }
+            Button("取消", role: .cancel) {}
+        } message: { existing in
+            Text("今天已經有 \(unit.formatWithUnit(kg: existing.kg))，同一天只保留一筆。")
+        }
+    }
+
+    /// 有填體重就記下來（同一天只保留一筆，已經有的先確認），然後關閉
+    private func finish() {
+        guard let kg = weightKg else { return onClose() }
+        if let existing = BodyWeightLog.existing(on: .now, in: context), existing.kg != kg {
+            confirmingOverwrite = existing
+        } else {
+            BodyWeightLog.save(kg: kg, on: .now, in: context)
+            onClose()
+        }
+    }
+
+    private var weightKg: Double? {
+        Double(weightText.replacingOccurrences(of: ",", with: ".")).flatMap { $0 > 0 ? unit.toKg($0) : nil }
     }
 
     private func stat(_ value: String, _ title: String) -> some View {

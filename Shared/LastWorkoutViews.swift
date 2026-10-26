@@ -1,4 +1,5 @@
 import SwiftUI
+import AppIntents
 import WidgetKit
 
 // 「上次訓練」小工具的畫面（CHANGE_05 第 4、5 節）。放在 Shared，小工具和 App 的預覽頁共用同一份畫面。
@@ -20,8 +21,8 @@ nonisolated extension WidgetSnapshot {
         return .trained(days: days)
     }
 
-    /// 點小工具開啟的連結：訓練中回到那次訓練，否則建立菜單
-    var link: DeepLink { isInProgress ? .workout : .new }
+    /// 點小工具：訓練中打開那次訓練，否則回到「今天」（建立菜單用右上角的＋）
+    var link: DeepLink { isInProgress ? .workout : .today }
 
     /// 建議的標籤：今天已經練過時，建議其實是下一次的
     static func suggestionLabel(days: Int) -> String {
@@ -70,9 +71,7 @@ struct LastWorkoutSmallView: View {
                     .foregroundStyle(Color(hex: p.textPrimary))
                     .widgetAccentable()
                 Spacer(minLength: 4)
-                Label("開始第一次訓練", systemImage: "plus.circle.fill")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color(hex: p.accent))
+                caption("按＋建立第一份菜單", p)
             case .inProgress(let startedAt):
                 Label("訓練中", systemImage: "dumbbell.fill")
                     .font(.caption.weight(.semibold))
@@ -107,6 +106,20 @@ struct LastWorkoutSmallView: View {
         }
         .lineLimit(1)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .overlay(alignment: .topTrailing) {
+            // 右上角的＋：打開 App 進入建立菜單（和 liftlog://new 相同）；訓練中不顯示
+            if snapshot?.isInProgress != true {
+                Button(intent: StartWorkoutIntent()) {
+                    Image(systemName: "plus")
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(Color(hex: p.onAccent))
+                        .frame(width: 30, height: 30)
+                        .background(Color(hex: p.accent), in: .circle)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("建立菜單")
+            }
+        }
         .containerBackground(Color(hex: p.background), for: .widget)
     }
 

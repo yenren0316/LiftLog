@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 /// 訓練日曆：每天一格，有練的日子亮起來，做越多動作越亮。不橫向捲動：
 /// - fit：格子固定大小，週數依寬度剛好塞滿（「今天」）
@@ -132,5 +133,38 @@ private struct YearHeightLayout: Layout {
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         subviews.first?.place(at: bounds.origin, proposal: ProposedViewSize(bounds.size))
+    }
+}
+
+/// 點日曆上有訓練的那天（「今天」和歷程的統計共用）：一次就打開摘要浮窗，多次先列出來讓使用者選
+struct DaySessionChooser: ViewModifier {
+    @Binding var choices: [WorkoutSession]
+    @Environment(WorkoutCoordinator.self) private var coordinator
+
+    func body(content: Content) -> some View {
+        content.confirmationDialog("這天有 \(choices.count) 次訓練", isPresented: Binding(
+            get: { !choices.isEmpty }, set: { if !$0 { choices = [] } }
+        ), titleVisibility: .visible) {
+            ForEach(choices) { session in
+                Button("\(session.startedAt.formatted(date: .omitted, time: .shortened))　\(session.title)") {
+                    coordinator.showSummary(of: session)
+                }
+            }
+            Button("取消", role: .cancel) {}
+        }
+    }
+
+    /// 那天的訓練：一次就直接打開，多次放進 choices
+    @MainActor
+    static func open(_ day: StatsSnapshot.DayStat, context: ModelContext, coordinator: WorkoutCoordinator,
+                     choices: inout [WorkoutSession]) {
+        let sessions = day.sessionIDs.compactMap { id in
+            try? context.fetch(FetchDescriptor<WorkoutSession>(predicate: #Predicate { $0.id == id })).first
+        }
+        if sessions.count == 1 {
+            coordinator.showSummary(of: sessions[0])
+        } else if sessions.count > 1 {
+            choices = sessions
+        }
     }
 }

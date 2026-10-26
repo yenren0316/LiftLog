@@ -4,8 +4,10 @@ import Foundation
 nonisolated enum DeepLink: String, Sendable {
     /// 建立菜單（帶入預設答案）；有進行中的訓練時先問「繼續目前訓練／建立新菜單」
     case new
-    /// 打開進行中的訓練；沒有的話回到首頁
+    /// 打開進行中的訓練；沒有的話回到「今天」
     case workout
+    /// 切到「今天」分頁並回到第 1 層（CHANGE_07 D-3：沒有訓練時點小工具）
+    case today
 
     static let scheme = "liftlog"
 

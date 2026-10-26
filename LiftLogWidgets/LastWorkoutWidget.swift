@@ -49,6 +49,6 @@ struct LastWorkoutWidgetView: View {
             default: LastWorkoutSmallView(snapshot: entry.snapshot, date: entry.date)
             }
         }
-        .widgetURL((entry.snapshot?.link ?? .new).url)
+        .widgetURL((entry.snapshot?.link ?? .today).url)
     }
 }

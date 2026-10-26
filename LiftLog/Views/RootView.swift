@@ -3,6 +3,7 @@ import SwiftData
 
 struct RootView: View {
     @Environment(\.modelContext) private var context
+    @Environment(\.scenePhase) private var scenePhase
     @State private var coordinator: WorkoutCoordinator
     @State private var launcher: WorkoutLauncher
     @State private var restTimer = RestTimer.shared
@@ -45,6 +46,10 @@ struct RootView: View {
             // 即時動態的目標重量依單位顯示
             .onChange(of: unit) { LiveActivityController.shared.scheduleSync() }
             .onOpenURL { router.open($0) }
+            // 小工具的＋如果在小工具的程序執行，連結留在 App Group，回到前景時接手
+            .onChange(of: scenePhase, initial: true) { _, phase in
+                if phase == .active { router.consumePendingLink() }
+            }
             .onChange(of: router.pending, initial: true) { _, link in
                 if let link { handle(link) }
             }
@@ -70,9 +75,11 @@ struct RootView: View {
             } else {
                 launcher.requestPlan(context: context)
             }
-        case .home:
+        case .today:
             closeWorkoutCover()
+            coordinator.summarySession = nil
             coordinator.tab = .today
+            coordinator.todayPath = NavigationPath()
         }
     }
 

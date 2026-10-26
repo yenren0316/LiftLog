@@ -1,9 +1,9 @@
 import Foundation
 import Observation
 
-/// 深層連結實際要去的畫面
+/// 深層連結實際要去的畫面：建立菜單、進行中的訓練、「今天」的第 1 層
 enum DeepLinkDestination: Equatable {
-    case plan, workout, home
+    case plan, workout, today
 }
 
 extension DeepLink {
@@ -11,7 +11,8 @@ extension DeepLink {
     func destination(hasActiveWorkout: Bool) -> DeepLinkDestination {
         switch self {
         case .new: .plan
-        case .workout: hasActiveWorkout ? .workout : .home
+        case .workout: hasActiveWorkout ? .workout : .today
+        case .today: .today
         }
     }
 }
@@ -26,5 +27,10 @@ final class DeepLinkRouter {
 
     func open(_ url: URL) {
         if let link = DeepLink(url: url) { pending = link }
+    }
+
+    /// App 回到前景時：接手小工具留在 App Group 的連結
+    func consumePendingLink(from defaults: UserDefaults? = WidgetSnapshotStore.groupDefaults) {
+        if let link = PendingDeepLink.consume(from: defaults) { pending = link }
     }
 }
