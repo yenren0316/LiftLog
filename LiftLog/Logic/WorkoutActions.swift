@@ -56,6 +56,32 @@ enum WorkoutActions {
         return true
     }
 
+    /// CHANGE_08 §1：已結束的訓練（包括補登）裡，沒打勾、但已經填了數字的組。
+    /// 只列照 ✓ 的規則（沒輸入的欄位用預填值）能完成的組；完全沒填數字的組不列
+    static func filledIncompleteSets(in session: WorkoutSession) -> [(set: SetRecord, placeholder: SetValues?)] {
+        guard !session.isActive else { return [] }
+        return session.orderedItems.flatMap { item -> [(set: SetRecord, placeholder: SetValues?)] in
+            guard let exercise = item.exercise else { return [] }
+            return item.setHints().compactMap { hint in
+                guard !hint.set.isCompleted, SetLogic.hasEnteredValues(hint.set.values) else { return nil }
+                let values = SetLogic.resolved(entered: hint.set.values, placeholder: hint.placeholder)
+                guard SetLogic.canComplete(values, logType: exercise.logType, equipment: exercise.equipment) else { return nil }
+                return (hint.set, hint.placeholder)
+            }
+        }
+    }
+
+    /// 把 filledIncompleteSets 標為完成，完成時間記成那次訓練的結束時間；回傳標了幾組
+    @discardableResult
+    static func completeFilledSets(in session: WorkoutSession, context: ModelContext) -> Int {
+        // 預填要在改動之前算好：後面的組會沿用前一組的值
+        let pending = filledIncompleteSets(in: session)
+        let date = completionDate(in: session)
+        let count = pending.filter { apply($0.placeholder, toComplete: $0.set, at: date) }.count
+        save(context)
+        return count
+    }
+
     /// 完成時間：進行中的訓練是現在；在已結束的歷史訓練裡打勾，記成那次訓練的時間，
     /// 不然那個動作的「幾天前」會變成今天
     static func completionDate(in session: WorkoutSession?, now: Date = .now) -> Date {

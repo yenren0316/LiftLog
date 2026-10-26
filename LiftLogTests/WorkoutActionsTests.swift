@@ -278,6 +278,58 @@ struct WorkoutActionsTests {
         #expect(bench.lastSets(excluding: active).map(\.weightKg) == [60])
     }
 
+    /// CHANGE_08 T1：編輯已結束的訓練（補登）按「完成」時，沒打勾但已經填了數字的組可以一次標為完成，
+    /// 完成時間是那次訓練的結束時間；沒填數字的組、已經打勾的組不處理
+    @Test func finishingAnEndedSessionCompletesFilledSets() throws {
+        let context = try makeContext()
+        let squat = Exercise(name: "深蹲", category: .kneeDominant, equipment: .barbell)
+        let row = Exercise(name: "反式划船", category: .horizontalPull, equipment: .bodyweight, logType: .bodyweight)
+        [squat, row].forEach(context.insert)
+        let start = Date.now.addingTimeInterval(-3 * 86_400)
+        let end = start.addingTimeInterval(3600)
+        let session = WorkoutSession(startedAt: start, endedAt: end)
+        context.insert(session)
+        let squatItem = SessionExercise(session: session, exercise: squat, order: 0)
+        let rowItem = SessionExercise(session: session, exercise: row, order: 1)
+        [squatItem, rowItem].forEach(context.insert)
+        let done = SetRecord(sessionExercise: squatItem, order: 0, weightKg: 60, reps: 5, isCompleted: true,
+                             completedAt: start.addingTimeInterval(600))
+        let filled = SetRecord(sessionExercise: squatItem, order: 1, weightKg: 80, reps: 5)
+        // 只填了重量：次數沿用前一組（和直接按 ✓ 一樣）
+        let weightOnly = SetRecord(sessionExercise: squatItem, order: 2, weightKg: 85)
+        let empty = SetRecord(sessionExercise: squatItem, order: 3)
+        let rowFilled = SetRecord(sessionExercise: rowItem, order: 0, reps: 12)
+        let rowEmpty = SetRecord(sessionExercise: rowItem, order: 1)
+        [done, filled, weightOnly, empty, rowFilled, rowEmpty].forEach(context.insert)
+
+        let pending = WorkoutActions.filledIncompleteSets(in: session)
+        #expect(pending.map(\.set.id) == [filled.id, weightOnly.id, rowFilled.id])
+        #expect(WorkoutActions.completeFilledSets(in: session, context: context) == 3)
+
+        #expect(filled.isCompleted && filled.completedAt == end)
+        #expect(weightOnly.isCompleted && weightOnly.weightKg == 85 && weightOnly.reps == 5 && weightOnly.completedAt == end)
+        #expect(rowFilled.isCompleted && rowFilled.completedAt == end)
+        // 已經打勾的不動，完全沒填數字的維持原樣
+        #expect(done.completedAt == start.addingTimeInterval(600))
+        #expect(!empty.isCompleted && empty.weightKg == nil && empty.reps == nil)
+        #expect(!rowEmpty.isCompleted)
+        #expect(WorkoutActions.filledIncompleteSets(in: session).isEmpty)
+        // 上次日期跟著算進來
+        #expect(squat.lastCompletedDate == end)
+    }
+
+    /// 進行中的訓練不走這裡（由「完成訓練」處理）
+    @Test func filledSetsPromptIsOnlyForEndedSessions() throws {
+        let context = try makeContext()
+        let squat = Exercise(name: "深蹲", category: .kneeDominant, equipment: .barbell)
+        context.insert(squat)
+        let active = WorkoutActions.start(with: [squat], in: context)
+        let set = try #require(active.orderedItems.first?.orderedSets.first)
+        set.weightKg = 80
+        set.reps = 5
+        #expect(WorkoutActions.filledIncompleteSets(in: active).isEmpty)
+    }
+
     @Test func previousSetsDependOnMainRole() throws {
         let context = try makeContext()
         let squat = Exercise(name: "深蹲", category: .kneeDominant, tags: [.main], equipment: .barbell)

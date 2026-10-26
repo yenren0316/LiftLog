@@ -12,6 +12,9 @@ struct SessionEditorView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @State private var rejectedEnd = false
+    /// 按「完成」時，沒打勾、但已經填了數字的組數（CHANGE_08 §1）
+    @State private var filledCount = 0
+    @State private var confirmingFilled = false
 
     var body: some View {
         NavigationStack {
@@ -22,10 +25,38 @@ struct SessionEditorView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("完成") { dismiss() }
+                    Button("完成", action: finishEditing)
                         .fontWeight(.semibold)
                 }
             }
+            .alert("有 \(filledCount) 組填了數字但沒打勾", isPresented: $confirmingFilled) {
+                Button("把 \(filledCount) 組標為完成") {
+                    WorkoutActions.completeFilledSets(in: session, context: context)
+                    dismiss()
+                }
+                Button("保持未完成", role: .cancel) { dismiss() }
+            } message: {
+                Text("沒打勾的組不會算進統計、上次日期和圖表。標為完成的組，完成時間記成這次訓練的結束時間。")
+            }
+            #if DEBUG
+            // 開發用：-editorFinishPrompt YES 打開後自動按「完成」（截圖用）
+            .task {
+                if UserDefaults.standard.bool(forKey: "editorFinishPrompt") {
+                    try? await Task.sleep(for: .milliseconds(800))
+                    finishEditing()
+                }
+            }
+            #endif
+        }
+    }
+
+    /// 「完成」：有沒打勾、但已經填了數字的組時先詢問；完全沒填數字的組不處理
+    private func finishEditing() {
+        filledCount = WorkoutActions.filledIncompleteSets(in: session).count
+        if filledCount > 0 {
+            confirmingFilled = true
+        } else {
+            dismiss()
         }
     }
 

@@ -197,6 +197,22 @@ struct RootView: View {
                     coordinator.showSummary(of: session, editing: mode == "edit")
                 }
             }
+            // 開發用：-demoBackfillPrompt YES 補登今天 07:00–08:00 的訓練，深蹲填了數字但沒打勾、單腳 RDL 沒填，
+            // 搭配 -editorFinishPrompt YES 截「完成」的詢問（CHANGE_08 V5）
+            if UserDefaults.standard.bool(forKey: "demoBackfillPrompt") {
+                let calendar = Calendar.current
+                let today = calendar.startOfDay(for: .now)
+                let all = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
+                if let start = calendar.date(bySettingHour: 7, minute: 0, second: 0, of: today),
+                   let session = launcher.start(.init(exercises: ["深蹲", "單腳 RDL"].compactMap { n in all.first { $0.name == n } },
+                                                      backfill: DateInterval(start: start, duration: 3600)), context: context) {
+                    for set in session.orderedItems.first?.orderedSets ?? [] {
+                        set.weightKg = 80
+                        set.reps = 5
+                    }
+                    WorkoutActions.save(context)
+                }
+            }
             // 開發用：-openURL liftlog://new 模擬點小工具（simctl openurl 會先跳出確認視窗）
             if let link = UserDefaults.standard.string(forKey: "openURL"), let url = URL(string: link) {
                 router.open(url)

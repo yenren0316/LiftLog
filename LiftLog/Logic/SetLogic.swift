@@ -57,6 +57,11 @@ nonisolated enum SetLogic {
     }
 
     /// 打勾需要的欄位是否齊全；不齊全時該列晃動、不標記完成
+    /// 使用者有輸入任何數字（灰字預填不算）
+    static func hasEnteredValues(_ v: SetValues) -> Bool {
+        v.reps != nil || [v.weightKg, v.incline, v.speed, v.minutes, v.seconds].contains { $0 != nil }
+    }
+
     static func canComplete(_ v: SetValues, logType: LogType, equipment: Equipment) -> Bool {
         switch logType {
         case .cardio:
