@@ -65,8 +65,8 @@ struct BodyWeightLogTests {
                        BodyWeightLog.Entry(date: date(10), kg: 72.8),
                        BodyWeightLog.Entry(date: date(25), kg: 72)]
         // 30 天前是 9/26：用那天的 73.5
-        let change = try? #require(BodyWeightLog.change(entries, now: now, calendar: calendar))
-        #expect(abs((change ?? 0) - (-1.5)) < 0.001)
+        let change = BodyWeightLog.change(entries, now: now, calendar: calendar)
+        #expect(change.map { abs($0 - (-1.5)) < 0.001 } == true)
         // 30 天前沒有紀錄
         #expect(BodyWeightLog.change(Array(entries.suffix(2)), now: now, calendar: calendar) == nil)
         // 最新一筆本身就在 30 天前
