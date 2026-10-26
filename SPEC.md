@@ -7,6 +7,7 @@
 > - CHANGE_05：小工具、即時動態、控制中心與動作按鈕、App Shortcut。
 > - CHANGE_06：共軛訓練（ME／DE）：標籤主／單／爆、動作庫 v2（51 個）、主項輪替、日型、建立菜單改寫、首頁「下一次」與主項紀錄。
 > - CHANGE_07：資訊架構重整：四個分頁「今天／歷程／動作庫／設定」、最多三層、單一的開始入口（`WorkoutLauncher`）、訓練摘要浮窗與編輯、補登、訓練目的名稱、統計與體重、資料遷移與自動備份、小工具的＋。
+> - CHANGE_08：實機回饋修正：編輯已結束的訓練時處理沒打勾的組、歷程捲到底部跳動（分頁列自動隱藏改寫）、訓練頻率改成長條圖、今天的日曆依部位上色並浮出標籤、即時動態固定高度、每個輸入都能收起鍵盤。
 >
 > 以本文件為準。
 
@@ -523,6 +524,7 @@ CHANGE_04 刪除了 15 個從沒練過的動作（前抱式深蹲、分腿蹲、
 
 ### 13. 開發用啟動參數（只在 DEBUG）
 - 資料：`-demoData YES`（seed 之外加 5 次示範訓練與近期體重，只加一次）、`-emptyData YES`（清空所有資料、不匯入 seed，檢查空狀態）。
+- CHANGE_08：`-scrollToBottom 紀錄｜統計｜動作庫｜分類`、`-tabBarLog YES`、`-frequencyPeriod month`、`-frequencyPeek <倒數第幾段>`、`-calendarPeek 2026-10-24`、`-demoBackfillPrompt YES`、`-editorFinishPrompt YES`、`-openWeightEntry YES`、`-previewFinishSummary YES`、`-focusWeight YES`。
 - 導航：`-startTab 0…3`、`-todayCategory core`、`-historySegment stats`、`-statsScrollTo weight`、`-openBackfill YES`、`-openSummary latest｜edit`、`-libraryCategory kneeDominant`、`-librarySortMenu YES`、`-openArchived YES`、`-openExercise 臥推`、`-detailTab guide｜history`、`-settingsPage backup`、`-planStep 2`、`-planAnswers deUpper,2,1`、`-demoWorkout YES`、`-demoRest YES`、`-discardActive YES`、`-openURL liftlog://today`、`-widgetGallery small｜lock｜live｜island｜control`、`-previewExpirationDays 6`。
 
 ## 初始資料

@@ -1,0 +1,25 @@
+# CHANGE_08 V1：捲到底部後每 0.5 秒連拍 5 張，遮掉最上面 200 px（狀態列）比對像素
+## 歷程・紀錄
+V1_records_2.png：相同
+V1_records_3.png：相同
+V1_records_4.png：相同
+V1_records_5.png：相同
+結果：全部相同
+## 歷程・統計
+V1_stats_2.png：相同
+V1_stats_3.png：相同
+V1_stats_4.png：相同
+V1_stats_5.png：相同
+結果：全部相同
+## 動作庫・第 1 層
+V1_library_2.png：相同
+V1_library_3.png：相同
+V1_library_4.png：相同
+V1_library_5.png：相同
+結果：全部相同
+## 動作庫・分類清單（核心）
+V1_category_2.png：相同
+V1_category_3.png：相同
+V1_category_4.png：相同
+V1_category_5.png：相同
+結果：全部相同
