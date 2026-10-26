@@ -141,11 +141,41 @@ private struct UnitsSettings: View {
 // MARK: - 訓練
 
 private struct TrainingSettings: View {
+    @Environment(StatsCache.self) private var stats
     @AppStorage(WorkoutService.autoRestKey) private var autoRestTimer = true
     @AppStorage(LiveActivityController.enabledKey) private var liveActivityEnabled = true
+    /// 0＝從來沒設定過（用近 12 週的平均）
+    @AppStorage(WeeklyGoal.goalKey) private var storedGoal = 0
+    @AppStorage(WeeklyGoal.cardioOnlyCountsKey) private var cardioOnlyCounts = false
 
     var body: some View {
         SettingsPage {
+            // 每週目標（CHANGE_09 §1）
+            VStack(alignment: .leading, spacing: 10) {
+                let goal = WeeklyGoal.goal(stored: storedGoal, automatic: stats.snapshot.automaticWeeklyGoal)
+                Stepper(value: Binding(get: { goal }, set: { storedGoal = $0 }), in: WeeklyGoal.range) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Label("每週目標", systemImage: "target").font(.headline)
+                        Spacer()
+                        Text("\(goal) 次").font(.headline.monospacedDigit())
+                    }
+                }
+                Text(WeeklyGoal.range.contains(storedGoal)
+                     ? "一週從週一開始，同一天練兩次只算 1 次，只算有完成組的訓練。首頁日曆標出達標的週，並算連續達標幾週。"
+                     : "還沒設定過：依近 12 週（不含本週）的平均自動帶入，調整之後就固定用你設定的。一週從週一開始，同一天練兩次只算 1 次。")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+                Divider().overlay(Theme.separator)
+                Toggle(isOn: $cardioOnlyCounts) {
+                    Text("只有有氧的訓練也算").font(.subheadline.weight(.semibold))
+                }
+                Text("關閉時，當天只做了跑步機就不算；只要有一個其他動作的完成組，那天就算。首頁日曆、訓練頻率和每週目標都用同一個算法。")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            .card()
+            .onChange(of: cardioOnlyCounts) { stats.recompute() }
+
             VStack(alignment: .leading, spacing: 8) {
                 Toggle(isOn: $autoRestTimer) {
                     Label("打勾後自動開始休息計時", systemImage: "timer").font(.headline)

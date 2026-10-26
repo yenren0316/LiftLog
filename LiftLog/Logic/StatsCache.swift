@@ -77,6 +77,8 @@ nonisolated struct StatsSnapshot: Sendable {
     var countedDays: [Date: DayRegion] = [:]
     /// 每週（週一）算進次數的天數：每週目標、日曆達標的小點
     var weekCounts: [Date: Int] = [:]
+    /// 每週目標的預設值（使用者沒設定過時用，CHANGE_09 §1）
+    var automaticWeeklyGoal = WeeklyGoal.fallback
     /// 訓練頻率卡：近 12 週、近 12 個月，依部位分開（CHANGE_08 §3）；以天為單位（CHANGE_09 §4），平均只算過完的週或月（§0-2）
     var frequencyWeeks = TrainingFrequency.Series()
     var frequencyMonths = TrainingFrequency.Series()
@@ -145,6 +147,7 @@ nonisolated struct StatsSnapshot: Sendable {
         // 訓練次數：全 App 同一套規則（以天為單位、只有有氧的處理），頻率卡的長條、每週目標都從這裡算
         snapshot.countedDays = TrainingCount.days(history.sessions, cardioOnlyCounts: cardioOnlyCounts, calendar: calendar)
         snapshot.weekCounts = TrainingCount.weeks(snapshot.countedDays, calendar: weekCalendar)
+        snapshot.automaticWeeklyGoal = WeeklyGoal.automatic(weeks: snapshot.weekCounts, now: now, calendar: weekCalendar)
         let counted = snapshot.countedDays.map { (date: $0.key, region: $0.value) }
         snapshot.frequencyWeeks = TrainingFrequency.series(counted, period: .week, now: now, calendar: weekCalendar)
         snapshot.frequencyMonths = TrainingFrequency.series(counted, period: .month, now: now, calendar: weekCalendar)

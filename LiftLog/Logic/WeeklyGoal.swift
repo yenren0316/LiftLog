@@ -45,6 +45,33 @@ nonisolated enum TrainingCount {
 nonisolated enum WeeklyGoal {
     /// 「只有有氧的訓練也算」，預設關閉
     static let cardioOnlyCountsKey = "weeklyGoal.cardioOnlyCounts"
+    /// 使用者設定的目標；0（沒有這個值）表示從來沒設定過，用自動算的預設值
+    static let goalKey = "weeklyGoal.goal"
+    static let range = 1...7
+    /// 近 12 週完全沒有紀錄時的預設值
+    static let fallback = 3
+
+    /// 預設值：近 12 個已經過完的週（不含本週）平均每週幾天，四捨五入，限制在 1–7；這 12 週都沒有紀錄時是 3
+    static func automatic(weeks: [Date: Int], now: Date = .now, calendar: Calendar) -> Int {
+        guard let thisWeek = TrainingCount.weekStart(of: now, calendar: calendar) else { return fallback }
+        let total = (1...TrainingFrequency.bucketCount).reduce(0) { sum, back in
+            guard let day = calendar.date(byAdding: .day, value: -7 * back, to: thisWeek),
+                  let start = TrainingCount.weekStart(of: day, calendar: calendar) else { return sum }
+            return sum + (weeks[start] ?? 0)
+        }
+        guard total > 0 else { return fallback }
+        let average = (Double(total) / Double(TrainingFrequency.bucketCount)).rounded()
+        return min(max(Int(average), range.lowerBound), range.upperBound)
+    }
+
+    /// 目前的目標：設定過就用設定的，從來沒設定過才用預設值
+    static func goal(stored: Int, automatic: Int) -> Int {
+        range.contains(stored) ? stored : automatic
+    }
+
+    static func goal(automatic: Int, defaults: UserDefaults = .standard) -> Int {
+        goal(stored: defaults.integer(forKey: goalKey), automatic: automatic)
+    }
 
     struct Progress: Equatable, Sendable {
         /// 本週算進次數的天數
