@@ -327,11 +327,12 @@ CHANGE_04 刪除了 15 個從沒練過的動作（前抱式深蹲、分腿蹲、
 - 熱身組號用 accent，MAX 組號用 warning。
 
 ### 9-2. App icon
-- 斜放 45° 的啞鈴，午夜藍配色（底 #0B1220、啞鈴 #4C7DF0），扁平、沒有文字。
+- 壺鈴，鈴身挖出一條往右上升的折線箭頭（`kettlebell/` 第 1 版），午夜藍配色（底 #0B1220、壺鈴 #4C7DF0），扁平、沒有文字。
 - `AppIcon.appiconset` 三種外觀，都是 1024×1024 PNG：
   - 一般（Any）：午夜藍底，沒有 alpha 通道。
   - 深色（Dark）：透明底，系統墊上自己的深色背景。
   - 單色（Tinted）：透明底、白色灰階圖，系統依使用者選的顏色上色。
+  - 深色和單色的折線用 SVG mask 挖空成透明，不是畫上底色。
 - 由 `tools/icon_concepts/make_appicon.py` 產生（SVG 轉 PNG 用同資料夾的 `render.swift`，只用 macOS 內建的 AppKit）。其他候選版本在 `tools/icon_concepts/` 的 `dumbbell/`、`kettlebell/` 與概念 A–C。
 
 ### 10. 備份

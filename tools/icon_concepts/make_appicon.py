@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""把選定的 icon（啞鈴第 2 版：斜放啞鈴，午夜藍）輸出成 App icon 的三種外觀，寫進 AppIcon.appiconset。
+"""把選定的 icon（壺鈴第 1 版：鈴身挖出上升折線，午夜藍）輸出成 App icon 的三種外觀，寫進 AppIcon.appiconset。
 
 - 一般：午夜藍底，沒有 alpha 通道。
 - 深色：透明底，系統會墊上自己的深色背景。
 - 單色（Tinted）：透明底、白色的灰階圖，系統依使用者選的顏色上色。
+深色和單色的折線是真的挖空（透明），不是畫上底色。
 
 用法：python3 tools/icon_concepts/make_appicon.py
 """
@@ -12,7 +13,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from make_dumbbell import DUMBBELL, PALETTES, place, shapes
+from make_kettlebell import PALETTES, kettlebell, rise
 
 HERE = Path(__file__).resolve().parent
 ICONSET = HERE.parent.parent / "LiftLog" / "Assets.xcassets" / "AppIcon.appiconset"
@@ -25,15 +26,17 @@ def svg(body, bg=None):
             f'{background}{body}</svg>\n')
 
 
-def dumbbell(color):
-    return place(shapes(DUMBBELL, color), angle=-45, scale=1.08)
+def icon(color):
+    """壺鈴，鈴身裡的上升折線用 mask 挖空"""
+    cut = f'<mask id="cut"><rect width="1024" height="1024" fill="#FFFFFF"/>{rise("#000000")}</mask>'
+    return f'<defs>{cut}</defs><g mask="url(#cut)">{kettlebell(color, color)}</g>'
 
 
 VARIANTS = [
     # (檔名, SVG, 外觀, 是否不透明)
-    ("AppIcon.png", svg(dumbbell(COLORS["accent"]), COLORS["bg"]), None, True),
-    ("AppIcon-Dark.png", svg(dumbbell(COLORS["accent"])), "dark", False),
-    ("AppIcon-Tinted.png", svg(dumbbell("#FFFFFF")), "tinted", False),
+    ("AppIcon.png", svg(icon(COLORS["accent"]), COLORS["bg"]), None, True),
+    ("AppIcon-Dark.png", svg(icon(COLORS["accent"])), "dark", False),
+    ("AppIcon-Tinted.png", svg(icon("#FFFFFF")), "tinted", False),
 ]
 
 
