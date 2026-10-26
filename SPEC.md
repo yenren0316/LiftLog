@@ -36,6 +36,7 @@ App 只給自己用、不上架，用免費 Apple ID（Personal Team）安裝。
   - 分頁列的隱藏和出現不改變內容的版面：捲動畫面一律延伸到螢幕底部（忽略底部安全區域），底部固定留「分頁列顯示時的底部安全區域」（分頁列、Home 指示條、訓練中橫條，量到的最大值），所以可捲動範圍和捲動位置都不會因為分頁列而變。最底部判斷用 `visibleRect` 的高度（`containerSize` 在 ScrollView 不含底部 inset、在 List 含，會差一個 inset）。
   - 切換分頁或進入下一頁時恢復顯示；不隱藏時交給系統（`.automatic`），動作詳情這類下一頁自己的 `.toolbar(.hidden, for: .tabBar)` 才會生效。
   - 開發用：`-scrollToBottom 紀錄｜統計｜動作庫｜分類` 捲到最底部（分類要搭配 `-libraryCategory`）；DEBUG 版用 os.Logger（subsystem `com.aaronhou.LiftLog`、category `TabBarAutoHide`）記每次切換，`-tabBarLog YES` 另外記每一格的捲動位置、可捲動範圍、內容高度和 inset。
+- 收起鍵盤（CHANGE_08 追加）：數字鍵盤沒有 return 鍵、多行輸入的 return 是換行，所以每個輸入的地方都要有辦法收起鍵盤。共用的 `.keyboardDoneButton()` 在鍵盤上方右側放「完成」（收起目前任何一個輸入框的鍵盤）：記錄體重、完成訓練的今天體重、強度換算表的手動 1RM、編輯動作、編輯說明；表單和可捲動的畫面另外可以往下拖收起（`.scrollDismissesKeyboard(.interactively)`）。訓練中和編輯訓練的組用自己的鍵盤列（-2.5／+2.5／+5、下一格、完成）；名稱欄位也會出現這一列，那時沒有「下一格」，「完成」直接收起鍵盤。訓練名稱按 return 當成完成（名稱不換行）。完成訓練的今天體重輸入時捲到畫面中間，不被鍵盤蓋住。搜尋框用鍵盤的搜尋鍵，備註的 alert 有自己的按鈕。開發用：`-openWeightEntry YES`、`-previewFinishSummary YES`、`-focusWeight YES`。
 - 點擊回饋與動畫：自訂按鈕一律用 `PressableButtonStyle`（`.pressable`，按下時微縮、變淡，放開時彈回），不用 `.plain`。點選造成的狀態改變（選項、組合、候選動作、篩選 chips、打勾、新增或刪除一組、上下移、收合）都包在 `withAnimation(.tap)` 裡；勾選圖示用 symbol 的 replace／bounce 效果；分頁和圖表的切換用 `.animation(.tap)` 的 binding；換主題時整個畫面淡入淡出。
 - 資料夾自動同步：新的 .swift 檔直接放進 App 資料夾即可。非必要不改 project.pbxproj，不動 Signing 設定。
   - 例外（已同意）：為了讀取 Apple Watch 運動，加了 HealthKit entitlement（`LiftLog.entitlements`）與健康資料讀取說明。

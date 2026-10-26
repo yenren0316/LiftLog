@@ -42,6 +42,7 @@ struct ExerciseDetailView: View {
             }
             .padding(16)
         }
+        .scrollDismissesKeyboard(.interactively)
         .screenBackground()
         .navigationTitle(exercise.name)
         .navigationBarTitleDisplayMode(.inline)

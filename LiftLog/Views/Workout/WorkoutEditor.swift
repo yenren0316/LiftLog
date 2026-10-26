@@ -344,9 +344,15 @@ struct WorkoutEditor<Header: View>: View {
                 Button("+5") { stepWeight(5) }
             }
             Spacer()
-            Button("下一格", action: focusNext)
-            Button("完成") { focus = nil }
-                .fontWeight(.semibold)
+            // 名稱欄位也會出現這一列：那時沒有「下一格」，「完成」直接收起鍵盤
+            if focus != nil {
+                Button("下一格", action: focusNext)
+            }
+            Button("完成") {
+                focus = nil
+                dismissKeyboard()
+            }
+            .fontWeight(.semibold)
         }
     }
 

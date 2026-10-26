@@ -45,9 +45,11 @@ struct WorkoutSummaryView: View {
     @AppStorage(WeightUnit.storageKey) private var unit: WeightUnit = .kg
     /// 選填的「今天體重」（CHANGE_07 D-2）
     @State private var weightText = ""
+    @FocusState private var weightFocused: Bool
     @State private var confirmingOverwrite: BodyWeight?
 
     var body: some View {
+        ScrollViewReader { proxy in
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 VStack(alignment: .leading, spacing: 6) {
@@ -105,18 +107,40 @@ struct WorkoutSummaryView: View {
                     Spacer()
                     TextField(BodyWeightLog.existing(on: .now, in: context).map { unit.format(kg: $0.kg) } ?? "—", text: $weightText)
                         .keyboardType(.decimalPad)
+                        .focused($weightFocused)
                         .multilineTextAlignment(.trailing)
                         .font(.title3.weight(.semibold).monospacedDigit())
                         .frame(width: 90)
                     Text(unit.symbol).foregroundStyle(Theme.textSecondary)
                 }
                 .card(padding: 16)
+                .id("weight")
 
                 PrimaryButton(title: "完成", action: finish)
             }
             .padding(16)
         }
+        // 輸入今天體重時捲到中間，不被鍵盤和鍵盤上的「完成」蓋住
+        .onChange(of: weightFocused) { _, focused in
+            guard focused else { return }
+            Task {
+                try? await Task.sleep(for: .milliseconds(350))
+                withAnimation { proxy.scrollTo("weight", anchor: .center) }
+            }
+        }
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .keyboardDoneButton()
         .screenBackground()
+        #if DEBUG
+        // 開發用：-focusWeight YES 直接輸入今天體重（截鍵盤的「完成」用）
+        .task {
+            if UserDefaults.standard.bool(forKey: "focusWeight") {
+                try? await Task.sleep(for: .milliseconds(800))
+                weightFocused = true
+            }
+        }
+        #endif
         .alert("覆蓋今天的體重？", isPresented: Binding(get: { confirmingOverwrite != nil }, set: { if !$0 { confirmingOverwrite = nil } }),
                presenting: confirmingOverwrite) { existing in
             Button("覆蓋") {

@@ -106,6 +106,8 @@ private struct GuideEditView: View {
                 .listRowBackground(Theme.card)
             }
             .scrollContentBackground(.hidden)
+            .scrollDismissesKeyboard(.interactively)
+            .keyboardDoneButton()
             .screenBackground()
             .navigationTitle(exercise.name)
             .navigationBarTitleDisplayMode(.inline)

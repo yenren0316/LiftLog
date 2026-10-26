@@ -213,6 +213,16 @@ struct RootView: View {
                     WorkoutActions.save(context)
                 }
             }
+            // 開發用：-previewFinishSummary YES 用最近一次訓練顯示完成畫面（看今天體重的鍵盤）
+            if UserDefaults.standard.bool(forKey: "previewFinishSummary") {
+                var latest = FetchDescriptor<WorkoutSession>(predicate: #Predicate { $0.endedAt != nil },
+                                                             sortBy: [SortDescriptor(\.startedAt, order: .reverse)])
+                latest.fetchLimit = 1
+                if let session = try? context.fetch(latest).first {
+                    coordinator.summary = WorkoutSummary(session: session, unit: unit)
+                    coordinator.isExpanded = true
+                }
+            }
             // 開發用：-openURL liftlog://new 模擬點小工具（simctl openurl 會先跳出確認視窗）
             if let link = UserDefaults.standard.string(forKey: "openURL"), let url = URL(string: link) {
                 router.open(url)

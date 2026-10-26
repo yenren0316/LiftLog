@@ -12,7 +12,14 @@ struct SessionTitleField: View {
         VStack(alignment: .leading, spacing: 4) {
             TextField(session.automaticTitle(), text: $text, axis: .vertical)
                 .font(.title2.bold())
+                .submitLabel(.done)
                 .onChange(of: text) {
+                    // 多行的輸入框按 return 是換行：名稱不需要換行，當成「完成」收起鍵盤
+                    if text.contains("\n") {
+                        text = text.replacingOccurrences(of: "\n", with: "")
+                        dismissKeyboard()
+                        return
+                    }
                     session.setTitle(fromUserInput: text)
                     WorkoutActions.save(context)
                 }

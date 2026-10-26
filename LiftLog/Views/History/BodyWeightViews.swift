@@ -51,6 +51,12 @@ struct BodyWeightCard: View {
         }
         .card(padding: 16)
         .sheet(item: $entry) { BodyWeightEntrySheet(date: $0.date) }
+        #if DEBUG
+        // 開發用：-openWeightEntry YES 打開記錄體重
+        .task {
+            if UserDefaults.standard.bool(forKey: "openWeightEntry") { entry = BodyWeightEntryRequest(date: .now) }
+        }
+        #endif
     }
 
     private func chart(_ entries: [BodyWeightLog.Entry], average: [BodyWeightLog.Entry]) -> some View {
@@ -96,6 +102,7 @@ struct BodyWeightEntrySheet: View {
     @State private var text = ""
     @State private var confirmingOverwrite: BodyWeight?
     @State private var showingHealth = false
+    @FocusState private var weightFocused: Bool
 
     var body: some View {
         NavigationStack {
@@ -111,6 +118,7 @@ struct BodyWeightEntrySheet: View {
                         Spacer()
                         TextField("例如 70.5", text: $text)
                             .keyboardType(.decimalPad)
+                            .focused($weightFocused)
                             .multilineTextAlignment(.trailing)
                             .font(.title3.weight(.semibold).monospacedDigit())
                             .frame(width: 120)
@@ -134,6 +142,7 @@ struct BodyWeightEntrySheet: View {
             }
             .padding(16)
             .screenBackground()
+            .keyboardDoneButton()
             .navigationTitle("記錄體重")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -149,6 +158,15 @@ struct BodyWeightEntrySheet: View {
             Text("\(date.shortDate) 已經有 \(unit.formatWithUnit(kg: existing.kg))，同一天只保留一筆。")
         }
         .sheet(isPresented: $showingHealth) { HealthBodyMassImport() }
+        #if DEBUG
+        // 開發用：-focusWeight YES 打開時直接輸入體重（截鍵盤的「完成」用）
+        .task {
+            if UserDefaults.standard.bool(forKey: "focusWeight") {
+                try? await Task.sleep(for: .milliseconds(600))
+                weightFocused = true
+            }
+        }
+        #endif
     }
 
     private var kg: Double? {

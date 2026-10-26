@@ -113,6 +113,8 @@ struct ExerciseEditView: View {
             .screenBackground()
             .navigationTitle(exercise == nil ? "新增動作" : "編輯動作")
             .navigationBarTitleDisplayMode(.inline)
+            .scrollDismissesKeyboard(.interactively)
+            .keyboardDoneButton()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("取消") { dismiss() }
