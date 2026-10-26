@@ -56,17 +56,45 @@ struct TabBarAutoHideTests {
         #expect(state.isHidden)
     }
 
-    @Test func layoutChangesOnlyMoveTheStartingPoint() {
+    @Test func listHeightEstimatesDoNotBlockHiding() {
+        // List 捲動時一直重估內容高度：可捲動範圍每一格都不一樣，照樣要能隱藏和出現（曾經因此完全不會隱藏）
+        var state = TabBarAutoHide()
+        state.update(offset: 0, maxOffset: 3000, isScrolling: false)
+        for (i, offset) in stride(from: 10, through: 200, by: 10).enumerated() {
+            state.update(offset: CGFloat(offset), maxOffset: 3000 + CGFloat(i * 37 % 90), isScrolling: true)
+        }
+        #expect(state.isHidden)
+        for (i, offset) in stride(from: 190, through: 150, by: -10).enumerated() {
+            state.update(offset: CGFloat(offset), maxOffset: 3100 - CGFloat(i * 23 % 70), isScrolling: true)
+        }
+        #expect(!state.isHidden)
+    }
+
+    @Test func barLeavingAtTheBottomDoesNotBringItBack() {
+        // 滑到最底部時分頁列消失，可捲動範圍變短，內容被拉回新的最底部：不算往上滑（曾經會彈出來一下又消失）
         var state = TabBarAutoHide()
         state.update(offset: 0, maxOffset: 1000, isScrolling: false)
-        scroll(&state, [300, 700, 1000], max: 1000)
+        scroll(&state, [300, 700, 980], max: 1000)
         #expect(state.isHidden)
-        // 分頁列消失讓可捲動範圍變短，停在底部的內容跟著往上移：不算往上滑
-        scroll(&state, [970, 950], max: 950)
+        for limit in stride(from: 990, through: 940, by: -10) {
+            state.update(offset: CGFloat(limit), maxOffset: CGFloat(limit), isScrolling: true)
+        }
         #expect(state.isHidden)
-        // 沒在捲動時的位移（例如展開一個區塊）也不算
-        state.update(offset: 900, maxOffset: 950, isScrolling: false)
-        scroll(&state, [890])
+        // 從最底部往上滑才出現
+        scroll(&state, [930, 920], max: 940)
+        #expect(state.isHidden)
+        scroll(&state, [910], max: 940)
+        #expect(!state.isHidden)
+    }
+
+    @Test func movesWhileNotScrollingOnlyMoveTheStartingPoint() {
+        var state = TabBarAutoHide()
+        state.update(offset: 0, maxOffset: 1000, isScrolling: false)
+        scroll(&state, [300, 700], max: 1000)
+        #expect(state.isHidden)
+        // 沒在捲動時的位移（例如收合一個區塊）不算
+        state.update(offset: 500, maxOffset: 800, isScrolling: false)
+        scroll(&state, [490])
         #expect(state.isHidden)
     }
 

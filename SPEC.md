@@ -25,7 +25,7 @@ App 只給自己用、不上架，用免費 Apple ID（Personal Team）安裝。
 - App Groups（CHANGE_05）：先用 `xcodebuild -allowProvisioningUpdates` 對實機建置，確認免費帳號（Personal Team）也能簽署，才開始使用。群組 `group.com.aaronhou.LiftLog` 只用來讓 App 把小工具快照交給小工具；資料庫不放在群組裡。
 - 介面全部繁體中文。重量單位由設定頁的全域 kg／lbs 決定，資料一律存 kg（1 lb = 0.45359237 kg）。版面簡潔、字大，適合在健身房單手操作。
 - UI 風格參考 Habits First：大圓角卡片、細進度條、懸浮膠囊分頁列。顏色由主題決定（見「主題配色」），預設石墨橙。
-- 分頁列隨捲動隱藏（四個分頁的主畫面都是，像 Threads）：往下滑超過 24 pt 隱藏、往上滑超過 24 pt 或回到頂端時出現；頂端和底部的回彈不算，分頁列出現或消失造成的內容位移也不算（邏輯在 `TabBarAutoHide`）。切換分頁或進入下一頁時恢復顯示。
+- 分頁列隨捲動隱藏（四個分頁的主畫面都是，像 Threads）：往下滑超過 24 pt 隱藏、往上滑超過 24 pt 或回到頂端時出現；頂端和底部的回彈不算。只看捲動位置、不看可捲動範圍（List 捲動時會一直重估內容高度）；停在最底部時的位移不算往上滑（分頁列消失讓範圍變短，內容會被拉回最底部）。邏輯在 `TabBarAutoHide`。切換分頁或進入下一頁時恢復顯示。
 - 點擊回饋與動畫：自訂按鈕一律用 `PressableButtonStyle`（`.pressable`，按下時微縮、變淡，放開時彈回），不用 `.plain`。點選造成的狀態改變（選項、組合、候選動作、篩選 chips、打勾、新增或刪除一組、上下移、收合）都包在 `withAnimation(.tap)` 裡；勾選圖示用 symbol 的 replace／bounce 效果；分頁和圖表的切換用 `.animation(.tap)` 的 binding；換主題時整個畫面淡入淡出。
 - 資料夾自動同步：新的 .swift 檔直接放進 App 資料夾即可。非必要不改 project.pbxproj，不動 Signing 設定。
   - 例外（已同意）：為了讀取 Apple Watch 運動，加了 HealthKit entitlement（`LiftLog.entitlements`）與健康資料讀取說明。
