@@ -6,7 +6,7 @@ import Testing
 
 struct ThemeTests {
     @Test func everyThemeHasEveryToken() {
-        #expect(AppTheme.allCases.count == 5)
+        #expect(AppTheme.allCases.count == 6)
         for theme in AppTheme.allCases {
             let tokens = theme.palette.tokens
             #expect(tokens.count == 11, "\(theme)")
@@ -18,32 +18,59 @@ struct ThemeTests {
     @Test func paletteValuesFollowTheSpecOrder() {
         let orange = AppTheme.graphiteOrange.palette
         #expect(orange.background == 0x111214 && orange.accent == 0xFF8A3D && orange.danger == 0xEF5350)
-        let sand = AppTheme.warmSand.palette
-        #expect(sand.card == 0xFFFFFF && sand.textPrimary == 0x2B2622 && sand.done == 0x3E8E5E)
-        #expect(AppTheme.pureBlack.palette.onAccent == 0x000000)
+        let blue = AppTheme.graphiteBlue.palette
+        #expect(blue.accent == 0x4C7DF0 && blue.onAccent == 0xFFFFFF)
     }
 
-    @Test func darkAndLightGroups() {
-        #expect(AppTheme.darkThemes == [.graphiteOrange, .midnightBlue, .pureBlack])
-        #expect(AppTheme.lightThemes == [.warmSand, .coolGray])
+    @Test func everyThemeSharesTheGraphiteBase() {
+        let base = AppTheme.graphiteOrange.palette
+        for theme in AppTheme.allCases {
+            var palette = theme.palette
+            (palette.accent, palette.onAccent) = (base.accent, base.onAccent)
+            #expect(palette == base, "\(theme)")
+        }
+        #expect(Set(AppTheme.allCases.map(\.palette.accent)).count == AppTheme.allCases.count)
     }
 
-    @Test func settingsDefaultsAndFollowSystem() throws {
+    @Test func storedIDsIncludingLegacyThemes() throws {
+        #expect(AppTheme(stored: nil) == .graphiteOrange)
+        #expect(AppTheme(stored: "graphitePurple") == .graphitePurple)
+        #expect(AppTheme(stored: "midnightBlue") == .graphiteBlue)
+        #expect(AppTheme(stored: "coolGray") == .graphiteBlue)
+        #expect(AppTheme(stored: "pureBlack") == .graphiteSilver)
+        #expect(AppTheme(stored: "warmSand") == .graphiteOrange)
+        #expect(AppTheme(stored: "nonsense") == .graphiteOrange)
+
         let defaults = try #require(UserDefaults(suiteName: "ThemeTests.\(UUID().uuidString)"))
-        var settings = ThemeSettings.load(defaults)
-        #expect(settings == ThemeSettings(theme: .graphiteOrange, followSystem: false, dark: .midnightBlue, light: .coolGray))
-        #expect(settings.colorScheme == .dark)
-        #expect(settings.active(systemIsDark: false) == .graphiteOrange)
+        #expect(AppTheme.load(defaults) == .graphiteOrange)
+        defaults.set("graphitePink", forKey: AppTheme.storageKey)
+        #expect(AppTheme.load(defaults) == .graphitePink)
+    }
 
+    @Test func migratesLegacySettings() throws {
+        let defaults = try #require(UserDefaults(suiteName: "ThemeTests.\(UUID().uuidString)"))
+        // 沒設定過：維持沒有設定（用預設的石墨橙）
+        AppTheme.migrateLegacySettings(defaults)
+        #expect(defaults.string(forKey: AppTheme.storageKey) == nil)
+
+        // 固定主題
+        defaults.set("pureBlack", forKey: AppTheme.storageKey)
+        AppTheme.migrateLegacySettings(defaults)
+        #expect(defaults.string(forKey: AppTheme.storageKey) == "graphiteSilver")
+
+        // 跟隨系統外觀：用當時的深色主題，舊設定刪掉
         defaults.set("warmSand", forKey: AppTheme.storageKey)
-        settings = ThemeSettings.load(defaults)
-        #expect(settings.colorScheme == .light)
+        defaults.set(true, forKey: "theme.followSystem")
+        defaults.set("midnightBlue", forKey: "theme.dark")
+        defaults.set("coolGray", forKey: "theme.light")
+        AppTheme.migrateLegacySettings(defaults)
+        #expect(defaults.string(forKey: AppTheme.storageKey) == "graphiteBlue")
+        #expect(defaults.object(forKey: "theme.followSystem") == nil)
+        #expect(defaults.object(forKey: "theme.dark") == nil && defaults.object(forKey: "theme.light") == nil)
 
-        defaults.set(true, forKey: AppTheme.followSystemKey)
-        settings = ThemeSettings.load(defaults)
-        #expect(settings.colorScheme == nil)
-        #expect(settings.active(systemIsDark: true) == .midnightBlue)
-        #expect(settings.active(systemIsDark: false) == .coolGray)
+        // 再跑一次不會變
+        AppTheme.migrateLegacySettings(defaults)
+        #expect(defaults.string(forKey: AppTheme.storageKey) == "graphiteBlue")
     }
 }
 

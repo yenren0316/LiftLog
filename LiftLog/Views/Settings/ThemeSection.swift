@@ -1,40 +1,24 @@
 import SwiftUI
 
-/// 設定頁的「主題」：每個主題一張預覽卡片，點一下立即套用；可跟隨系統外觀
+/// 設定頁的「主題」：石墨深灰的底配不同強調色，每個主題一張預覽卡片，點一下立即套用
 struct ThemeSection: View {
     @AppStorage(AppTheme.storageKey) private var theme: AppTheme = .graphiteOrange
-    @AppStorage(AppTheme.followSystemKey) private var followSystem = false
-    @AppStorage(AppTheme.darkKey) private var darkTheme: AppTheme = .midnightBlue
-    @AppStorage(AppTheme.lightKey) private var lightTheme: AppTheme = .coolGray
 
     private let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Label("主題", systemImage: "paintpalette.fill").font(.headline)
-            Toggle("跟隨系統外觀", isOn: $followSystem)
-                .font(.body.weight(.semibold))
-            if followSystem {
-                Text("深色模式").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.textSecondary)
-                grid(AppTheme.darkThemes, selection: $darkTheme)
-                Text("淺色模式").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.textSecondary)
-                grid(AppTheme.lightThemes, selection: $lightTheme)
-            } else {
-                grid(AppTheme.allCases, selection: $theme)
+            LazyVGrid(columns: columns, spacing: 12) {
+                ForEach(AppTheme.allCases) { option in
+                    Button { theme = option } label: {
+                        ThemePreviewCard(theme: option, isSelected: theme == option)
+                    }
+                    .buttonStyle(.pressable)
+                }
             }
         }
         .card()
-    }
-
-    private func grid(_ themes: [AppTheme], selection: Binding<AppTheme>) -> some View {
-        LazyVGrid(columns: columns, spacing: 12) {
-            ForEach(themes) { option in
-                Button { selection.wrappedValue = option } label: {
-                    ThemePreviewCard(theme: option, isSelected: selection.wrappedValue == option)
-                }
-                .buttonStyle(.pressable)
-            }
-        }
     }
 }
 
@@ -46,11 +30,9 @@ struct ThemePreviewCard: View {
     var body: some View {
         let p = theme.palette
         VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 4) {
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(theme.title).font(.subheadline.bold()).foregroundStyle(Color(hex: p.textPrimary))
-                    Text(theme.subtitle).font(.caption2).foregroundStyle(Color(hex: p.textSecondary))
-                }
+            HStack(spacing: 6) {
+                Circle().fill(Color(hex: p.accent)).frame(width: 10, height: 10)
+                Text(theme.title).font(.subheadline.bold()).foregroundStyle(Color(hex: p.textPrimary))
                 Spacer(minLength: 0)
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill").foregroundStyle(Color(hex: p.accent))

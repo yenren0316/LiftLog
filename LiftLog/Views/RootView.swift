@@ -7,22 +7,15 @@ struct RootView: View {
     @State private var restTimer = RestTimer.shared
     @State private var tab = 0
     @AppStorage(AppTheme.storageKey) private var theme: AppTheme = .graphiteOrange
-    @AppStorage(AppTheme.followSystemKey) private var followSystem = false
-    @AppStorage(AppTheme.darkKey) private var darkTheme: AppTheme = .midnightBlue
-    @AppStorage(AppTheme.lightKey) private var lightTheme: AppTheme = .coolGray
     @AppStorage(WeightUnit.storageKey) private var unit: WeightUnit = .kg
     @Query(filter: #Predicate<WorkoutSession> { $0.endedAt == nil }) private var active: [WorkoutSession]
     private let router = DeepLinkRouter.shared
-
-    private var themeSettings: ThemeSettings {
-        ThemeSettings(theme: theme, followSystem: followSystem, dark: darkTheme, light: lightTheme)
-    }
 
     var body: some View {
         #if DEBUG
         // 開發用：-widgetGallery small｜lock｜live 顯示小工具和即時動態的預覽
         if let page = UserDefaults.standard.string(forKey: "widgetGallery") {
-            WidgetGalleryView(page: page).preferredColorScheme(themeSettings.colorScheme)
+            WidgetGalleryView(page: page).preferredColorScheme(.dark)
         } else {
             content
         }
@@ -32,13 +25,13 @@ struct RootView: View {
     }
 
     private var content: some View {
-        // 換主題時重建畫面，讓所有 token 重新取色
+        // 換主題時重建畫面，讓所有 token 重新取色；主題都是深色，鍵盤、sheet 等系統元件也固定深色
         tabs
-            .id(themeSettings.key)
-            .animation(.easeInOut(duration: 0.35), value: themeSettings.key)
+            .id(theme)
+            .animation(.easeInOut(duration: 0.35), value: theme)
             .tint(Theme.accent)
-            .preferredColorScheme(themeSettings.colorScheme)
-            .onChange(of: themeSettings.key) {
+            .preferredColorScheme(.dark)
+            .onChange(of: theme) {
                 SnapshotWriter.shared.update()
                 LiveActivityController.shared.scheduleSync()
             }
@@ -114,7 +107,7 @@ struct RootView: View {
             }
             .environment(coordinator)
             .environment(restTimer)
-            .preferredColorScheme(themeSettings.colorScheme)
+            .preferredColorScheme(.dark)
         }
         .alert("沒有完成任何一組", isPresented: Binding(
             get: { coordinator.showEmptyFinishNotice },

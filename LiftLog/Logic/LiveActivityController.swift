@@ -1,7 +1,6 @@
 import ActivityKit
 import Foundation
 import SwiftData
-import UIKit
 
 extension WorkoutActivityAttributes.ContentState {
     /// 依進行中的訓練和休息計時器算出即時動態的內容
@@ -95,8 +94,7 @@ final class LiveActivityController {
         let context = LiftLogStore.container.mainContext
         if isEnabled, ActivityAuthorizationInfo().areActivitiesEnabled,
            let session = WorkoutActions.activeSession(in: context) {
-            let isDark = UITraitCollection.current.userInterfaceStyle == .dark
-            let palette = ThemeSettings.load().active(systemIsDark: isDark).palette
+            let palette = AppTheme.load().palette
             let timer = RestTimer.shared
             let rest = timer.startDate.flatMap { start in timer.endDate.map { start...$0 } }
             let unit = WeightUnit(rawValue: UserDefaults.standard.string(forKey: WeightUnit.storageKey) ?? "") ?? .kg

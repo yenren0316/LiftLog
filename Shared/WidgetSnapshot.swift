@@ -13,10 +13,8 @@ nonisolated struct WidgetSnapshot: Codable, Equatable, Sendable {
     /// 進行中的訓練
     var isInProgress: Bool
     var startedAt: Date?
-    /// 目前的主題；跟隨系統外觀時為 nil，改存深色和淺色兩個主題
+    /// 目前的主題
     var themeID: String?
-    var darkThemeID: String?
-    var lightThemeID: String?
 
     /// 從上次訓練到 date 經過幾個日曆天（同一天為 0）；沒有紀錄時為 nil
     func daysSinceLast(at date: Date, calendar: Calendar = .current) -> Int? {
@@ -39,12 +37,9 @@ nonisolated struct WidgetSnapshot: Codable, Equatable, Sendable {
         return "\(lastRegion.title)・\(date)"
     }
 
-    /// 依小工具目前的深淺決定配色；沒有快照時深色用石墨橙、淺色用冷灰
-    static func palette(for snapshot: WidgetSnapshot?, isDark: Bool) -> Palette {
-        let fallback: AppTheme = isDark ? .graphiteOrange : .coolGray
-        guard let snapshot else { return fallback.palette }
-        let id = snapshot.themeID ?? (isDark ? snapshot.darkThemeID : snapshot.lightThemeID)
-        return (id.flatMap(AppTheme.init(rawValue:)) ?? fallback).palette
+    /// 快照裡主題的配色；沒有快照時用石墨橙
+    static func palette(for snapshot: WidgetSnapshot?) -> Palette {
+        AppTheme(stored: snapshot?.themeID).palette
     }
 }
 

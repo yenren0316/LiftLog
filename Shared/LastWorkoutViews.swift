@@ -51,7 +51,7 @@ nonisolated extension WidgetSnapshot {
     static var sample: WidgetSnapshot {
         WidgetSnapshot(lastSessionDate: Calendar.current.date(byAdding: .day, value: -2, to: .now), lastRegion: .upper,
                        suggestedRegion: .lower, suggestedCount: 3, suggestsTreadmill: true,
-                       isInProgress: false, startedAt: nil, themeID: nil, darkThemeID: nil, lightThemeID: nil)
+                       isInProgress: false, startedAt: nil, themeID: nil)
     }
 }
 
@@ -59,10 +59,8 @@ nonisolated extension WidgetSnapshot {
 struct LastWorkoutSmallView: View {
     var snapshot: WidgetSnapshot?
     var date: Date
-    @Environment(\.colorScheme) private var colorScheme
-
     var body: some View {
-        let p = WidgetSnapshot.palette(for: snapshot, isDark: colorScheme == .dark)
+        let p = WidgetSnapshot.palette(for: snapshot)
         VStack(alignment: .leading, spacing: 0) {
             switch snapshot?.status(at: date) ?? .neverTrained {
             case .neverTrained:

@@ -306,22 +306,24 @@ CHANGE_04 刪除了 15 個從沒練過的動作（前抱式深蹲、分腿蹲、
 - 主題（見下節）。
 
 ### 9-1. 主題配色
-- 所有顏色集中在 `Theme/Theme.swift`，畫面只使用 token：
+- 所有顏色集中在 `Shared/Theme.swift`，畫面只使用 token：
   - background（頁面底色）、card（卡片與分區）、field（輸入框、未選取的 chip、長條底）、separator（分隔線、卡片外框）
   - textPrimary、textSecondary
   - accent（主要按鈕、選取狀態、圖表線條、分頁列）、onAccent（accent 上的文字）
   - done（完成的組：整列底色 done 18%，打勾符號 done；60 天內、狀態良好的數字）
   - warning（超過 60 天、MAX 標記）、danger（超過 180 天、刪除、錯誤）
-- 五個主題（background / card / field / separator / textPrimary / textSecondary / accent / onAccent / done / warning / danger）：
-  1. 石墨橙（深色）#111214 / #1B1C1F / #2A2B30 / #34363B / #F3F3F4 / #9C9DA3 / #FF8A3D / #111214 / #3FB97C / #F2C14E / #EF5350
-  2. 午夜藍（深色）#0B1220 / #141D30 / #1F2A40 / #2A3650 / #E8EDF6 / #8B97AD / #4C7DF0 / #FFFFFF / #2BB673 / #F3B63F / #F06262
-  3. 純黑（深色，適合 OLED）#000000 / #111111 / #1E1E1E / #2A2A2A / #FFFFFF / #8E8E93 / #E6E6E6 / #000000 / #34C759 / #FFCC00 / #FF453A
-  4. 暖砂（淺色）#F6F1EA / #FFFFFF / #EFE7DC / #E2D8CA / #2B2622 / #7D7368 / #C2602F / #FFFFFF / #3E8E5E / #B8860B / #C0392B
-  5. 冷灰（淺色）#F2F4F7 / #FFFFFF / #E9EDF2 / #DDE2E8 / #1A1F26 / #6B7480 / #2F6FEB / #FFFFFF / #1F9D63 / #C98A0B / #D64545
+- 只有深色：所有主題共用石墨深灰的底，只換強調色（accent／onAccent）。共用的 token：background #111214、card #1B1C1F、field #2A2B30、separator #34363B、textPrimary #F3F3F4、textSecondary #9C9DA3、done #3FB97C、warning #F2C14E、danger #EF5350。
+- 六個主題（accent / onAccent）：
+  1. 石墨橙 #FF8A3D / #111214（預設）
+  2. 石墨藍 #4C7DF0 / #FFFFFF（和 App icon 同色）
+  3. 石墨紫 #A683FF / #111214
+  4. 石墨粉 #FF6B9D / #111214
+  5. 石墨青 #2EC4D6 / #111214
+  6. 石墨銀 #E6E6E6 / #111214
+  強調色避開 done（綠）、warning（黃）、danger（紅），以免和狀態顏色混淆。
 - 設定頁「主題」：每個主題一張預覽卡片（一列已完成的組、一列未完成的組、選取中的 chip、主要按鈕、近 30 天長條），點一下立即套用。
-- 「跟隨系統外觀」開關：打開後分別選一個深色主題和一個淺色主題（預設午夜藍、冷灰），依系統深淺切換。
-- 設定存在 AppStorage：`theme.id`（預設石墨橙）、`theme.followSystem`、`theme.dark`、`theme.light`。
-- 依主題深淺設定 preferredColorScheme，讓鍵盤、sheet 等系統元件一致；跟隨系統時不指定。換主題時整個畫面重建。
+- 設定存在 AppStorage：`theme.id`（預設石墨橙）。CHANGE_04 的主題在啟動時換成強調色相近的新主題：午夜藍、冷灰 → 石墨藍，純黑 → 石墨銀，暖砂 → 石墨橙；開著「跟隨系統外觀」時用當時選的深色主題。`theme.followSystem`、`theme.dark`、`theme.light` 刪除。
+- preferredColorScheme 固定深色，讓鍵盤、sheet 等系統元件一致。換主題時整個畫面重建。
 - 熱身組號用 accent，MAX 組號用 warning。
 
 ### 9-2. App icon
@@ -352,7 +354,7 @@ CHANGE_04 刪除了 15 個從沒練過的動作（前抱式深蹲、分腿蹲、
   - lastSessionDate、lastRegion：最後一次已完成的訓練。
   - 今天的建議：suggestedRegion、suggestedCount、suggestsTreadmill，和建立菜單的預設答案相同（`PlanDefaults.answers`）。
   - 進行中的訓練：isInProgress、startedAt。
-  - 主題：themeID；跟隨系統外觀時 themeID 為空，改存 darkThemeID 和 lightThemeID。
+  - 主題：themeID。舊版快照（App 更新後還沒開過）的主題 id 一樣換成新主題，沒有 themeID 時用石墨橙。
 - 更新時機（`SnapshotWriter`）：
   - App 啟動。
   - 資料庫存檔（`ModelContext.didSave`）。開始、完成、捨棄訓練，以及編輯或刪除歷史訓練都會存檔；連續編輯時合併成一次（0.3 秒）。
@@ -371,7 +373,7 @@ CHANGE_04 刪除了 15 個從沒練過的動作（前抱式深蹲、分腿蹲、
 - 從來沒有紀錄：「還沒有紀錄」和「開始第一次訓練」。
 - 有進行中的訓練：「訓練中」和經過時間（`Text(startedAt, style: .timer)`，系統自己跳秒），點一下開啟 `liftlog://workout`。其他狀態點一下開啟 `liftlog://new`。
 - timeline：現在一筆，加上之後 7 天每天午夜各一筆，天數自己往上加，不需要 App 喚醒；用完（`.atEnd`）再讀一次快照。
-- 外觀：用快照裡的主題 token，跟隨系統時依小工具的深淺選深色或淺色主題；讀不到快照時深色用石墨橙、淺色用冷灰。背景用 `containerBackground`。主要數字加 `widgetAccentable`，支援著色和透明模式。
+- 外觀：用快照裡的主題 token（都是深色）；讀不到快照時用石墨橙。背景用 `containerBackground`。主要數字加 `widgetAccentable`，支援著色和透明模式。
 - 畫面在 `Shared/LastWorkoutViews.swift`，小工具和 App 的開發用預覽頁（啟動參數 `-widgetGallery small`）共用。
 - 今天已經練過時，建議其實是下一次的，標籤改成「下次建議：下半身」（鎖定畫面同理）。
 

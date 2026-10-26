@@ -47,91 +47,69 @@ nonisolated struct Palette: Equatable, Sendable {
     }
 }
 
+/// 主題：都用石墨深灰的底，只換強調色（accent 和 accent 上的文字顏色）
 nonisolated enum AppTheme: String, CaseIterable, Identifiable, Sendable {
-    case graphiteOrange, midnightBlue, pureBlack, warmSand, coolGray
+    case graphiteOrange, graphiteBlue, graphitePurple, graphitePink, graphiteCyan, graphiteSilver
 
     static let storageKey = "theme.id"
-    static let followSystemKey = "theme.followSystem"
-    static let darkKey = "theme.dark"
-    static let lightKey = "theme.light"
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .graphiteOrange: "石墨橙"
-        case .midnightBlue: "午夜藍"
-        case .pureBlack: "純黑"
-        case .warmSand: "暖砂"
-        case .coolGray: "冷灰"
+        case .graphiteBlue: "石墨藍"
+        case .graphitePurple: "石墨紫"
+        case .graphitePink: "石墨粉"
+        case .graphiteCyan: "石墨青"
+        case .graphiteSilver: "石墨銀"
         }
     }
 
-    var subtitle: String {
-        switch self {
-        case .graphiteOrange, .midnightBlue: "深色"
-        case .pureBlack: "深色，適合 OLED"
-        case .warmSand, .coolGray: "淺色"
-        }
-    }
-
-    var isDark: Bool {
-        switch self {
-        case .graphiteOrange, .midnightBlue, .pureBlack: true
-        case .warmSand, .coolGray: false
-        }
-    }
+    /// 石墨深灰的底；accent 和 onAccent 由各主題決定
+    private static let graphite = Palette([0x111214, 0x1B1C1F, 0x2A2B30, 0x34363B, 0xF3F3F4, 0x9C9DA3,
+                                           0xFF8A3D, 0x111214, 0x3FB97C, 0xF2C14E, 0xEF5350])
 
     var palette: Palette {
-        switch self {
-        case .graphiteOrange:
-            Palette([0x111214, 0x1B1C1F, 0x2A2B30, 0x34363B, 0xF3F3F4, 0x9C9DA3, 0xFF8A3D, 0x111214, 0x3FB97C, 0xF2C14E, 0xEF5350])
-        case .midnightBlue:
-            Palette([0x0B1220, 0x141D30, 0x1F2A40, 0x2A3650, 0xE8EDF6, 0x8B97AD, 0x4C7DF0, 0xFFFFFF, 0x2BB673, 0xF3B63F, 0xF06262])
-        case .pureBlack:
-            Palette([0x000000, 0x111111, 0x1E1E1E, 0x2A2A2A, 0xFFFFFF, 0x8E8E93, 0xE6E6E6, 0x000000, 0x34C759, 0xFFCC00, 0xFF453A])
-        case .warmSand:
-            Palette([0xF6F1EA, 0xFFFFFF, 0xEFE7DC, 0xE2D8CA, 0x2B2622, 0x7D7368, 0xC2602F, 0xFFFFFF, 0x3E8E5E, 0xB8860B, 0xC0392B])
-        case .coolGray:
-            Palette([0xF2F4F7, 0xFFFFFF, 0xE9EDF2, 0xDDE2E8, 0x1A1F26, 0x6B7480, 0x2F6FEB, 0xFFFFFF, 0x1F9D63, 0xC98A0B, 0xD64545])
+        var palette = Self.graphite
+        (palette.accent, palette.onAccent) = switch self {
+        case .graphiteOrange: (0xFF8A3D, 0x111214)
+        case .graphiteBlue: (0x4C7DF0, 0xFFFFFF)
+        case .graphitePurple: (0xA683FF, 0x111214)
+        case .graphitePink: (0xFF6B9D, 0x111214)
+        case .graphiteCyan: (0x2EC4D6, 0x111214)
+        case .graphiteSilver: (0xE6E6E6, 0x111214)
+        }
+        return palette
+    }
+
+    /// 讀存起來的主題 id。CHANGE_04 的舊主題換成強調色相近的新主題（午夜藍、冷灰 → 藍，純黑 → 銀），
+    /// 其他或讀不到時用石墨橙。小工具讀快照時也用這個，App 還沒開過的舊快照一樣能對應
+    init(stored raw: String?) {
+        switch raw {
+        case "midnightBlue", "coolGray": self = .graphiteBlue
+        case "pureBlack": self = .graphiteSilver
+        default: self = raw.flatMap(AppTheme.init(rawValue:)) ?? .graphiteOrange
         }
     }
 
-    static var darkThemes: [AppTheme] { allCases.filter(\.isDark) }
-    static var lightThemes: [AppTheme] { allCases.filter { !$0.isDark } }
+    /// 目前的主題
+    static func load(_ defaults: UserDefaults = .standard) -> AppTheme {
+        AppTheme(stored: defaults.string(forKey: storageKey))
+    }
+
+    /// 啟動時把 CHANGE_04 的主題設定換成新的：跟隨系統外觀時用當時選的深色主題，再刪掉不用的設定
+    static func migrateLegacySettings(_ defaults: UserDefaults = .standard) {
+        let followSystem = "theme.followSystem", dark = "theme.dark", light = "theme.light"
+        let stored = defaults.bool(forKey: followSystem)
+            ? defaults.string(forKey: dark) ?? "midnightBlue"
+            : defaults.string(forKey: storageKey)
+        if let stored { defaults.set(AppTheme(stored: stored).rawValue, forKey: storageKey) }
+        [followSystem, dark, light].forEach(defaults.removeObject(forKey:))
+    }
 }
 
-/// 主題設定（AppStorage）：預設石墨橙；跟隨系統外觀時預設午夜藍／冷灰
-nonisolated struct ThemeSettings: Equatable, Sendable {
-    var theme: AppTheme = .graphiteOrange
-    var followSystem = false
-    var dark: AppTheme = .midnightBlue
-    var light: AppTheme = .coolGray
-
-    static func load(_ defaults: UserDefaults = .standard) -> ThemeSettings {
-        var settings = ThemeSettings()
-        if let raw = defaults.string(forKey: AppTheme.storageKey), let theme = AppTheme(rawValue: raw) { settings.theme = theme }
-        settings.followSystem = defaults.bool(forKey: AppTheme.followSystemKey)
-        if let raw = defaults.string(forKey: AppTheme.darkKey), let theme = AppTheme(rawValue: raw) { settings.dark = theme }
-        if let raw = defaults.string(forKey: AppTheme.lightKey), let theme = AppTheme(rawValue: raw) { settings.light = theme }
-        return settings
-    }
-
-    /// 目前要用的主題；跟隨系統時依系統深淺
-    func active(systemIsDark: Bool) -> AppTheme {
-        followSystem ? (systemIsDark ? dark : light) : theme
-    }
-
-    /// 讓鍵盤、sheet 等系統元件的深淺和主題一致；跟隨系統時不指定
-    var colorScheme: ColorScheme? {
-        followSystem ? nil : (theme.isDark ? .dark : .light)
-    }
-
-    /// 設定改變時用來重建畫面
-    var key: String { [theme.rawValue, String(followSystem), dark.rawValue, light.rawValue].joined(separator: ",") }
-}
-
-/// 畫面使用的顏色 token：依目前主題（或跟隨系統時依深淺）動態決定
+/// 畫面使用的顏色 token：依目前主題動態決定
 enum Theme {
     static let background = token { $0.background }
     static let card = token { $0.card }
@@ -148,12 +126,10 @@ enum Theme {
     static let cardRadius: CGFloat = 28
 
     /// SwiftUI 在 iPhone 上可能從背景的繪製執行緒取色（例如動畫中），所以取色的 closure 不能綁在主執行緒：
-    /// App target 預設是 MainActor，Swift 6 會在執行時檢查，不在主執行緒就閃退
+    /// App target 預設是 MainActor，Swift 6 會在執行時檢查，不在主執行緒就閃退。
+    /// 每次取色都重新讀主題，換主題後重建畫面就會拿到新顏色
     nonisolated private static func token(_ value: @escaping @Sendable (Palette) -> UInt32) -> Color {
-        Color(uiColor: UIColor { traits in
-            let theme = ThemeSettings.load().active(systemIsDark: traits.userInterfaceStyle == .dark)
-            return UIColor(hex: value(theme.palette))
-        })
+        Color(uiColor: UIColor { _ in UIColor(hex: value(AppTheme.load().palette)) })
     }
 }
 

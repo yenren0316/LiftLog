@@ -22,7 +22,7 @@ struct WidgetSnapshotTests {
     }
 
     @Test func neverTrained() {
-        let snapshot = WidgetSnapshot.make(history: PlanHistory([]), activeStartedAt: nil, theme: ThemeSettings())
+        let snapshot = WidgetSnapshot.make(history: PlanHistory([]), activeStartedAt: nil, theme: .graphiteOrange)
         #expect(snapshot.lastSessionDate == nil && snapshot.lastRegion == nil)
         #expect(snapshot.daysSinceLast(at: date(25), calendar: calendar) == nil)
         #expect(snapshot.lastSummary(calendar: calendar) == nil)
@@ -38,7 +38,7 @@ struct WidgetSnapshotTests {
             session(23, .upper, [.push, .pull, .cardio]),
             session(20, .lower, [.main, .unilateral, .core]),
         ])
-        let snapshot = WidgetSnapshot.make(history: history, activeStartedAt: nil, theme: ThemeSettings())
+        let snapshot = WidgetSnapshot.make(history: history, activeStartedAt: nil, theme: .graphiteOrange)
         #expect(snapshot.lastSessionDate == date(23))
         #expect(snapshot.lastRegion == .upper)
         #expect(snapshot.lastSummary(calendar: calendar) == "上半身・10/23")
@@ -51,7 +51,7 @@ struct WidgetSnapshotTests {
     }
 
     @Test func daysCountCalendarDays() {
-        var snapshot = WidgetSnapshot.make(history: PlanHistory([]), activeStartedAt: nil, theme: ThemeSettings())
+        var snapshot = WidgetSnapshot.make(history: PlanHistory([]), activeStartedAt: nil, theme: .graphiteOrange)
         snapshot.lastSessionDate = date(24, 23, 30)
         #expect(snapshot.daysSinceLast(at: date(24, 23, 59), calendar: calendar) == 0)
         #expect(WidgetSnapshot.daysText(0) == "今天")
@@ -67,7 +67,7 @@ struct WidgetSnapshotTests {
     @Test func inProgress() {
         let started = date(25, 18, 5)
         let snapshot = WidgetSnapshot.make(history: PlanHistory([session(23, .upper, [.push])]),
-                                           activeStartedAt: started, theme: ThemeSettings())
+                                           activeStartedAt: started, theme: .graphiteOrange)
         #expect(snapshot.isInProgress)
         #expect(snapshot.startedAt == started)
         // 進行中仍保留上次已完成的訓練
@@ -75,24 +75,22 @@ struct WidgetSnapshotTests {
     }
 
     @Test func themeAndPalette() {
-        let fixed = WidgetSnapshot.make(history: PlanHistory([]), activeStartedAt: nil,
-                                        theme: ThemeSettings(theme: .warmSand))
-        #expect(fixed.themeID == "warmSand" && fixed.darkThemeID == nil && fixed.lightThemeID == nil)
-        #expect(WidgetSnapshot.palette(for: fixed, isDark: true) == AppTheme.warmSand.palette)
+        var snapshot = WidgetSnapshot.make(history: PlanHistory([]), activeStartedAt: nil, theme: .graphitePurple)
+        #expect(snapshot.themeID == "graphitePurple")
+        #expect(WidgetSnapshot.palette(for: snapshot) == AppTheme.graphitePurple.palette)
 
-        let follow = WidgetSnapshot.make(history: PlanHistory([]), activeStartedAt: nil,
-                                         theme: ThemeSettings(followSystem: true, dark: .pureBlack, light: .warmSand))
-        #expect(follow.themeID == nil && follow.darkThemeID == "pureBlack" && follow.lightThemeID == "warmSand")
-        #expect(WidgetSnapshot.palette(for: follow, isDark: true) == AppTheme.pureBlack.palette)
-        #expect(WidgetSnapshot.palette(for: follow, isDark: false) == AppTheme.warmSand.palette)
+        // App 更新後還沒開過：舊快照的主題對應到新主題；跟隨系統外觀的舊快照沒有 themeID
+        snapshot.themeID = "midnightBlue"
+        #expect(WidgetSnapshot.palette(for: snapshot) == AppTheme.graphiteBlue.palette)
+        snapshot.themeID = nil
+        #expect(WidgetSnapshot.palette(for: snapshot) == AppTheme.graphiteOrange.palette)
 
-        // 讀不到快照：深色用石墨橙、淺色用冷灰
-        #expect(WidgetSnapshot.palette(for: nil, isDark: true) == AppTheme.graphiteOrange.palette)
-        #expect(WidgetSnapshot.palette(for: nil, isDark: false) == AppTheme.coolGray.palette)
+        // 讀不到快照：石墨橙
+        #expect(WidgetSnapshot.palette(for: nil) == AppTheme.graphiteOrange.palette)
     }
 
     @Test func statusAndLink() {
-        var snapshot = WidgetSnapshot.make(history: PlanHistory([]), activeStartedAt: nil, theme: ThemeSettings())
+        var snapshot = WidgetSnapshot.make(history: PlanHistory([]), activeStartedAt: nil, theme: .graphiteOrange)
         #expect(snapshot.status(at: date(25), calendar: calendar) == .neverTrained)
         #expect(snapshot.link == .new)
         snapshot.lastSessionDate = date(23)
@@ -113,7 +111,7 @@ struct WidgetSnapshotTests {
 
     @Test func lockScreenTexts() {
         var snapshot = WidgetSnapshot.make(history: PlanHistory([session(23, .upper, [.push])]),
-                                           activeStartedAt: nil, theme: ThemeSettings())
+                                           activeStartedAt: nil, theme: .graphiteOrange)
         #expect(snapshot.inlineText(at: date(25), calendar: calendar) == "上次訓練 2 天前・今天下半身")
         #expect(snapshot.rectangularFirstLine(days: 2) == "上次：2 天前・上半身")
         // 今天已經練過：建議是下一次的
@@ -131,7 +129,7 @@ struct WidgetSnapshotTests {
 
     @Test func storeWritesOnlyWhenChanged() throws {
         let defaults = try #require(UserDefaults(suiteName: "WidgetSnapshotTests.\(UUID().uuidString)"))
-        var snapshot = WidgetSnapshot.make(history: PlanHistory([]), activeStartedAt: nil, theme: ThemeSettings())
+        var snapshot = WidgetSnapshot.make(history: PlanHistory([]), activeStartedAt: nil, theme: .graphiteOrange)
         #expect(WidgetSnapshotStore.save(snapshot, to: defaults))
         #expect(!WidgetSnapshotStore.save(snapshot, to: defaults))
         #expect(WidgetSnapshotStore.load(from: defaults) == snapshot)

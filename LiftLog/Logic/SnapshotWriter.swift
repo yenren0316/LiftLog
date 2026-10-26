@@ -4,7 +4,7 @@ import WidgetKit
 
 extension WidgetSnapshot {
     /// 依訓練紀錄和主題設定算出快照（純函式，方便測試）
-    static func make(history: PlanHistory, activeStartedAt: Date?, theme: ThemeSettings) -> WidgetSnapshot {
+    static func make(history: PlanHistory, activeStartedAt: Date?, theme: AppTheme) -> WidgetSnapshot {
         let suggestion = PlanDefaults.answers(history)
         let last = history.sessions.first
         return WidgetSnapshot(
@@ -15,9 +15,7 @@ extension WidgetSnapshot {
             suggestsTreadmill: suggestion.cardio,
             isInProgress: activeStartedAt != nil,
             startedAt: activeStartedAt,
-            themeID: theme.followSystem ? nil : theme.theme.rawValue,
-            darkThemeID: theme.followSystem ? theme.dark.rawValue : nil,
-            lightThemeID: theme.followSystem ? theme.light.rawValue : nil
+            themeID: theme.rawValue
         )
     }
 }
@@ -58,7 +56,7 @@ final class SnapshotWriter {
         let snapshot = WidgetSnapshot.make(
             history: PlanHistory(sessions: sessions),
             activeStartedAt: sessions.first(where: \.isActive)?.startedAt,
-            theme: ThemeSettings.load()
+            theme: AppTheme.load()
         )
         if WidgetSnapshotStore.save(snapshot) {
             WidgetCenter.shared.reloadAllTimelines()

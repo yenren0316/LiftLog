@@ -5,7 +5,6 @@ import SwiftUI
 /// 啟動參數 -widgetGallery small｜lock｜live｜island｜control
 struct WidgetGalleryView: View {
     var page: String
-    @Environment(\.colorScheme) private var colorScheme
 
     private static let smallSize = CGSize(width: 170, height: 170)
 
@@ -44,7 +43,7 @@ struct WidgetGalleryView: View {
     }
 
     private func small(_ snapshot: WidgetSnapshot) -> some View {
-        let p = WidgetSnapshot.palette(for: snapshot, isDark: colorScheme == .dark)
+        let p = WidgetSnapshot.palette(for: snapshot)
         return LastWorkoutSmallView(snapshot: snapshot, date: .now)
             .padding(16)
             .frame(width: Self.smallSize.width, height: Self.smallSize.height)
@@ -193,7 +192,7 @@ struct WidgetGalleryView: View {
     }
 
     private var activityAttributes: WorkoutActivityAttributes {
-        let palette = ThemeSettings.load().active(systemIsDark: colorScheme == .dark).palette
+        let palette = AppTheme.load().palette
         return WorkoutActivityAttributes(sessionID: "preview", accent: palette.accent, done: palette.done)
     }
 
