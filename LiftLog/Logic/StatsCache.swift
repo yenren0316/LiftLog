@@ -71,8 +71,6 @@ nonisolated struct StatsSnapshot: Sendable {
     var balance = Balance()
     /// 近 12 週每週跑步機的分鐘數，由舊到新
     var weeklyCardioMinutes: [Double] = []
-    /// 近 12 週每週的訓練次數，由舊到新（最後一個是本週）；TrainingCount 的規則（以天為單位）
-    var weeklySessions: [Int] = []
     /// 算進次數的日子和那天的部位（TrainingCount.days，CHANGE_09 §2）
     var countedDays: [Date: DayRegion] = [:]
     /// 每週（週一）算進次數的天數：每週目標、日曆達標的小點
@@ -151,7 +149,6 @@ nonisolated struct StatsSnapshot: Sendable {
         let counted = snapshot.countedDays.map { (date: $0.key, region: $0.value) }
         snapshot.frequencyWeeks = TrainingFrequency.series(counted, period: .week, now: now, calendar: weekCalendar)
         snapshot.frequencyMonths = TrainingFrequency.series(counted, period: .month, now: now, calendar: weekCalendar)
-        snapshot.weeklySessions = snapshot.frequencyWeeks.buckets.map(\.total)
 
         // 每週：近 12 週（含本週）
         let weeks = (0..<trendWeeks).reversed().compactMap { back -> DateInterval? in

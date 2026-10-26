@@ -32,12 +32,17 @@ nonisolated enum ActivityCalendar {
     }
 }
 
-/// 今天的訓練日曆的格子位置（CHANGE_08 §4）：格子固定大小，週數依寬度決定；點和拖曳時把手指的位置換成那一天
+/// 今天的訓練日曆的格子位置（CHANGE_08 §4）：格子固定大小，週數依寬度決定；點和拖曳時把手指的位置換成那一天。
+/// 每一欄是一週，從週一開始（TrainingCount.weekCalendar）
 nonisolated enum CalendarGrid {
     static let cell: CGFloat = 12
     static let gap: CGFloat = 3
-    /// 最上面月份那一列（含和格子的間距）
-    static let monthRow: CGFloat = 14 + 4
+    /// 最上面月份的文字
+    static let monthLabel: CGFloat = 14
+    /// 月份下面「這週達標」的小點（CHANGE_09 §3）
+    static let dot: CGFloat = 5
+    /// 格子上方的月份和小點兩列（含間距）
+    static let monthRow: CGFloat = monthLabel + 2 + dot + 3
 
     static var height: CGFloat { monthRow + 7 * cell + 6 * gap }
 

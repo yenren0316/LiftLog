@@ -57,7 +57,8 @@ struct StatsCacheTests {
         #expect(snapshot.days[day]?.exerciseCount == 2 && snapshot.days[day]?.sessionIDs.count == 1)
         // 有氧每週分鐘數：最後一週（本週）有 30 分鐘以前的那週
         #expect(snapshot.weeklyCardioMinutes.reduce(0, +) == 30)
-        #expect(snapshot.weeklySessions.count == StatsSnapshot.trendWeeks)
+        #expect(snapshot.weeklyCardioMinutes.count == StatsSnapshot.trendWeeks)
+        #expect(snapshot.frequencyWeeks.buckets.count == StatsSnapshot.trendWeeks)
     }
 
     @Test func mainLiftTrend() {
