@@ -31,7 +31,7 @@ struct WorkoutActionsTests {
         history(bench, sets: [(60, 1)], daysAgo: 30, in: context)
 
         let session = WorkoutActions.start(with: [bench, row], in: context)
-        #expect(session.title == "臥推＋爆發划船")
+        #expect(session.title == "上肢訓練")
         #expect(session.orderedItems[0].sets.count == 3)   // 照最近一次
         #expect(session.orderedItems[1].sets.count == 3)   // 沒有歷史 → 依角色（拉 3 組）
         #expect(bench.lastSets(excluding: session).map(\.weightKg) == [40, 42.6, 42.6])
@@ -127,12 +127,24 @@ struct WorkoutActionsTests {
         let row = Exercise(name: "爆發划船", category: .horizontalPull, equipment: .barbell)
         context.insert(bench)
         context.insert(row)
+        let squat = Exercise(name: "深蹲", category: .kneeDominant, equipment: .barbell)
+        context.insert(squat)
         let session = WorkoutActions.start(with: [bench], in: context)
         _ = WorkoutActions.add(row, to: session, in: context)
-        #expect(session.title == "臥推＋爆發划船")
-        session.title = "推日"
-        WorkoutActions.remove(session.orderedItems[1], in: context)
+        #expect(session.title == "上肢訓練")
+        // 沒有自訂時跟著動作更新
+        _ = WorkoutActions.add(squat, to: session, in: context)
+        #expect(session.title == "全身訓練")
+        // 手動改過就不再覆蓋；「恢復自動名稱」再交回自動
+        session.setTitle(fromUserInput: "推日")
+        #expect(session.isTitleCustom)
+        WorkoutActions.remove(session.orderedItems[2], in: context)
         #expect(session.title == "推日")
+        session.restoreAutomaticTitle()
+        #expect(!session.isTitleCustom && session.title == "上肢訓練")
+        // 欄位清空等於恢復自動名稱
+        session.setTitle(fromUserInput: "  ")
+        #expect(!session.isTitleCustom && session.title == "上肢訓練")
     }
 
     @Test func rolesAndDayTypeFromPlanAreKept() throws {
@@ -239,7 +251,7 @@ struct WorkoutActionsTests {
         // 舊角色換動作時當作下肢輔助
         #expect([Role.main, .explosive, .unilateral].map(Slot.init(role:)) == [.lowerAssist, .lowerAssist, .lowerAssist])
         WorkoutActions.replace(session.orderedItems[1], with: pulldown, role: .pull, in: context)
-        #expect(session.orderedItems[1].role == .pull && session.title == "深蹲＋滑輪下拉")
+        #expect(session.orderedItems[1].role == .pull && session.title == "上肢最大肌力・深蹲")
         WorkoutActions.replace(session.orderedItems[0], with: front, in: context)
         #expect(session.orderedItems[0].role == .maxEffort)
     }

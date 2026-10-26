@@ -99,6 +99,8 @@ final class WorkoutSession {
     var modeID: String?
     /// 共軛訓練的日型（DayType）；只做有氧、舊紀錄和不是從建立菜單開始的訓練為 nil
     var dayTypeRaw: String?
+    /// 使用者改過名稱：之後不再自動更新（CHANGE_07 C-5）
+    var isTitleCustom: Bool = false
 
     @Relationship(deleteRule: .cascade, inverse: \SessionExercise.session)
     var items: [SessionExercise] = []

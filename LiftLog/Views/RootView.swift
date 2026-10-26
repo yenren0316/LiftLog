@@ -88,7 +88,7 @@ struct RootView: View {
                     Group {
                         switch tab {
                         case .today: TodayView()
-                        case .history: SessionsView()
+                        case .history: HistoryView()
                         case .library: LibraryView()
                         case .settings: SettingsView()
                         }

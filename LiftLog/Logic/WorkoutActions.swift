@@ -14,12 +14,12 @@ enum WorkoutActions {
     @discardableResult
     static func start(with exercises: [Exercise], roles: [Role]? = nil, dayType: DayType? = nil,
                       backfill: DateInterval? = nil, in context: ModelContext) -> WorkoutSession {
-        let session = WorkoutSession(startedAt: backfill?.start ?? .now, endedAt: backfill?.end,
-                                     title: SessionTitle.automatic(exercises.map(\.name)), dayType: dayType)
+        let session = WorkoutSession(startedAt: backfill?.start ?? .now, endedAt: backfill?.end, dayType: dayType)
         context.insert(session)
         for (index, exercise) in exercises.enumerated() {
             _ = add(exercise, to: session, role: roles?[index], in: context, updateTitle: false)
         }
+        session.refreshAutomaticTitle()
         save(context)
         return session
     }
@@ -32,7 +32,6 @@ enum WorkoutActions {
         if let existing = session.items.first(where: { $0.exercise === exercise }) {
             return existing
         }
-        let before = names(session)
         let item = SessionExercise(session: session, exercise: exercise, order: (session.items.map(\.order).max() ?? -1) + 1,
                                    role: role)
         context.insert(item)
@@ -43,7 +42,7 @@ enum WorkoutActions {
             let kind = SetLogic.previous(at: i, lastSets: last)?.kind ?? .normal
             context.insert(SetRecord(sessionExercise: item, order: i, kind: kind))
         }
-        if updateTitle { refreshTitle(session, before: before) }
+        if updateTitle { session.refreshAutomaticTitle() }
         save(context)
         return item
     }
@@ -96,10 +95,9 @@ enum WorkoutActions {
     /// 換動作；role 為 nil 時保留原本的角色（位置不變）
     static func replace(_ item: SessionExercise, with exercise: Exercise, role: Role? = nil, in context: ModelContext) {
         guard let session = item.session else { return }
-        let before = names(session)
         item.exercise = exercise
         if let role { item.role = role }
-        refreshTitle(session, before: before)
+        session.refreshAutomaticTitle()
         save(context)
     }
 
@@ -108,19 +106,17 @@ enum WorkoutActions {
         var items = session.orderedItems
         guard let index = items.firstIndex(where: { $0 === item }),
               items.indices.contains(index + offset) else { return }
-        let before = names(session)
         items.swapAt(index, index + offset)
         for (i, it) in items.enumerated() { it.order = i }
-        refreshTitle(session, before: before)
+        session.refreshAutomaticTitle()
         save(context)
     }
 
     static func remove(_ item: SessionExercise, in context: ModelContext) {
         guard let session = item.session else { return }
-        let before = names(session)
         context.delete(item)
         for (i, it) in session.orderedItems.filter({ $0 !== item }).enumerated() { it.order = i }
-        refreshTitle(session, before: before, excluding: item)
+        session.refreshAutomaticTitle(excluding: item)
         save(context)
     }
 
@@ -162,6 +158,7 @@ enum WorkoutActions {
         if !remaining.contains(where: { $0.exercise?.category != .cardio }) {
             session.dayType = nil
         }
+        session.refreshAutomaticTitle()
         session.endedAt = now
         save(context)
         return true
@@ -174,18 +171,6 @@ enum WorkoutActions {
 
     static func save(_ context: ModelContext) {
         try? context.save()
-    }
-
-    // MARK: - 標題
-
-    private static func names(_ session: WorkoutSession, excluding: SessionExercise? = nil) -> [String] {
-        session.orderedItems.filter { $0 !== excluding && !$0.isDeleted }.compactMap { $0.exercise?.name }
-    }
-
-    /// 標題還是自動產生的才跟著動作更新；使用者改過就不動
-    private static func refreshTitle(_ session: WorkoutSession, before: [String], excluding: SessionExercise? = nil) {
-        guard session.title.isEmpty || session.title == SessionTitle.automatic(before) else { return }
-        session.title = SessionTitle.automatic(names(session, excluding: excluding))
     }
 
     private static func renumber(_ sets: [SetRecord]) {

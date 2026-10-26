@@ -233,12 +233,47 @@ nonisolated enum SetFormat {
     }
 }
 
+/// 訓練名稱（CHANGE_07 C-5）：自動產生的名稱是訓練目的
 nonisolated enum SessionTitle {
-    /// 動作名稱以「＋」連接；超過 3 個時顯示前兩個加「等 N 項」
-    static func automatic(_ names: [String]) -> String {
+    /// 有日型：「下肢最大肌力・深蹲」（主項是角色為 ME／DE 主項的第一個動作，沒有就不加）。
+    /// 沒有日型：依上肢和下肢分類的動作推算「下肢訓練／上肢訓練／全身訓練」（忽略核心、補強、有氧）；
+    /// 只有有氧「有氧」；沒有任何動作或推算不出來「訓練」
+    static func purpose(dayType: DayType?, mainName: String?, categories: [ExerciseCategory]) -> String {
+        if let dayType {
+            let base = switch dayType {
+            case .meLower: "下肢最大肌力"
+            case .meUpper: "上肢最大肌力"
+            case .deLower: "下肢速度與爆發"
+            case .deUpper: "上肢速度與爆發"
+            }
+            return mainName.map { "\(base)・\($0)" } ?? base
+        }
+        if !categories.isEmpty, categories.allSatisfy({ $0 == .cardio }) { return "有氧" }
+        switch Region.infer(categories) {
+        case .lower: return "下肢訓練"
+        case .upper: return "上肢訓練"
+        case .full: return "全身訓練"
+        case .unspecified: return "訓練"
+        }
+    }
+
+    /// CHANGE_07 之前的自動名稱：動作名稱以「＋」連接；超過 3 個時顯示前兩個加「等 N 項」（舊備份匯入時產生）
+    static func legacyAutomatic(_ names: [String]) -> String {
         if names.count > 3 {
             return names.prefix(2).joined(separator: "＋") + " 等 \(names.count) 項"
         }
         return names.joined(separator: "＋")
+    }
+
+    /// 名稱符合舊的自動格式：空白、動作名稱（或別名）用「＋」串起來、或「A＋B 等 N 項」
+    static func isLegacyAutomatic(_ title: String, exerciseNames: Set<String>) -> Bool {
+        let trimmed = title.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return true }
+        var head = trimmed
+        if let range = trimmed.range(of: #" 等 \d+ 項$"#, options: .regularExpression) {
+            head = String(trimmed[..<range.lowerBound])
+        }
+        let parts = head.split(separator: "＋").map { $0.trimmingCharacters(in: .whitespaces) }
+        return !parts.isEmpty && parts.allSatisfy(exerciseNames.contains)
     }
 }

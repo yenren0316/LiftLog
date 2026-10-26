@@ -107,4 +107,26 @@ struct WorkoutLauncherTests {
         #expect(again.orderedItems.map(\.role) == [.dynamicEffort, .core])
         #expect(again.dayType == .deLower && f.launcher.coordinator.isExpanded)
     }
+
+    @Test func backfillIsAnEndedSessionWithoutRestOrConflict() throws {
+        // T8：補登不會產生休息計時，也不會和進行中的訓練衝突
+        let f = try makeFixture()
+        let start = Date.now.addingTimeInterval(-3 * 86_400)
+        let interval = DateInterval(start: start, end: start.addingTimeInterval(4500))
+        let session = try #require(f.launcher.start(.init(exercises: [f.row], backfill: interval), context: f.context))
+        #expect(f.launcher.pendingStart == nil)                       // 沒有衝突確認
+        #expect(f.current.isActive && WorkoutActions.activeSession(in: f.context) === f.current)
+        #expect(!session.isActive && session.startedAt == interval.start && session.endedAt == interval.end && session.hasTime)
+        // 直接進入編輯（摘要浮窗＋編輯），不展開訓練中畫面
+        #expect(f.launcher.coordinator.summarySession === session && f.launcher.coordinator.editOnSummaryOpen)
+        #expect(!f.launcher.coordinator.isExpanded)
+        // 打勾：完成時間記成這次訓練的結束時間，休息計時不會開始
+        let set = session.orderedItems[0].orderedSets[0]
+        set.weightKg = 30; set.reps = 10
+        #expect(WorkoutActions.complete(set, placeholder: nil, in: f.context))
+        #expect(set.completedAt == interval.end && !f.timer.isRunning)
+        // 從建立菜單補登：沒有詢問，直接打開建立菜單
+        f.launcher.requestPlan(backfill: interval, context: f.context)
+        #expect(f.launcher.planRequest?.backfill == interval && f.launcher.planWithActive == nil)
+    }
 }

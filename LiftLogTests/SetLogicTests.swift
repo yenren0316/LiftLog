@@ -100,9 +100,10 @@ struct SetLogicTests {
     }
 
     @Test func sessionTitles() {
-        #expect(SessionTitle.automatic(["臥推"]) == "臥推")
-        #expect(SessionTitle.automatic(["臥推", "滑輪下拉", "跑步機"]) == "臥推＋滑輪下拉＋跑步機")
-        #expect(SessionTitle.automatic(["A", "B", "C", "D"]) == "A＋B 等 4 項")
+        // CHANGE_07 之前的自動名稱格式（舊備份匯入時還會用到）
+        #expect(SessionTitle.legacyAutomatic(["臥推"]) == "臥推")
+        #expect(SessionTitle.legacyAutomatic(["臥推", "滑輪下拉", "跑步機"]) == "臥推＋滑輪下拉＋跑步機")
+        #expect(SessionTitle.legacyAutomatic(["A", "B", "C", "D"]) == "A＋B 等 4 項")
     }
 
     @Test func onlyBodyweightLoadsCanBeNegative() {

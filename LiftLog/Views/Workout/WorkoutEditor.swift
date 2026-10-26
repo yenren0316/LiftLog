@@ -109,7 +109,7 @@ struct WorkoutEditor<Header: View>: View {
         .sheet(item: $healthImportItem) { item in
             HealthImportSheet { workout in applyHealth(workout, to: item) }
         }
-        .navigationDestination(item: $detailExercise) { ExerciseDetailView(exercise: $0) }
+        .sheet(item: $detailExercise) { ExerciseInfoSheet(exercise: $0) }
         .alert("換動作？", isPresented: isPresented($confirmReplace)) {
             Button("換動作") { replacing = confirmReplace; confirmReplace = nil }
             Button("取消", role: .cancel) { confirmReplace = nil }

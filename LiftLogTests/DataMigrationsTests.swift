@@ -54,7 +54,9 @@ struct DataMigrationsTests {
         record(dips, date(9, 1), [12])
         try context.save()
 
-        let ran = DataMigrations.runIfNeeded(context: context, defaults: defaults, backupFolder: folder, now: date(10, 28))
+        let assistOnly = DataMigrations.all.filter { $0.id == AssistToNegative.id }
+        let ran = DataMigrations.runIfNeeded(context: context, migrations: assistOnly, defaults: defaults,
+                                             backupFolder: folder, now: date(10, 28))
         #expect(ran == [AssistToNegative.id])
         // 遷移前的備份：檔名有日期和遷移名稱，內容還是轉換前的正數
         let backups = AutoBackup.list(folder: folder)
@@ -68,8 +70,12 @@ struct DataMigrationsTests {
         #expect(weights(dips) == [12])
         #expect(pullUp.note == ConjugateLibrary.negativeLoadNoteConverted)
         // 只執行一次：再跑不會再備份、不會轉回正數
-        #expect(DataMigrations.runIfNeeded(context: context, defaults: defaults, backupFolder: folder).isEmpty)
+        #expect(DataMigrations.runIfNeeded(context: context, migrations: assistOnly, defaults: defaults, backupFolder: folder).isEmpty)
         #expect(AutoBackup.list(folder: folder).count == 1 && weights(pullUp) == [-19, -19, -16.25, -15, 5])
+        // 名稱遷移也一樣先備份：兩個遷移各一份備份
+        #expect(DataMigrations.runIfNeeded(context: context, defaults: defaults, backupFolder: folder, now: date(10, 29))
+                == [AutoTitles.id])
+        #expect(AutoBackup.list(folder: folder).map(\.migration) == [AutoTitles.id, AssistToNegative.id])
     }
 
     @Test func nothingToMigrateMeansNoBackup() throws {

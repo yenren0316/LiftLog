@@ -41,7 +41,8 @@ nonisolated enum AutoBackup {
             let parts = url.deletingPathExtension().lastPathComponent.split(separator: "-", maxSplits: 5)
             return Entry(url: url, date: date, migration: parts.count == 6 ? String(parts[5]) : "")
         }
-        .sorted { $0.date > $1.date }
+        // 同一秒建立的檔案再依檔名（含日期時間）排
+        .sorted { $0.date != $1.date ? $0.date > $1.date : $0.url.lastPathComponent > $1.url.lastPathComponent }
     }
 }
 
@@ -59,12 +60,15 @@ enum DataMigrations {
         Migration(id: AssistToNegative.id,
                   run: { try AssistToNegative.apply(in: $0).count },
                   isNeeded: { try !AssistToNegative.targets(in: $0).isEmpty }),
+        Migration(id: AutoTitles.id,
+                  run: { try AutoTitles.apply(in: $0).regenerated },
+                  isNeeded: { try $0.fetchCount(FetchDescriptor<WorkoutSession>()) > 0 }),
     ]
 
     static func flagKey(_ id: String) -> String { "migration.\(id)" }
 
     /// 設定的自動備份清單顯示的名稱
-    nonisolated static let titles = ["assistToNegative": "輔助重量改記負數"]
+    nonisolated static let titles = ["assistToNegative": "輔助重量改記負數", "autoTitles": "訓練名稱改成訓練目的"]
 
     nonisolated static func title(of id: String) -> String {
         titles[id] ?? id
@@ -146,5 +150,37 @@ enum AssistToNegative {
             return Change(date: set.sessionExercise?.session?.startedAt ?? .distantPast,
                           exerciseName: set.sessionExercise?.exercise?.name ?? "", from: kg, to: -kg)
         }
+    }
+}
+
+/// C-5：訓練名稱改成訓練目的。符合舊自動格式（動作名稱用「＋」串起來、或「等 N 項」）的視為自動名稱，重新產生；
+/// 其他視為自訂，保留不動並標成 isTitleCustom
+enum AutoTitles {
+    static let id = "autoTitles"
+
+    struct Result {
+        var regenerated = 0
+        /// 視為自訂、保留不動的訓練
+        var custom: [(date: Date, title: String)] = []
+    }
+
+    static func exerciseNames(in context: ModelContext) throws -> Set<String> {
+        Set(try context.fetch(FetchDescriptor<Exercise>()).flatMap { [$0.name] + $0.aliases })
+    }
+
+    @discardableResult
+    static func apply(in context: ModelContext) throws -> Result {
+        let names = try exerciseNames(in: context)
+        var result = Result()
+        for session in try context.fetch(FetchDescriptor<WorkoutSession>(sortBy: [SortDescriptor(\.startedAt)])) {
+            if SessionTitle.isLegacyAutomatic(session.title, exerciseNames: names) {
+                session.restoreAutomaticTitle()
+                result.regenerated += 1
+            } else {
+                session.isTitleCustom = true
+                result.custom.append((session.startedAt, session.title))
+            }
+        }
+        return result
     }
 }

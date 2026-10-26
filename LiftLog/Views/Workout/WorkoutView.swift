@@ -71,11 +71,8 @@ struct WorkoutView: View {
     }
 
     private var header: some View {
-        @Bindable var session = session
-        return VStack(alignment: .leading, spacing: 6) {
-            TextField("訓練名稱", text: $session.title, axis: .vertical)
-                .font(.title2.bold())
-                .onChange(of: session.title) { WorkoutActions.save(context) }
+        VStack(alignment: .leading, spacing: 6) {
+            SessionTitleField(session: session)
             HStack(spacing: 12) {
                 Text(session.startedAt.formatted(date: .abbreviated, time: .shortened))
                 // 經過時間一律用 startedAt 推算

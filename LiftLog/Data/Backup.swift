@@ -1,8 +1,8 @@
 import Foundation
 import SwiftData
 
-/// 備份檔格式（version 5：訓練 → 動作 → 組，加上 role、region、modeID、日型與主項輪替順序）。
-/// 匯入時也能讀 version 3、4（缺的欄位依動作推算或留空）與 version 2（seed.json 也是 v2）。
+/// 備份檔格式（version 6：訓練 → 動作 → 組，加上 role、region、modeID、日型、主項輪替順序與自訂名稱）。
+/// 匯入時也能讀 version 3–5（缺的欄位依動作推算或留空）與 version 2（seed.json 也是 v2）。
 nonisolated struct BackupFile: Codable {
     struct ExerciseRecord: Codable {
         var id: UUID
@@ -64,6 +64,8 @@ nonisolated struct BackupFile: Codable {
         var modeID: String?
         /// v5 新增；舊版本和沒有日型的訓練為 nil
         var dayType: String?
+        /// v6 新增；舊版本為 nil，匯入時名稱符合舊自動格式的視為自動名稱
+        var isTitleCustom: Bool?
         var items: [ItemRecord]
     }
 
@@ -72,7 +74,7 @@ nonisolated struct BackupFile: Codable {
         var kg: Double
     }
 
-    static let currentVersion = 5
+    static let currentVersion = 6
 
     var version: Int
     var exercises: [ExerciseRecord]
@@ -84,7 +86,7 @@ nonisolated struct BackupFile: Codable {
         decoder.dateDecodingStrategy = .iso8601
         let version = try decoder.decode(VersionProbe.self, from: data).version
         switch version {
-        case 3, 4, 5:
+        case 3, 4, 5, 6:
             return try decoder.decode(BackupFile.self, from: data)
         case 2:
             return try decoder.decode(V2.self, from: data).upgraded()
@@ -136,8 +138,8 @@ nonisolated struct BackupFile: Codable {
             let sessions = SessionMigration.plan(legacy).map { plan in
                 SessionRecord(
                     id: UUID(), startedAt: plan.startedAt, endedAt: plan.startedAt,
-                    title: SessionTitle.automatic(plan.items.compactMap { names[$0.exerciseID] }),
-                    note: "", hasTime: false, region: nil, modeID: nil, dayType: nil,
+                    title: SessionTitle.legacyAutomatic(plan.items.compactMap { names[$0.exerciseID] }),
+                    note: "", hasTime: false, region: nil, modeID: nil, dayType: nil, isTitleCustom: nil,
                     items: plan.items.enumerated().map { index, item in
                         ItemRecord(id: UUID(), exerciseId: item.exerciseID, order: index, note: item.note, role: nil,
                                    sets: item.sets.enumerated().map { order, s in
@@ -183,7 +185,7 @@ enum BackupService {
             },
             sessions: sessions.map { s in
                 .init(id: s.id, startedAt: s.startedAt, endedAt: s.endedAt, title: s.title, note: s.note, hasTime: s.hasTime,
-                      region: s.regionRaw, modeID: s.modeID, dayType: s.dayTypeRaw,
+                      region: s.regionRaw, modeID: s.modeID, dayType: s.dayTypeRaw, isTitleCustom: s.isTitleCustom,
                       items: s.orderedItems.compactMap { item in
                           guard let exerciseId = item.exercise?.id else { return nil }
                           return .init(id: item.id, exerciseId: exerciseId, order: item.order, note: item.note,
@@ -208,6 +210,7 @@ enum BackupService {
         for bodyWeight in try context.fetch(FetchDescriptor<BodyWeight>()) { context.delete(bodyWeight) }
         try context.save()
 
+        let exerciseNames = Set(file.exercises.flatMap { [$0.name] + $0.aliases })
         var byID: [UUID: Exercise] = [:]
         for r in file.exercises {
             let exercise = makeExercise(r)
@@ -220,6 +223,7 @@ enum BackupService {
             let session = WorkoutSession(id: s.id, startedAt: s.startedAt, endedAt: s.endedAt, title: s.title,
                                          note: s.note, hasTime: s.hasTime, region: region, modeID: s.modeID,
                                          dayType: s.dayType.flatMap(DayType.init(rawValue:)))
+            session.isTitleCustom = s.isTitleCustom ?? !SessionTitle.isLegacyAutomatic(s.title, exerciseNames: exerciseNames)
             context.insert(session)
             for i in s.items {
                 guard let exercise = byID[i.exerciseId] else { continue }

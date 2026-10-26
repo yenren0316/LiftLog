@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 
 /// 動作在一次訓練裡的角色。共軛訓練用前八個；主項、爆發、單邊是 CHANGE_04 的角色，只出現在舊紀錄
 nonisolated enum Role: String, Codable, CaseIterable, Identifiable {
@@ -182,5 +183,31 @@ extension WorkoutSession {
     /// 依目前的動作推算部位
     var inferredRegion: Region {
         Region.infer(items.compactMap { $0.exercise?.category })
+    }
+
+    /// 自動產生的名稱（訓練目的，CHANGE_07 C-5）；excluding 是正在刪除的動作
+    func automaticTitle(excluding: SessionExercise? = nil) -> String {
+        let items = orderedItems.filter { $0 !== excluding && !$0.isDeleted }
+        let main = items.first { $0.role == .maxEffort || $0.role == .dynamicEffort }?.exercise?.name
+        return SessionTitle.purpose(dayType: dayType, mainName: main, categories: items.compactMap { $0.exercise?.category })
+    }
+
+    /// 沒有自訂名稱時，名稱跟著動作和日型更新
+    func refreshAutomaticTitle(excluding: SessionExercise? = nil) {
+        guard !isTitleCustom else { return }
+        title = automaticTitle(excluding: excluding)
+    }
+
+    /// 使用者在名稱欄位輸入：有字就是自訂名稱，留空就恢復自動名稱
+    func setTitle(fromUserInput text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        isTitleCustom = !trimmed.isEmpty
+        title = trimmed.isEmpty ? automaticTitle() : text
+    }
+
+    /// 「恢復自動名稱」
+    func restoreAutomaticTitle() {
+        isTitleCustom = false
+        title = automaticTitle()
     }
 }
