@@ -125,9 +125,12 @@ struct TrainingRegionTests {
         session(date(10, 26, 20), ended: false, [(bench, true)], title: "進行中")   // 進行中：不算
         let snapshot = StatsSnapshot.make(history: PlanHistory(sessions: try context.fetch(FetchDescriptor<WorkoutSession>())),
                                           exercises: [squat, bench].map { PlanExercise($0) }, now: now, calendar: calendar)
-        #expect(snapshot.frequencyWeeks.buckets.last?.counts == [.lower: 1, .upper: 1])
-        #expect(snapshot.weeklySessions.last == 2)
-        #expect(snapshot.frequencyMonths.buckets.last?.total == 2)
+        // CHANGE_09：以天為單位，同一天的下肢＋上肢合併成 1 天全身
+        #expect(snapshot.frequencyWeeks.buckets.last?.counts == [.full: 1])
+        #expect(snapshot.weeklySessions.last == 1)
+        #expect(snapshot.frequencyMonths.buckets.last?.total == 1)
+        #expect(snapshot.countedDays == [calendar.startOfDay(for: now): .full])
+        #expect(snapshot.weekCounts == [calendar.startOfDay(for: now): 1])   // 10/26 是週一
         // 同一天下肢＋上肢：日曆是全身，標籤列出兩次的名稱（依開始時間）
         let today = try #require(snapshot.days[calendar.startOfDay(for: now)])
         #expect(today.region == .full)

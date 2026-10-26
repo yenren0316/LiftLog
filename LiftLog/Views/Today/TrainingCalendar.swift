@@ -26,7 +26,8 @@ struct TrainingCalendar: View {
                 Text("本週 \(weekSessions) 次").font(.caption.monospacedDigit()).foregroundStyle(Theme.textSecondary)
             }
             GeometryReader { geo in
-                let weeks = ActivityCalendar.weeks(endingAt: .now, count: CalendarGrid.weekCount(width: geo.size.width))
+                let weeks = ActivityCalendar.weeks(endingAt: .now, count: CalendarGrid.weekCount(width: geo.size.width),
+                                                   calendar: TrainingCount.weekCalendar())
                 grid(weeks)
                     .contentShape(.rect)
                     .gesture(SpatialTapGesture().onEnded { value in

@@ -71,9 +71,13 @@ nonisolated struct StatsSnapshot: Sendable {
     var balance = Balance()
     /// 近 12 週每週跑步機的分鐘數，由舊到新
     var weeklyCardioMinutes: [Double] = []
-    /// 近 12 週每週的訓練次數，由舊到新（最後一個是本週）；只算有完成組的訓練
+    /// 近 12 週每週的訓練次數，由舊到新（最後一個是本週）；TrainingCount 的規則（以天為單位）
     var weeklySessions: [Int] = []
-    /// 訓練頻率卡：近 12 週、近 12 個月，依部位分開（CHANGE_08 §3）；平均只算過完的週或月（CHANGE_09 §0-2）
+    /// 算進次數的日子和那天的部位（TrainingCount.days，CHANGE_09 §2）
+    var countedDays: [Date: DayRegion] = [:]
+    /// 每週（週一）算進次數的天數：每週目標、日曆達標的小點
+    var weekCounts: [Date: Int] = [:]
+    /// 訓練頻率卡：近 12 週、近 12 個月，依部位分開（CHANGE_08 §3）；以天為單位（CHANGE_09 §4），平均只算過完的週或月（§0-2）
     var frequencyWeeks = TrainingFrequency.Series()
     var frequencyMonths = TrainingFrequency.Series()
 
@@ -81,20 +85,20 @@ nonisolated struct StatsSnapshot: Sendable {
 
     static let trendWeeks = 12
 
-    /// exercises：全部動作（含封存）；lastDate 不需要先算好
+    /// exercises：全部動作（含封存）；lastDate 不需要先算好。cardioOnlyCounts：「只有有氧的訓練也算」（每週目標的設定）
     static func make(history: PlanHistory, exercises: [PlanExercise], now: Date = .now,
-                     calendar: Calendar = .current) -> StatsSnapshot {
+                     calendar: Calendar = .current, cardioOnlyCounts: Bool = false) -> StatsSnapshot {
         var snapshot = StatsSnapshot()
         let today = calendar.startOfDay(for: now)
+        // 週一開始的週（和今天的日曆、每週目標一致）
+        let weekCalendar = TrainingCount.weekCalendar(calendar)
 
         // 每個動作：最後日期、次數、上一次的組（history 由新到舊）
-        var regional: [(date: Date, region: DayRegion)] = []
         for session in history.sessions {
             let day = calendar.startOfDay(for: session.date)
             var dayStat = snapshot.days[day] ?? DayStat()
             dayStat.sessionIDs.insert(session.id, at: 0)
             if let region = DayRegion.of(session) {
-                regional.append((session.date, region))
                 dayStat.regions.insert(region, at: 0)
                 dayStat.titles.insert(session.title, at: 0)
                 dayStat.region = DayRegion.merged(dayStat.regions)
@@ -138,14 +142,19 @@ nonisolated struct StatsSnapshot: Sendable {
             exercises: planExercises.filter { !$0.isArchived }, history: history, now: now
         ).items.first?.exercise.name
 
+        // 訓練次數：全 App 同一套規則（以天為單位、只有有氧的處理），頻率卡的長條、每週目標都從這裡算
+        snapshot.countedDays = TrainingCount.days(history.sessions, cardioOnlyCounts: cardioOnlyCounts, calendar: calendar)
+        snapshot.weekCounts = TrainingCount.weeks(snapshot.countedDays, calendar: weekCalendar)
+        let counted = snapshot.countedDays.map { (date: $0.key, region: $0.value) }
+        snapshot.frequencyWeeks = TrainingFrequency.series(counted, period: .week, now: now, calendar: weekCalendar)
+        snapshot.frequencyMonths = TrainingFrequency.series(counted, period: .month, now: now, calendar: weekCalendar)
+        snapshot.weeklySessions = snapshot.frequencyWeeks.buckets.map(\.total)
+
         // 每週：近 12 週（含本週）
         let weeks = (0..<trendWeeks).reversed().compactMap { back -> DateInterval? in
-            guard let day = calendar.date(byAdding: .weekOfYear, value: -back, to: today) else { return nil }
-            return calendar.dateInterval(of: .weekOfYear, for: day)
+            guard let day = weekCalendar.date(byAdding: .weekOfYear, value: -back, to: today) else { return nil }
+            return weekCalendar.dateInterval(of: .weekOfYear, for: day)
         }
-        snapshot.frequencyWeeks = TrainingFrequency.series(regional, period: .week, now: now, calendar: calendar)
-        snapshot.frequencyMonths = TrainingFrequency.series(regional, period: .month, now: now, calendar: calendar)
-        snapshot.weeklySessions = snapshot.frequencyWeeks.buckets.map(\.total)
         snapshot.weeklyCardioMinutes = weeks.map { week -> Double in
             let items: [PlanHistory.Item] = history.sessions.filter { week.contains($0.date) }.flatMap(\.items)
             let sets: [SetValues] = items.filter { $0.category == .cardio }.flatMap(\.sets)
@@ -208,6 +217,7 @@ final class StatsCache {
         let sessions = (try? context.fetch(FetchDescriptor<WorkoutSession>())) ?? []
         let exercises = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
         snapshot = StatsSnapshot.make(history: PlanHistory(sessions: sessions),
-                                      exercises: exercises.map { PlanExercise(snapshotOf: $0) })
+                                      exercises: exercises.map { PlanExercise(snapshotOf: $0) },
+                                      cardioOnlyCounts: UserDefaults.standard.bool(forKey: WeeklyGoal.cardioOnlyCountsKey))
     }
 }

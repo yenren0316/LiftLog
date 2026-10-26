@@ -136,12 +136,12 @@ private struct CardioCard: View {
                 Text("近 12 週沒有跑步機紀錄").font(.subheadline).foregroundStyle(Theme.textSecondary)
             } else {
                 Chart(Array(zip(weeks, minutes)), id: \.0) { week, value in
-                    BarMark(x: .value("週", week, unit: .weekOfYear), y: .value("分鐘", value))
+                    BarMark(x: .value("週", week, unit: .weekOfYear, calendar: Self.calendar), y: .value("分鐘", value))
                         .foregroundStyle(Theme.accent)
                         .cornerRadius(3)
                 }
                 .chartXAxis {
-                    AxisMarks(values: .stride(by: .weekOfYear, count: 3)) { _ in
+                    AxisMarks(values: .stride(by: .weekOfYear, count: 3, calendar: Self.calendar)) { _ in
                         AxisValueLabel(format: .dateTime.month(.defaultDigits).day())
                     }
                 }
@@ -151,9 +151,11 @@ private struct CardioCard: View {
         .card(padding: 16)
     }
 
+    /// 週一開始的週（和訓練頻率、今天的日曆一致）
+    private static let calendar = TrainingCount.weekCalendar()
+
     private static func weekStarts(count: Int) -> [Date] {
-        let calendar = Calendar.current
-        return (0..<count).reversed().compactMap { back in
+        (0..<count).reversed().compactMap { back in
             calendar.date(byAdding: .weekOfYear, value: -back, to: .now)
                 .flatMap { calendar.dateInterval(of: .weekOfYear, for: $0)?.start }
         }
@@ -231,6 +233,8 @@ private struct FrequencyCard: View {
     }
 
     private var unit: Calendar.Component { period == .week ? .weekOfYear : .month }
+    /// 週一開始的週（和 StatsSnapshot 的分段一致）
+    private let calendar = TrainingCount.weekCalendar()
 
     private func chart(_ buckets: [TrainingFrequency.Bucket], average: Double) -> some View {
         let top = Double(max(buckets.map(\.total).max() ?? 0, 1))
@@ -239,7 +243,7 @@ private struct FrequencyCard: View {
             ForEach(buckets) { bucket in
                 ForEach(DayRegion.stackOrder, id: \.self) { region in
                     if let count = bucket.counts[region], count > 0 {
-                        BarMark(x: .value("期間", bucket.start, unit: unit), y: .value("次數", count))
+                        BarMark(x: .value("期間", bucket.start, unit: unit, calendar: calendar), y: .value("次數", count))
                             .foregroundStyle(region.barFill)
                     }
                 }
@@ -248,7 +252,7 @@ private struct FrequencyCard: View {
                 .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
                 .foregroundStyle(Theme.textPrimary.opacity(0.7))
             if let current {
-                RuleMark(x: .value("期間", current.start, unit: unit))
+                RuleMark(x: .value("期間", current.start, unit: unit, calendar: calendar))
                     .foregroundStyle(Theme.textSecondary.opacity(0.25))
                     // 放在圖表裡最上面（長條上方留了空間），不蓋到上面的分段切換
                     .annotation(position: .overlay, alignment: .top, spacing: 0,
@@ -267,7 +271,7 @@ private struct FrequencyCard: View {
             }
         }
         .chartXAxis {
-            AxisMarks(values: .stride(by: unit, count: 3)) { _ in
+            AxisMarks(values: .stride(by: unit, count: 3, calendar: calendar)) { _ in
                 AxisValueLabel(format: period == .week ? .dateTime.month(.defaultDigits).day() : .dateTime.month(.defaultDigits))
                     .foregroundStyle(Theme.textSecondary)
             }
@@ -318,7 +322,6 @@ private struct FrequencyCard: View {
 
     /// 「10/13–10/19・3 次」或「2026 年 9 月・12 次」
     private func label(_ bucket: TrainingFrequency.Bucket) -> String {
-        let calendar = Calendar.current
         if period == .month {
             let parts = calendar.dateComponents([.year, .month], from: bucket.start)
             return "\(parts.year ?? 0) 年 \(parts.month ?? 0) 月・\(bucket.total) 次"
