@@ -4,7 +4,7 @@ import UIKit
 // 配色系統（CHANGE_04 第 6 節）：所有顏色都集中在這個檔案，畫面只用 Theme 的 token。
 // 這個檔案在 Shared 資料夾，App 和小工具（CHANGE_05）共用；畫面元件在 App 的 Theme/Components.swift。
 
-/// 一個主題的 11 個顏色（0xRRGGBB）
+/// 一個主題的 12 個顏色（0xRRGGBB）
 nonisolated struct Palette: Equatable, Sendable {
     /// 頁面底色
     var background: UInt32
@@ -26,6 +26,8 @@ nonisolated struct Palette: Equatable, Sendable {
     var warning: UInt32
     /// 超過 180 天、刪除
     var danger: UInt32
+    /// 上肢（日曆格子、訓練頻率長條；下肢用 accent）。色相和 accent 明顯不同、亮度相近（CHANGE_08 §4）
+    var upperBody: UInt32 = 0x4FA3FF
 
     /// 依 background / card / field / separator / textPrimary / textSecondary / accent / onAccent / done / warning / danger 的順序
     init(_ hex: [UInt32]) {
@@ -43,7 +45,7 @@ nonisolated struct Palette: Equatable, Sendable {
     var tokens: [(name: String, hex: UInt32)] {
         [("background", background), ("card", card), ("field", field), ("separator", separator),
          ("textPrimary", textPrimary), ("textSecondary", textSecondary), ("accent", accent), ("onAccent", onAccent),
-         ("done", done), ("warning", warning), ("danger", danger)]
+         ("done", done), ("warning", warning), ("danger", danger), ("upperBody", upperBody)]
     }
 }
 
@@ -66,19 +68,19 @@ nonisolated enum AppTheme: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// 石墨深灰的底；accent 和 onAccent 由各主題決定
+    /// 石墨深灰的底；accent、onAccent、upperBody 由各主題決定
     private static let graphite = Palette([0x111214, 0x1B1C1F, 0x2A2B30, 0x34363B, 0xF3F3F4, 0x9C9DA3,
                                            0xFF8A3D, 0x111214, 0x3FB97C, 0xF2C14E, 0xEF5350])
 
     var palette: Palette {
         var palette = Self.graphite
-        (palette.accent, palette.onAccent) = switch self {
-        case .graphiteOrange: (0xFF8A3D, 0x111214)
-        case .graphiteBlue: (0x4C7DF0, 0xFFFFFF)
-        case .graphitePurple: (0xA683FF, 0x111214)
-        case .graphitePink: (0xFF6B9D, 0x111214)
-        case .graphiteCyan: (0x2EC4D6, 0x111214)
-        case .graphiteSilver: (0xE6E6E6, 0x111214)
+        (palette.accent, palette.onAccent, palette.upperBody) = switch self {
+        case .graphiteOrange: (0xFF8A3D, 0x111214, 0x4FA3FF)   // 上肢：天藍
+        case .graphiteBlue: (0x4C7DF0, 0xFFFFFF, 0xE07A35)     // 上肢：橘
+        case .graphitePurple: (0xA683FF, 0x111214, 0x2EC4D6)   // 上肢：青
+        case .graphitePink: (0xFF6B9D, 0x111214, 0x4FA3FF)     // 上肢：天藍
+        case .graphiteCyan: (0x2EC4D6, 0x111214, 0xB48CFF)     // 上肢：淡紫
+        case .graphiteSilver: (0xE6E6E6, 0x111214, 0x9BCBFF)   // 上肢：淺藍（銀色沒有色相，用有彩度的藍）
         }
         return palette
     }
@@ -122,6 +124,7 @@ enum Theme {
     static let done = token { $0.done }
     static let warning = token { $0.warning }
     static let danger = token { $0.danger }
+    static let upperBody = token { $0.upperBody }
 
     static let cardRadius: CGFloat = 28
 

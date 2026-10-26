@@ -19,6 +19,8 @@ nonisolated struct PlanHistory: Sendable {
     struct Session: Sendable {
         var id = UUID()
         var date: Date
+        /// 訓練名稱（日曆的標籤用）
+        var title = ""
         var region: Region = .unspecified
         var dayType: DayType?
         var items: [Item]
@@ -416,7 +418,8 @@ nonisolated struct SlotAdvice: Equatable, Sendable {
 nonisolated extension PlanHistory {
     init(sessions: [WorkoutSession]) {
         self.init(sessions.filter { !$0.isActive }.map { s in
-            Session(id: s.id, date: s.startedAt, region: s.region, dayType: s.dayType, items: s.orderedItems.compactMap { item in
+            Session(id: s.id, date: s.startedAt, title: s.title.isEmpty ? "訓練" : s.title, region: s.region, dayType: s.dayType,
+                    items: s.orderedItems.compactMap { item in
                 guard let exercise = item.exercise else { return nil }
                 return Item(exerciseID: exercise.id, category: exercise.category, tags: exercise.tags, role: item.role,
                             sets: item.completedSets.map(\.values))

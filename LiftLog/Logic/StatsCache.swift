@@ -31,6 +31,12 @@ nonisolated struct StatsSnapshot: Sendable {
         var exerciseCount = 0
         /// 那天的訓練，依開始時間
         var sessionIDs: [UUID] = []
+        /// 那天有完成組的訓練的名稱，依開始時間（日曆的標籤，CHANGE_08 §4）
+        var titles: [String] = []
+        /// 合併後的部位（日曆格子的顏色）；那天沒有完成任何組時為 nil
+        var region: DayRegion?
+        /// 各次訓練的部位，算 region 用
+        var regions: [DayRegion] = []
     }
 
     /// 主項的估算 1RM 趨勢
@@ -65,8 +71,11 @@ nonisolated struct StatsSnapshot: Sendable {
     var balance = Balance()
     /// 近 12 週每週跑步機的分鐘數，由舊到新
     var weeklyCardioMinutes: [Double] = []
-    /// 近 12 週每週的訓練次數，由舊到新（最後一個是本週）
+    /// 近 12 週每週的訓練次數，由舊到新（最後一個是本週）；只算有完成組的訓練
     var weeklySessions: [Int] = []
+    /// 訓練頻率卡：近 12 週、近 12 個月，依部位分開（CHANGE_08 §3）
+    var frequencyWeeks: [TrainingFrequency.Bucket] = []
+    var frequencyMonths: [TrainingFrequency.Bucket] = []
 
     static let empty = StatsSnapshot()
 
@@ -79,10 +88,17 @@ nonisolated struct StatsSnapshot: Sendable {
         let today = calendar.startOfDay(for: now)
 
         // 每個動作：最後日期、次數、上一次的組（history 由新到舊）
+        var regional: [(date: Date, region: DayRegion)] = []
         for session in history.sessions {
             let day = calendar.startOfDay(for: session.date)
             var dayStat = snapshot.days[day] ?? DayStat()
             dayStat.sessionIDs.insert(session.id, at: 0)
+            if let region = DayRegion.of(session) {
+                regional.append((session.date, region))
+                dayStat.regions.insert(region, at: 0)
+                dayStat.titles.insert(session.title, at: 0)
+                dayStat.region = DayRegion.merged(dayStat.regions)
+            }
             for item in session.items where item.sets.contains(where: \.isCompleted) {
                 var stat = snapshot.exercises[item.exerciseID] ?? ExerciseStat()
                 if stat.lastDate == nil {
@@ -127,7 +143,9 @@ nonisolated struct StatsSnapshot: Sendable {
             guard let day = calendar.date(byAdding: .weekOfYear, value: -back, to: today) else { return nil }
             return calendar.dateInterval(of: .weekOfYear, for: day)
         }
-        snapshot.weeklySessions = weeks.map { week in history.sessions.filter { week.contains($0.date) }.count }
+        snapshot.frequencyWeeks = TrainingFrequency.buckets(regional, period: .week, now: now, calendar: calendar)
+        snapshot.frequencyMonths = TrainingFrequency.buckets(regional, period: .month, now: now, calendar: calendar)
+        snapshot.weeklySessions = snapshot.frequencyWeeks.map(\.total)
         snapshot.weeklyCardioMinutes = weeks.map { week -> Double in
             let items: [PlanHistory.Item] = history.sessions.filter { week.contains($0.date) }.flatMap(\.items)
             let sets: [SetValues] = items.filter { $0.category == .cardio }.flatMap(\.sets)

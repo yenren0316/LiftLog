@@ -9,8 +9,8 @@ struct ThemeTests {
         #expect(AppTheme.allCases.count == 6)
         for theme in AppTheme.allCases {
             let tokens = theme.palette.tokens
-            #expect(tokens.count == 11, "\(theme)")
-            #expect(Set(tokens.map(\.name)).count == 11, "\(theme)")
+            #expect(tokens.count == 12, "\(theme)")
+            #expect(Set(tokens.map(\.name)).count == 12, "\(theme)")
             #expect(tokens.allSatisfy { $0.hex <= 0xFFFFFF }, "\(theme)")
         }
     }
@@ -26,10 +26,40 @@ struct ThemeTests {
         let base = AppTheme.graphiteOrange.palette
         for theme in AppTheme.allCases {
             var palette = theme.palette
-            (palette.accent, palette.onAccent) = (base.accent, base.onAccent)
+            (palette.accent, palette.onAccent, palette.upperBody) = (base.accent, base.onAccent, base.upperBody)
             #expect(palette == base, "\(theme)")
         }
         #expect(Set(AppTheme.allCases.map(\.palette.accent)).count == AppTheme.allCases.count)
+    }
+
+    /// CHANGE_08 §4：上肢的顏色和 accent（下肢）色相明顯不同、亮度相近，在深色底上清楚
+    @Test func upperBodyIsDistinctFromAccent() {
+        func hsv(_ hex: UInt32) -> (hue: Double, saturation: Double) {
+            let r = Double((hex >> 16) & 0xFF) / 255, g = Double((hex >> 8) & 0xFF) / 255, b = Double(hex & 0xFF) / 255
+            let maxV = max(r, g, b), minV = min(r, g, b), delta = maxV - minV
+            guard delta > 0 else { return (0, 0) }
+            var hue: Double
+            if maxV == r { hue = (g - b) / delta } else if maxV == g { hue = (b - r) / delta + 2 } else { hue = (r - g) / delta + 4 }
+            hue = (hue * 60).truncatingRemainder(dividingBy: 360)
+            return (hue < 0 ? hue + 360 : hue, delta / maxV)
+        }
+        func brightness(_ hex: UInt32) -> Double {
+            let r = Double((hex >> 16) & 0xFF), g = Double((hex >> 8) & 0xFF), b = Double(hex & 0xFF)
+            return (0.299 * r + 0.587 * g + 0.114 * b) / 255
+        }
+        for theme in AppTheme.allCases {
+            let p = theme.palette
+            let accent = hsv(p.accent), upper = hsv(p.upperBody)
+            if accent.saturation < 0.1 {
+                // 銀色沒有色相：上肢要有明顯的彩度
+                #expect(upper.saturation >= 0.35, "\(theme)")
+            } else {
+                let gap = abs(accent.hue - upper.hue)
+                #expect(min(gap, 360 - gap) >= 60, "\(theme)")
+            }
+            #expect(abs(brightness(p.accent) - brightness(p.upperBody)) <= 0.15, "\(theme)")
+            #expect(brightness(p.upperBody) - brightness(p.background) >= 0.45, "\(theme)")
+        }
     }
 
     @Test func storedIDsIncludingLegacyThemes() throws {
