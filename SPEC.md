@@ -304,6 +304,7 @@ CHANGE_04 刪除了 15 個從沒練過的動作（前抱式深蹲、分腿蹲、
 - 打勾後自動開始休息計時。
 - 強度換算表的進位單位（槓鈴 kg／lbs、其他器材 kg／lbs）。
 - 主題（見下節）。
+- 最下方：App 名稱、版本，以及免費簽署的到期日「簽署到期 2026/11/02 上午9:30・還有 7 天」（剩一天以內用 warning 色）。到期日讀 App 裡 `embedded.mobileprovision` 的 ExpirationDate，每次用 Xcode 重新安裝都會更新；模擬器沒有這個檔，不顯示（開發用：啟動參數 `-previewExpirationDays 6` 顯示假的到期日）。
 
 ### 9-1. 主題配色
 - 所有顏色集中在 `Shared/Theme.swift`，畫面只使用 token：

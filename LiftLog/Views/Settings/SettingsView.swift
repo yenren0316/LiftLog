@@ -103,6 +103,9 @@ struct SettingsView: View {
                     Text("版本 \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")")
                         .font(.footnote)
                         .foregroundStyle(Theme.textSecondary)
+                    if let expiration {
+                        ExpirationLine(expiration: expiration)
+                    }
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.top, 20)
@@ -125,6 +128,15 @@ struct SettingsView: View {
         .alert(message ?? "", isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } })) {
             Button("好") {}
         }
+    }
+
+    /// 免費簽署的到期日；開發用：啟動參數 -previewExpirationDays 6 在模擬器顯示假的到期日
+    private var expiration: Date? {
+        #if DEBUG
+        let days = UserDefaults.standard.integer(forKey: "previewExpirationDays")
+        if days > 0 { return Calendar.current.date(byAdding: .day, value: days, to: .now) }
+        #endif
+        return ProvisioningProfile.installedExpiration
     }
 
     private func stepper(_ title: String, value: Binding<Double>, step: Double, unit: String) -> some View {
@@ -188,5 +200,18 @@ struct SettingsView: View {
         } catch {
             message = "匯入失敗：\(error.localizedDescription)"
         }
+    }
+}
+
+/// 設定頁最下方：免費簽署的到期日，剩一天以內用 warning 色提醒重新安裝
+private struct ExpirationLine: View {
+    var expiration: Date
+
+    var body: some View {
+        let days = ProvisioningProfile.daysLeft(until: expiration)
+        let left = days > 0 ? "還有 \(days) 天" : "今天到期"
+        Text("簽署到期 \(expiration.formatted(.dateTime.year().month(.twoDigits).day(.twoDigits).hour().minute()))・\(left)")
+            .font(.footnote.monospacedDigit())
+            .foregroundStyle(days <= 1 ? Theme.warning : Theme.textSecondary)
     }
 }
