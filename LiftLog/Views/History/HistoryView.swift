@@ -52,9 +52,14 @@ struct HistoryView: View {
                 }
             }
             #if DEBUG
-            // 開發用：-historySegment stats 切到統計；-openBackfill YES 打開補登
+            // 開發用：-historySegment stats 切到統計；-openBackfill YES 打開補登；
+            // -scrollToBottom 紀錄｜統計 切到那個分段並捲到最底部（CHANGE_08 §2）
             .task {
                 if let raw = UserDefaults.standard.string(forKey: "historySegment"), let value = Segment(rawValue: raw) {
+                    segment = value
+                }
+                if let raw = UserDefaults.standard.string(forKey: "scrollToBottom"),
+                   let value = Segment.allCases.first(where: { $0.title == raw || $0.rawValue == raw }) {
                     segment = value
                 }
                 if UserDefaults.standard.bool(forKey: "openBackfill") { showingBackfill = true }
@@ -102,6 +107,7 @@ private struct HistoryRecordsList: View {
                         }
                         .buttonStyle(.pressable)
                         .listRowBackground(Theme.card)
+                        .id(session.id)
                     }
                 } header: {
                     Text(Self.monthTitle(month.start, count: month.sessions.count))
@@ -111,7 +117,10 @@ private struct HistoryRecordsList: View {
         }
         .listSectionSpacing(12)
         .scrollContentBackground(.hidden)
-        .hidesTabBarOnScroll()
+        .hidesTabBarOnScroll("history.records")
+        #if DEBUG
+        .debugScrollToBottom("紀錄", "records", last: months.last?.sessions.last?.id)
+        #endif
     }
 
     /// 「2026 年 10 月・12 次」
@@ -221,3 +230,32 @@ private struct BackfillSheet: View {
         }
     }
 }
+
+#if DEBUG
+struct DebugScrollToBottom: ViewModifier {
+    var names: [String]
+    /// 最後一列的 id
+    var last: AnyHashable?
+
+    func body(content: Content) -> some View {
+        ScrollViewReader { proxy in
+            content.task {
+                guard let raw = UserDefaults.standard.string(forKey: "scrollToBottom"), names.contains(raw), let last else { return }
+                try? await Task.sleep(for: .milliseconds(800))
+                TabBarAutoHideLog.note("scrollToBottom \(raw) -> \(last)")
+                // 先用動畫捲（捲動中才會觸發分頁列的切換）；List 的動畫捲動到很遠的列會沒有反應，之後再直接跳一次
+                withAnimation(.easeInOut(duration: 1.2)) { proxy.scrollTo(last, anchor: .bottom) }
+                try? await Task.sleep(for: .milliseconds(1400))
+                proxy.scrollTo(last, anchor: .bottom)
+            }
+        }
+    }
+}
+
+extension View {
+    /// 開發用：-scrollToBottom 紀錄｜統計｜動作庫（或 records｜stats｜library）時，出現後捲到最底部
+    func debugScrollToBottom(_ names: String..., last: AnyHashable?) -> some View {
+        modifier(DebugScrollToBottom(names: names, last: last))
+    }
+}
+#endif

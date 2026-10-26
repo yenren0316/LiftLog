@@ -19,8 +19,9 @@ struct HistoryStatsView: View {
                 .padding(.horizontal, 16)
                 .padding(.bottom, 16)
             }
-            .hidesTabBarOnScroll()
+            .hidesTabBarOnScroll("history.stats")
             #if DEBUG
+            .debugScrollToBottom("統計", "stats", last: "balance")
             // 開發用：-statsScrollTo cardio 捲到那張卡（截圖用）
             .task {
                 if let id = UserDefaults.standard.string(forKey: "statsScrollTo") {

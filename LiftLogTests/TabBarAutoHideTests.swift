@@ -80,10 +80,76 @@ struct TabBarAutoHideTests {
             state.update(offset: CGFloat(limit), maxOffset: CGFloat(limit), isScrolling: true)
         }
         #expect(state.isHidden)
-        // 從最底部往上滑才出現
-        scroll(&state, [930, 920], max: 940)
+        // 距離底部 80 pt 以內往上滑不算；離開之後連續往上滑 24 pt 才出現
+        scroll(&state, [930, 900, 870], max: 940)
         #expect(state.isHidden)
-        scroll(&state, [910], max: 940)
+        scroll(&state, [850, 840], max: 940)
+        #expect(!state.isHidden)
+    }
+
+    /// CHANGE_08 T2：實機在歷程最底部卡住跳動的序列。分頁列隱藏讓可捲動範圍少 98 pt（1000 → 902），
+    /// 內容被拉回時彈簧回彈超過新的底部再回來；分頁列出現又讓範圍變回來。以前會一直切換，現在都不切換
+    @Test func bottomBounceSequenceNeverToggles() {
+        var state = TabBarAutoHide()
+        state.update(offset: 0, maxOffset: 1000, isScrolling: false)
+        scroll(&state, [300, 600, 900], max: 1000)
+        #expect(state.isHidden)
+        var toggles = 0
+        var wasHidden = state.isHidden
+        func step(_ offset: CGFloat, _ max: CGFloat) {
+            state.update(offset: offset, maxOffset: max, isScrolling: true)
+            if state.isHidden != wasHidden { toggles += 1; wasHidden = state.isHidden }
+        }
+        for _ in 0..<5 {
+            // 手指還往下推：超出底部的回彈
+            for offset in [960, 1010, 1040] as [CGFloat] { step(offset, 1000) }
+            // 範圍變短，被拉回新的底部，回彈時低於底部 32 pt
+            for offset in [1000, 950, 905, 870, 890, 902] as [CGFloat] { step(offset, 902) }
+            // 範圍又變長（以前分頁列出現），手指繼續往下推
+            for offset in [902, 930, 970, 1000] as [CGFloat] { step(offset, 1000) }
+        }
+        #expect(toggles == 0)
+        #expect(state.isHidden)
+    }
+
+    @Test func noTogglingWithinEightyPointsOfTheBottom() {
+        // 隱藏中：在底部 80 pt 以內往上滑 25 pt 不出現
+        var hidden = TabBarAutoHide()
+        hidden.update(offset: 0, maxOffset: 1000, isScrolling: false)
+        scroll(&hidden, [100, 400, 950], max: 1000)
+        #expect(hidden.isHidden)
+        scroll(&hidden, [940, 930, 925], max: 1000)
+        #expect(hidden.isHidden)
+        // 顯示中：在底部 80 pt 以內往下滑（包括超出底部的回彈）不隱藏
+        var shown = TabBarAutoHide()
+        shown.update(offset: 925, maxOffset: 1000, isScrolling: false)
+        scroll(&shown, [950, 990, 1000, 1040, 1010, 1000], max: 1000)
+        #expect(!shown.isHidden)
+    }
+
+    @Test func needsTwentyFourPointsInOneDirection() {
+        var state = TabBarAutoHide()
+        state.update(offset: 100, maxOffset: 2000, isScrolling: false)
+        // 往下 15、往上 5、往下 15：累計 25，但沒有連續 24 pt
+        scroll(&state, [115, 110, 125])
+        #expect(!state.isHidden)
+        // 從換方向的 110 起連續往下剛好 24 pt
+        scroll(&state, [134])
+        #expect(state.isHidden)
+        // 往上也一樣：往上 14、往下 5、往上 15 不算，從 125 起連續往上 24 pt 才出現
+        scroll(&state, [120, 125, 110])
+        #expect(state.isHidden)
+        scroll(&state, [101])
+        #expect(!state.isHidden)
+    }
+
+    @Test func flingIntoTheTopBounceShows() {
+        // 快速滑回頂端時，可能一格就從中段跳進頂端的回彈（跳過頂端 24 pt 那一段），還是要出現
+        var state = TabBarAutoHide()
+        state.update(offset: 0, maxOffset: 2000, isScrolling: false)
+        scroll(&state, [200, 600])
+        #expect(state.isHidden)
+        scroll(&state, [300, -30])
         #expect(!state.isHidden)
     }
 

@@ -210,34 +210,75 @@ extension ButtonStyle where Self == PressableButtonStyle {
 // MARK: - 捲動時隱藏分頁列
 
 extension View {
-    /// 分頁裡的捲動畫面用：往下滑隱藏分頁列，往上滑或回到頂端時出現（像 Threads）
-    func hidesTabBarOnScroll() -> some View {
-        modifier(TabBarAutoHideModifier())
+    /// 分頁裡的捲動畫面用：往下滑隱藏分頁列，往上滑或回到頂端時出現（像 Threads）。name 只用在 DEBUG 的紀錄
+    func hidesTabBarOnScroll(_ name: String = "") -> some View {
+        modifier(TabBarAutoHideModifier(name: name))
     }
 }
 
 private struct TabBarAutoHideModifier: ViewModifier {
+    var name: String
     @State private var isHidden = false
     @State private var autoHide = TabBarAutoHide()
     @State private var isScrolling = false
+    @State private var phase: ScrollPhase = .idle
+    /// 分頁列顯示時底部的安全區域（分頁列、Home 指示條、訓練中橫條）。捲動內容底部固定留這麼多，
+    /// 而且捲動畫面一律延伸到螢幕底部：分頁列隱藏或出現時，畫面大小和可捲動範圍都不變（CHANGE_08 §2）
+    @State private var visibleBottomInset: CGFloat = 0
+    @State private var extendedMaxY: CGFloat = 0
+    @State private var safeMaxY: CGFloat = 0
 
     private struct Metrics: Equatable {
         var offset: CGFloat
         var maxOffset: CGFloat
+        var contentHeight: CGFloat
+        var viewportHeight: CGFloat
+        var insetTop: CGFloat
+        var insetBottom: CGFloat
     }
 
     func body(content: Content) -> some View {
         content
-            .onScrollPhaseChange { _, phase in isScrolling = phase.isScrolling }
+            .onScrollPhaseChange { _, newPhase in
+                phase = newPhase
+                isScrolling = newPhase.isScrolling
+            }
             .onScrollGeometryChange(for: Metrics.self) { geometry in
                 let insets = geometry.contentInsets
+                // 可視範圍用 visibleRect：ScrollView 的 containerSize 不含底部 inset，List 的含，用它算最底部會差一個 inset
+                let viewport = geometry.visibleRect.height
                 return Metrics(offset: geometry.contentOffset.y + insets.top,
-                               maxOffset: geometry.contentSize.height + insets.top + insets.bottom - geometry.containerSize.height)
+                               maxOffset: geometry.contentSize.height + insets.top + insets.bottom - viewport,
+                               contentHeight: geometry.contentSize.height, viewportHeight: viewport,
+                               insetTop: insets.top, insetBottom: insets.bottom)
             } action: { _, metrics in
                 autoHide.update(offset: metrics.offset, maxOffset: metrics.maxOffset, isScrolling: isScrolling)
+                #if DEBUG
+                TabBarAutoHideLog.geometry(name, metrics: (metrics.offset, metrics.maxOffset, metrics.contentHeight,
+                                                           metrics.viewportHeight, metrics.insetTop, metrics.insetBottom),
+                                           phase: phase, hidden: autoHide.isHidden)
+                #endif
                 if autoHide.isHidden != isHidden {
+                    #if DEBUG
+                    TabBarAutoHideLog.toggle(name, hidden: autoHide.isHidden, offset: metrics.offset, maxOffset: metrics.maxOffset)
+                    #endif
                     withAnimation(.snappy(duration: 0.3)) { isHidden = autoHide.isHidden }
                 }
+            }
+            // List 不吃 contentMargins 的底部留白，用 safeAreaPadding（List 和 ScrollView 都會當成內容的 inset）
+            .safeAreaPadding(.bottom, visibleBottomInset)
+            // 捲動畫面延伸到螢幕底部：量它的底邊…
+            .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { extendedMaxY = $0 }
+            .ignoresSafeArea(.container, edges: .bottom)
+            // …和原本安全區域的底邊，差距就是底部安全區域
+            .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { safeMaxY = $0 }
+            .onChange(of: extendedMaxY - safeMaxY, initial: true) { _, inset in
+                // 只在分頁列顯示時記下，而且只增不減（出現的動畫過程中的中間值不採用）
+                guard !isHidden, extendedMaxY > 0, safeMaxY > 0, inset > visibleBottomInset else { return }
+                visibleBottomInset = inset
+                #if DEBUG
+                TabBarAutoHideLog.note("\(name) bottom margin = \(inset)")
+                #endif
             }
             // 沒有要隱藏時交給系統（.automatic），下一頁的 .toolbar(.hidden, for: .tabBar) 才會生效
             .toolbarVisibility(isHidden ? .hidden : .automatic, for: .tabBar)
@@ -248,3 +289,36 @@ private struct TabBarAutoHideModifier: ViewModifier {
             }
     }
 }
+
+#if DEBUG
+import os
+
+/// 開發用：分頁列自動隱藏的紀錄（CHANGE_08 §2 查歷程捲到底部跳動）。啟動參數 -tabBarLog YES 另外記每一格的捲動位置。
+/// 看紀錄：xcrun simctl spawn <裝置> log show --last 1m --predicate 'subsystem == "com.aaronhou.LiftLog"'
+enum TabBarAutoHideLog {
+    private static let logger = Logger(subsystem: "com.aaronhou.LiftLog", category: "TabBarAutoHide")
+
+    /// 每一格的捲動位置只在 -tabBarLog YES 時記（量很大）；切換一律記
+    private static let logsGeometry = UserDefaults.standard.bool(forKey: "tabBarLog")
+
+    static func geometry(_ name: String, metrics m: (offset: CGFloat, maxOffset: CGFloat, content: CGFloat, viewport: CGFloat,
+                                                      top: CGFloat, bottom: CGFloat),
+                         phase: ScrollPhase, hidden: Bool) {
+        guard logsGeometry else { return }
+        logger.notice("""
+        geo \(name, privacy: .public) y=\(m.offset, format: .fixed(precision: 1)) max=\(m.maxOffset, format: .fixed(precision: 1)) \
+        content=\(m.content, format: .fixed(precision: 1)) viewport=\(m.viewport, format: .fixed(precision: 1)) \
+        top=\(m.top, format: .fixed(precision: 1)) bottom=\(m.bottom, format: .fixed(precision: 1)) \
+        phase=\(String(describing: phase), privacy: .public) hidden=\(hidden)
+        """)
+    }
+
+    static func note(_ text: String) {
+        logger.notice("\(text, privacy: .public)")
+    }
+
+    static func toggle(_ name: String, hidden: Bool, offset: CGFloat, maxOffset: CGFloat) {
+        logger.notice("TOGGLE \(name, privacy: .public) -> \(hidden ? "hidden" : "shown", privacy: .public) y=\(offset, format: .fixed(precision: 1)) max=\(maxOffset, format: .fixed(precision: 1))")
+    }
+}
+#endif

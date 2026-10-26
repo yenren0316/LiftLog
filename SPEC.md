@@ -29,7 +29,13 @@ App 只給自己用、不上架，用免費 Apple ID（Personal Team）安裝。
 - UI 風格參考 Habits First：大圓角卡片、細進度條、懸浮膠囊分頁列。顏色由主題決定（見「主題配色」），預設石墨橙。
 - 資訊架構（CHANGE_07）：四個分頁各回答一個問題——今天「下一次該練什麼？」、歷程「我練了什麼、進步了多少？」、動作庫「我有哪些動作？」、設定。每個分頁最多三層：第 1 層分頁、第 2 層 push 的清單或詳情、第 3 層一律是唯讀的 sheet（例如訓練摘要浮窗），不再 push。
 - 共用元件（`Theme/Components.swift`）：`Metrics`（按鈕高度 50、膠囊高度 38，不再各自寫死 52／54／56／60）、`PrimaryButton`、`FilterCapsule`、`ElapsedTimeText`；「今天／昨天／N 天前」只由 `Shared/RelativeDay.swift` 產生。
-- 分頁列隨捲動隱藏（四個分頁的第 1 層，像 Threads）：往下滑超過 24 pt 隱藏、往上滑超過 24 pt 或回到頂端時出現；頂端和底部的回彈不算。只看捲動位置、不看可捲動範圍（List 捲動時會一直重估內容高度）；停在最底部時的位移不算往上滑（分頁列消失讓範圍變短，內容會被拉回最底部）。邏輯在 `TabBarAutoHide`。切換分頁或進入下一頁時恢復顯示；不隱藏時交給系統（`.automatic`），動作詳情這類下一頁自己的 `.toolbar(.hidden, for: .tabBar)` 才會生效。
+- 分頁列隨捲動隱藏（歷程的紀錄與統計、動作庫第 1 層，像 Threads；邏輯在 `TabBarAutoHide`，CHANGE_08 §2 改寫）：
+  - 同一個方向**連續**捲動至少 24 pt 才切換（往下隱藏、往上出現），中途換方向就從換方向的地方重新算。
+  - 距離底部 80 pt 以內，或底部回彈中（捲動位置超出內容範圍）時不切換。頂端 24 pt 以內一律顯示，包括頂端往下拉的回彈（快速滑回頂端時可能直接跳進回彈）。
+  - 只在使用者捲動中（拖動、慣性、捲動動畫）才切換；版面重算、收合區塊造成的位移只當新的起點。
+  - 分頁列的隱藏和出現不改變內容的版面：捲動畫面一律延伸到螢幕底部（忽略底部安全區域），底部固定留「分頁列顯示時的底部安全區域」（分頁列、Home 指示條、訓練中橫條，量到的最大值），所以可捲動範圍和捲動位置都不會因為分頁列而變。最底部判斷用 `visibleRect` 的高度（`containerSize` 在 ScrollView 不含底部 inset、在 List 含，會差一個 inset）。
+  - 切換分頁或進入下一頁時恢復顯示；不隱藏時交給系統（`.automatic`），動作詳情這類下一頁自己的 `.toolbar(.hidden, for: .tabBar)` 才會生效。
+  - 開發用：`-scrollToBottom 紀錄｜統計｜動作庫｜分類` 捲到最底部（分類要搭配 `-libraryCategory`）；DEBUG 版用 os.Logger（subsystem `com.aaronhou.LiftLog`、category `TabBarAutoHide`）記每次切換，`-tabBarLog YES` 另外記每一格的捲動位置、可捲動範圍、內容高度和 inset。
 - 點擊回饋與動畫：自訂按鈕一律用 `PressableButtonStyle`（`.pressable`，按下時微縮、變淡，放開時彈回），不用 `.plain`。點選造成的狀態改變（選項、組合、候選動作、篩選 chips、打勾、新增或刪除一組、上下移、收合）都包在 `withAnimation(.tap)` 裡；勾選圖示用 symbol 的 replace／bounce 效果；分頁和圖表的切換用 `.animation(.tap)` 的 binding；換主題時整個畫面淡入淡出。
 - 資料夾自動同步：新的 .swift 檔直接放進 App 資料夾即可。非必要不改 project.pbxproj，不動 Signing 設定。
   - 例外（已同意）：為了讀取 Apple Watch 運動，加了 HealthKit entitlement（`LiftLog.entitlements`）與健康資料讀取說明。

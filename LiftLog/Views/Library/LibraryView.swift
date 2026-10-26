@@ -35,6 +35,7 @@ struct LibraryView: View {
                             Text("已封存（\(exercises.filter(\.isArchived).count)）").font(.body.weight(.semibold))
                         }
                         .listRowBackground(Theme.card)
+                        .id("archived")
                     }
                 } else {
                     let results = ExerciseLists.search(exercises, query: query)
@@ -48,7 +49,10 @@ struct LibraryView: View {
             }
             .listSectionSpacing(12)
             .scrollContentBackground(.hidden)
-            .hidesTabBarOnScroll()
+            .hidesTabBarOnScroll("library")
+            #if DEBUG
+            .debugScrollToBottom("動作庫", "library", last: "archived")
+            #endif
             .screenBackground()
             .navigationTitle("動作庫")
             .toolbar {
@@ -126,6 +130,10 @@ struct CategoryExerciseList: View {
             }
         }
         .scrollContentBackground(.hidden)
+        #if DEBUG
+        // 開發用：-libraryCategory core -scrollToBottom 分類 捲到分類清單的最底部（CHANGE_08 V1）
+        .debugScrollToBottom("分類", "category", last: sorted.last?.id)
+        #endif
         .screenBackground()
         .navigationTitle(category.title)
         .navigationBarTitleDisplayMode(.inline)
