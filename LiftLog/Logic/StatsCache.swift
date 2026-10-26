@@ -73,9 +73,9 @@ nonisolated struct StatsSnapshot: Sendable {
     var weeklyCardioMinutes: [Double] = []
     /// 近 12 週每週的訓練次數，由舊到新（最後一個是本週）；只算有完成組的訓練
     var weeklySessions: [Int] = []
-    /// 訓練頻率卡：近 12 週、近 12 個月，依部位分開（CHANGE_08 §3）
-    var frequencyWeeks: [TrainingFrequency.Bucket] = []
-    var frequencyMonths: [TrainingFrequency.Bucket] = []
+    /// 訓練頻率卡：近 12 週、近 12 個月，依部位分開（CHANGE_08 §3）；平均只算過完的週或月（CHANGE_09 §0-2）
+    var frequencyWeeks = TrainingFrequency.Series()
+    var frequencyMonths = TrainingFrequency.Series()
 
     static let empty = StatsSnapshot()
 
@@ -143,9 +143,9 @@ nonisolated struct StatsSnapshot: Sendable {
             guard let day = calendar.date(byAdding: .weekOfYear, value: -back, to: today) else { return nil }
             return calendar.dateInterval(of: .weekOfYear, for: day)
         }
-        snapshot.frequencyWeeks = TrainingFrequency.buckets(regional, period: .week, now: now, calendar: calendar)
-        snapshot.frequencyMonths = TrainingFrequency.buckets(regional, period: .month, now: now, calendar: calendar)
-        snapshot.weeklySessions = snapshot.frequencyWeeks.map(\.total)
+        snapshot.frequencyWeeks = TrainingFrequency.series(regional, period: .week, now: now, calendar: calendar)
+        snapshot.frequencyMonths = TrainingFrequency.series(regional, period: .month, now: now, calendar: calendar)
+        snapshot.weeklySessions = snapshot.frequencyWeeks.buckets.map(\.total)
         snapshot.weeklyCardioMinutes = weeks.map { week -> Double in
             let items: [PlanHistory.Item] = history.sessions.filter { week.contains($0.date) }.flatMap(\.items)
             let sets: [SetValues] = items.filter { $0.category == .cardio }.flatMap(\.sets)

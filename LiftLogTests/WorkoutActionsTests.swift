@@ -318,6 +318,38 @@ struct WorkoutActionsTests {
         #expect(squat.lastCompletedDate == end)
     }
 
+    /// CHANGE_09 §0-1：「繼續編輯」不改任何資料、不關閉編輯畫面；另外兩個選項的行為不變
+    @Test func continueEditingChangesNothing() throws {
+        let context = try makeContext()
+        let squat = Exercise(name: "深蹲", category: .kneeDominant, equipment: .barbell)
+        context.insert(squat)
+        let start = Date.now.addingTimeInterval(-2 * 86_400)
+        let session = WorkoutSession(startedAt: start, endedAt: start.addingTimeInterval(3600))
+        context.insert(session)
+        let item = SessionExercise(session: session, exercise: squat, order: 0)
+        context.insert(item)
+        let filled = SetRecord(sessionExercise: item, order: 0, weightKg: 80, reps: 5)
+        let weightOnly = SetRecord(sessionExercise: item, order: 1, weightKg: 85)
+        [filled, weightOnly].forEach(context.insert)
+        try context.save()
+        let before = [filled, weightOnly].map { ($0.values, $0.isCompleted, $0.completedAt) }
+
+        #expect(WorkoutActions.resolveFilledSets(.continueEditing, in: session, context: context) == false)
+        #expect(!context.hasChanges)
+        for (set, old) in zip([filled, weightOnly], before) {
+            #expect(set.values == old.0 && set.isCompleted == old.1 && set.completedAt == old.2)
+        }
+        #expect(WorkoutActions.filledIncompleteSets(in: session).count == 2)
+        #expect(squat.lastCompletedDate == nil)
+
+        // 「保持未完成」：一樣不改資料，但關閉
+        #expect(WorkoutActions.resolveFilledSets(.keepIncomplete, in: session, context: context))
+        #expect(!context.hasChanges && !filled.isCompleted)
+        // 「標為完成」：標完成並關閉
+        #expect(WorkoutActions.resolveFilledSets(.complete, in: session, context: context))
+        #expect(filled.isCompleted && weightOnly.isCompleted && weightOnly.reps == 5)
+    }
+
     /// 進行中的訓練不走這裡（由「完成訓練」處理）
     @Test func filledSetsPromptIsOnlyForEndedSessions() throws {
         let context = try makeContext()

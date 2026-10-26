@@ -5,7 +5,7 @@ import Foundation
 /// 補登或編輯過的訓練存的 region 可能沒更新，所以不讀存的值
 nonisolated enum DayRegion: String, CaseIterable, Sendable {
     case lower, upper, full
-    /// 沒有上肢和下肢的動作：只有有氧（只有核心或補強的少數情況也歸在這裡）
+    /// 沒有上肢和下肢的動作：只有有氧，以及只有核心或補強的日子
     case cardio
 
     var title: String {
@@ -13,7 +13,7 @@ nonisolated enum DayRegion: String, CaseIterable, Sendable {
         case .lower: "下肢"
         case .upper: "上肢"
         case .full: "全身"
-        case .cardio: "有氧"
+        case .cardio: "有氧與其他"
         }
     }
 
@@ -65,7 +65,22 @@ nonisolated enum TrainingFrequency {
         var total: Int { counts.values.reduce(0, +) }
     }
 
+    /// 畫出來的長條和它的平均
+    struct Series: Sendable, Equatable {
+        /// 近 12 段，由舊到新，最後一段是本週或本月
+        var buckets: [Bucket] = []
+        /// 近 12 個已經過完的週或月的平均，不含本週或本月（CHANGE_09 §0-2）
+        var average: Double = 0
+    }
+
     static let bucketCount = 12
+
+    /// 長條是近 12 段（含本週或本月）；平均算的是本週或本月之前的 12 段，所以多算一段最舊的
+    static func series(_ sessions: [(date: Date, region: DayRegion)], period: Period, now: Date = .now,
+                       calendar: Calendar = .current) -> Series {
+        let all = buckets(sessions, period: period, now: now, count: bucketCount + 1, calendar: calendar)
+        return Series(buckets: Array(all.suffix(bucketCount)), average: average(Array(all.dropLast())))
+    }
 
     /// sessions：已結束、而且有完成組的訓練（日期和部位）。由舊到新，最後一段是本週或本月
     static func buckets(_ sessions: [(date: Date, region: DayRegion)], period: Period, now: Date = .now,
@@ -82,7 +97,7 @@ nonisolated enum TrainingFrequency {
         }
     }
 
-    /// 平均每一段幾次（含還沒過完的本週或本月）
+    /// 這幾段平均每段幾次
     static func average(_ buckets: [Bucket]) -> Double {
         buckets.isEmpty ? 0 : Double(buckets.map(\.total).reduce(0, +)) / Double(buckets.count)
     }

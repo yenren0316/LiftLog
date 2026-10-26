@@ -67,3 +67,33 @@ nonisolated struct TabBarAutoHide: Equatable {
         direction = 0
     }
 }
+
+/// 捲動內容底部固定留的高度（CHANGE_08 §2、CHANGE_09 §0-4）：分頁列顯示時量到的底部被蓋住的高度
+/// （分頁列、Home 指示條、訓練中的橫條）。分頁列隱藏或出現時不變，版面才不會跟著跳。
+/// - 分頁列隱藏時量到的值不採用；平常只增不減（分頁列出現的動畫過程中的中間值不採用）。
+/// - 訓練中的橫條出現或消失後，等畫面穩定、分頁列顯示時，直接採用最近量到的值（可以變小）。
+nonisolated struct BottomInset: Equatable {
+    private(set) var value: CGFloat = 0
+    /// 最近一次分頁列顯示時量到的高度
+    private(set) var latest: CGFloat = 0
+    /// 橫條出現或消失之後還沒重新量
+    private(set) var needsRemeasure = false
+
+    mutating func measured(_ inset: CGFloat, tabBarHidden: Bool) {
+        guard !tabBarHidden, inset > 0 else { return }
+        latest = inset
+        value = max(value, inset)
+    }
+
+    /// 訓練中的橫條出現或消失
+    mutating func barChanged() {
+        needsRemeasure = true
+    }
+
+    /// 畫面穩定之後呼叫：橫條變過、而且分頁列顯示中，就採用最近量到的值
+    mutating func settle(tabBarHidden: Bool) {
+        guard needsRemeasure, !tabBarHidden, latest > 0 else { return }
+        value = latest
+        needsRemeasure = false
+    }
+}

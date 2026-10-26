@@ -81,6 +81,28 @@ struct TrainingRegionTests {
         #expect(zip(months, months.dropFirst()).allSatisfy { $0.end == $1.start })
     }
 
+    /// CHANGE_09 §0-2：平均只算近 12 個已經過完的週或月，不含本週或本月；本週或本月的長條照樣畫
+    @Test func averageExcludesTheCurrentWeekAndMonth() {
+        let now = date(10, 26, 9)
+        // 本週（10/25–10/31）3 次；之前 12 週（8/2–10/24）共 6 次，其中 8/2 那週不在畫出來的 12 條裡
+        let list: [(date: Date, region: DayRegion)] = [
+            (date(10, 25), .lower), (date(10, 26, 7), .upper), (date(10, 26, 18), .lower),
+            (date(10, 20), .lower), (date(10, 14), .upper), (date(9, 30), .lower), (date(9, 2), .lower),
+            (date(8, 12), .upper), (date(8, 3), .lower),
+            (date(7, 29), .lower),   // 13 週前：不算
+        ]
+        let weeks = TrainingFrequency.series(list, period: .week, now: now, calendar: calendar)
+        #expect(weeks.buckets.count == 12)
+        #expect(weeks.buckets.last?.total == 3)
+        #expect(weeks.buckets.first?.start == calendar.date(from: DateComponents(year: 2026, month: 8, day: 9)))
+        #expect(abs(weeks.average - 6.0 / 12) < 0.0001)
+        // 月：本月（10 月）5 次不算；之前 12 個月（2025/10–2026/9）共 5 次（7/29、8/3、8/12、9/2、9/30）
+        let months = TrainingFrequency.series(list, period: .month, now: now, calendar: calendar)
+        #expect(months.buckets.count == 12)
+        #expect(months.buckets.last?.total == 5)
+        #expect(abs(months.average - 5.0 / 12) < 0.0001)
+    }
+
     @Test func snapshotCountsOnlyEndedSessionsWithCompletedSets() throws {
         let context = ModelContext(try ModelContainer(for: LiftLogStore.schema,
                                                       configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
@@ -103,9 +125,9 @@ struct TrainingRegionTests {
         session(date(10, 26, 20), ended: false, [(bench, true)], title: "進行中")   // 進行中：不算
         let snapshot = StatsSnapshot.make(history: PlanHistory(sessions: try context.fetch(FetchDescriptor<WorkoutSession>())),
                                           exercises: [squat, bench].map { PlanExercise($0) }, now: now, calendar: calendar)
-        #expect(snapshot.frequencyWeeks.last?.counts == [.lower: 1, .upper: 1])
+        #expect(snapshot.frequencyWeeks.buckets.last?.counts == [.lower: 1, .upper: 1])
         #expect(snapshot.weeklySessions.last == 2)
-        #expect(snapshot.frequencyMonths.last?.total == 2)
+        #expect(snapshot.frequencyMonths.buckets.last?.total == 2)
         // 同一天下肢＋上肢：日曆是全身，標籤列出兩次的名稱（依開始時間）
         let today = try #require(snapshot.days[calendar.startOfDay(for: now)])
         #expect(today.region == .full)

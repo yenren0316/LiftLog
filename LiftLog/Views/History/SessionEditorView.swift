@@ -12,7 +12,7 @@ struct SessionEditorView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @State private var rejectedEnd = false
-    /// 按「完成」時，沒打勾、但已經填了數字的組數（CHANGE_08 §1）
+    /// 按「完成」時，沒打勾、但已經填了數字的組數（CHANGE_08 §1；CHANGE_09 §0-1 加了「繼續編輯」）
     @State private var filledCount = 0
     @State private var confirmingFilled = false
 
@@ -30,11 +30,10 @@ struct SessionEditorView: View {
                 }
             }
             .alert("有 \(filledCount) 組填了數字但沒打勾", isPresented: $confirmingFilled) {
-                Button("把 \(filledCount) 組標為完成") {
-                    WorkoutActions.completeFilledSets(in: session, context: context)
-                    dismiss()
-                }
-                Button("保持未完成", role: .cancel) { dismiss() }
+                Button("把 \(filledCount) 組標為完成") { resolve(.complete) }
+                Button("保持未完成") { resolve(.keepIncomplete) }
+                // 取消（包括點對話框外面）＝繼續編輯：不改任何資料
+                Button("繼續編輯", role: .cancel) { resolve(.continueEditing) }
             } message: {
                 Text("沒打勾的組不會算進統計、上次日期和圖表。標為完成的組，完成時間記成這次訓練的結束時間。")
             }
@@ -58,6 +57,10 @@ struct SessionEditorView: View {
         } else {
             dismiss()
         }
+    }
+
+    private func resolve(_ choice: WorkoutActions.FilledSetsChoice) {
+        if WorkoutActions.resolveFilledSets(choice, in: session, context: context) { dismiss() }
     }
 
     private var header: some View {

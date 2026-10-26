@@ -160,25 +160,25 @@ private struct CardioCard: View {
     }
 }
 
-/// 訓練頻率（CHANGE_08 §3）：近 12 週或近 12 個月的訓練次數長條，依部位分段疊色，虛線是平均。
+/// 訓練頻率（CHANGE_08 §3）：近 12 週或近 12 個月的訓練次數長條，依部位分段疊色，虛線是平均（只算過完的週或月）。
 /// 點一下長條顯示那一段的次數和日期範圍（2 秒後消失），按住拖曳時跟著手指；不導向其他頁面
 private struct FrequencyCard: View {
-    var weeks: [TrainingFrequency.Bucket]
-    var months: [TrainingFrequency.Bucket]
+    var weeks: TrainingFrequency.Series
+    var months: TrainingFrequency.Series
 
     @AppStorage("history.frequencyPeriod") private var period: TrainingFrequency.Period = .week
     @State private var selected: Date?
     @State private var hideTask: Task<Void, Never>?
 
     var body: some View {
-        let buckets = period == .week ? weeks : months
-        let average = TrainingFrequency.average(buckets)
-        let weekAverage = TrainingFrequency.average(weeks)
+        let series = period == .week ? weeks : months
+        let buckets = series.buckets
+        let average = series.average
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline) {
                 Text("訓練頻率").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.textSecondary)
                 Spacer()
-                Text("本週 \(weeks.last?.total ?? 0) 次・近 12 週平均 \(weekAverage.formatted(.number.precision(.fractionLength(1)))) 次")
+                Text("本週 \(weeks.buckets.last?.total ?? 0) 次・近 12 週平均 \(weeks.average.formatted(.number.precision(.fractionLength(1)))) 次")
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(Theme.textSecondary)
             }
@@ -223,7 +223,7 @@ private struct FrequencyCard: View {
             if let back = UserDefaults.standard.string(forKey: "frequencyPeek"), let index = Int(back) {
                 // 等切換期間清掉選取之後再選
                 try? await Task.sleep(for: .milliseconds(300))
-                let list = period == .week ? weeks : months
+                let list = (period == .week ? weeks : months).buckets
                 if list.indices.contains(list.count - 1 - index) { selected = list[list.count - 1 - index].start }
             }
         }

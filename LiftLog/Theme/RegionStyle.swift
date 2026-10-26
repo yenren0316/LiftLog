@@ -3,7 +3,7 @@ import SwiftUI
 // 部位的顏色（CHANGE_08 §3、§4）：今天的日曆格子和歷程「訓練頻率」的長條共用
 
 extension DayRegion {
-    /// 下肢 accent、上肢 upperBody、全身沿對角線各一半、只有有氧 textSecondary 40%
+    /// 下肢 accent、上肢 upperBody、全身沿對角線各一半、有氧與其他 textSecondary 40%
     var fill: AnyShapeStyle {
         switch self {
         case .lower: AnyShapeStyle(Theme.accent)
@@ -49,7 +49,7 @@ extension DayRegion {
     static let stackOrder: [DayRegion] = [.lower, .upper, .full, .cardio]
 }
 
-/// 圖例：「■ 下肢　■ 上肢　◪ 全身　■ 有氧」，用實際的顏色。forBars 時全身用長條的斜紋
+/// 圖例：「■ 下肢　■ 上肢　◪ 全身　■ 有氧與其他」，用實際的顏色。forBars 時全身用長條的斜紋
 struct RegionLegend: View {
     var forBars = false
 
@@ -65,7 +65,7 @@ struct RegionLegend: View {
         .font(.caption2)
         .foregroundStyle(Theme.textSecondary)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("圖例：下肢、上肢、全身、有氧")
+        .accessibilityLabel("圖例：\(DayRegion.stackOrder.map(\.title).joined(separator: "、"))")
     }
 }
 

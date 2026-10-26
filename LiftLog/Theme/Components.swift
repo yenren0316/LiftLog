@@ -238,15 +238,23 @@ extension View {
     }
 }
 
+extension EnvironmentValues {
+    /// 分頁列上方「訓練中」橫條的上緣（global 座標，`.workoutMiniBar()` 設定）；沒有橫條為 nil。
+    /// 橫條放在分頁的 NavigationStack 外面，它的高度不會算進裡面捲動畫面的安全區域，所以另外告訴捲動畫面
+    @Entry var workoutMiniBarTop: CGFloat?
+}
+
 private struct TabBarAutoHideModifier: ViewModifier {
     var name: String
+    @Environment(\.workoutMiniBarTop) private var miniBarTop
     @State private var isHidden = false
     @State private var autoHide = TabBarAutoHide()
     @State private var isScrolling = false
     @State private var phase: ScrollPhase = .idle
-    /// 分頁列顯示時底部的安全區域（分頁列、Home 指示條、訓練中橫條）。捲動內容底部固定留這麼多，
-    /// 而且捲動畫面一律延伸到螢幕底部：分頁列隱藏或出現時，畫面大小和可捲動範圍都不變（CHANGE_08 §2）
-    @State private var visibleBottomInset: CGFloat = 0
+    /// 捲動內容底部固定留的高度，而且捲動畫面一律延伸到螢幕底部：分頁列隱藏或出現時，畫面大小和可捲動範圍都不變
+    /// （CHANGE_08 §2）。包括訓練中的橫條，橫條出現或消失時重新量（CHANGE_09 §0-4）
+    @State private var bottomInset = BottomInset()
+    @State private var settleTask: Task<Void, Never>?
     @State private var extendedMaxY: CGFloat = 0
     @State private var safeMaxY: CGFloat = 0
 
@@ -288,19 +296,23 @@ private struct TabBarAutoHideModifier: ViewModifier {
                 }
             }
             // List 不吃 contentMargins 的底部留白，用 safeAreaPadding（List 和 ScrollView 都會當成內容的 inset）
-            .safeAreaPadding(.bottom, visibleBottomInset)
+            .safeAreaPadding(.bottom, bottomInset.value)
             // 捲動畫面延伸到螢幕底部：量它的底邊…
             .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { extendedMaxY = $0 }
             .ignoresSafeArea(.container, edges: .bottom)
             // …和原本安全區域的底邊，差距就是底部安全區域
             .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { safeMaxY = $0 }
-            .onChange(of: extendedMaxY - safeMaxY, initial: true) { _, inset in
-                // 只在分頁列顯示時記下，而且只增不減（出現的動畫過程中的中間值不採用）
-                guard !isHidden, extendedMaxY > 0, safeMaxY > 0, inset > visibleBottomInset else { return }
-                visibleBottomInset = inset
-                #if DEBUG
-                TabBarAutoHideLog.note("\(name) bottom margin = \(inset)")
-                #endif
+            .onChange(of: obstruction, initial: true) { _, inset in
+                guard extendedMaxY > 0, safeMaxY > 0 else { return }
+                update { $0.measured(inset, tabBarHidden: isHidden) }
+            }
+            // 訓練中的橫條出現或消失：等動畫結束、分頁列顯示時重新量
+            .onChange(of: miniBarTop == nil) {
+                bottomInset.barChanged()
+                scheduleSettle()
+            }
+            .onChange(of: isHidden) {
+                if bottomInset.needsRemeasure { scheduleSettle() }
             }
             // 沒有要隱藏時交給系統（.automatic），下一頁的 .toolbar(.hidden, for: .tabBar) 才會生效
             .toolbarVisibility(isHidden ? .hidden : .automatic, for: .tabBar)
@@ -309,6 +321,30 @@ private struct TabBarAutoHideModifier: ViewModifier {
                 autoHide.reset()
                 isHidden = false
             }
+    }
+
+    /// 底部被蓋住的高度：底部安全區域（分頁列、Home 指示條），有訓練中橫條時從螢幕底部算到橫條上緣
+    private var obstruction: CGFloat {
+        max(extendedMaxY - safeMaxY, miniBarTop.map { extendedMaxY - $0 } ?? 0)
+    }
+
+    private func scheduleSettle() {
+        settleTask?.cancel()
+        settleTask = Task {
+            try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled else { return }
+            update { $0.settle(tabBarHidden: isHidden) }
+        }
+    }
+
+    private func update(_ change: (inout BottomInset) -> Void) {
+        #if DEBUG
+        let before = bottomInset.value
+        #endif
+        change(&bottomInset)
+        #if DEBUG
+        if bottomInset.value != before { TabBarAutoHideLog.note("\(name) bottom margin = \(bottomInset.value)") }
+        #endif
     }
 }
 

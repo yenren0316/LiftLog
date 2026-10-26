@@ -175,4 +175,59 @@ struct TabBarAutoHideTests {
         scroll(&state, [500, 510])
         #expect(!state.isHidden)
     }
+
+    // MARK: 底部留白（CHANGE_09 §0-4）
+
+    /// 分頁列隱藏或出現時留白不變（T2 的「版面不變」）
+    @Test func tabBarTogglingKeepsTheBottomMargin() {
+        var inset = BottomInset()
+        inset.measured(83, tabBarHidden: false)
+        #expect(inset.value == 83)
+        // 隱藏的動畫：量到的值不採用
+        inset.measured(34, tabBarHidden: true)
+        #expect(inset.value == 83)
+        // 出現的動畫：中間值不採用
+        inset.measured(34, tabBarHidden: false)
+        inset.measured(60, tabBarHidden: false)
+        inset.measured(83, tabBarHidden: false)
+        #expect(inset.value == 83)
+        // 橫條沒變時，穩定之後也不改
+        inset.settle(tabBarHidden: false)
+        #expect(inset.value == 83)
+    }
+
+    @Test func barDisappearingShrinksTheBottomMargin() {
+        var inset = BottomInset()
+        // 有訓練中的橫條：分頁列 83 ＋ 橫條 56
+        inset.measured(139, tabBarHidden: false)
+        #expect(inset.value == 139)
+        // 橫條消失：量到變小的值不直接採用（可能是動畫的中間值）…
+        inset.measured(83, tabBarHidden: false)
+        #expect(inset.value == 139)
+        // …穩定之後重新量，留白變小
+        inset.barChanged()
+        inset.settle(tabBarHidden: false)
+        #expect(inset.value == 83)
+        // 橫條又出現：馬上變大
+        inset.measured(139, tabBarHidden: false)
+        inset.barChanged()
+        #expect(inset.value == 139)
+        inset.settle(tabBarHidden: false)
+        #expect(inset.value == 139)
+    }
+
+    @Test func barChangingWhileTheTabBarIsHiddenWaitsUntilItShows() {
+        var inset = BottomInset()
+        inset.measured(139, tabBarHidden: false)
+        // 分頁列隱藏中橫條消失：先不改
+        inset.measured(34, tabBarHidden: true)
+        inset.barChanged()
+        inset.settle(tabBarHidden: true)
+        #expect(inset.value == 139 && inset.needsRemeasure)
+        // 分頁列出現、穩定之後採用新的值
+        inset.measured(50, tabBarHidden: false)
+        inset.measured(83, tabBarHidden: false)
+        inset.settle(tabBarHidden: false)
+        #expect(inset.value == 83 && !inset.needsRemeasure)
+    }
 }

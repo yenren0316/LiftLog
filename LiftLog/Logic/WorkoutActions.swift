@@ -71,6 +71,30 @@ enum WorkoutActions {
         }
     }
 
+    /// 編輯已結束的訓練按「完成」、有沒打勾但填了數字的組時的三個選項（CHANGE_08 §1、CHANGE_09 §0-1）
+    enum FilledSetsChoice {
+        /// 把這些組標為完成，關閉編輯畫面
+        case complete
+        /// 不改資料，關閉編輯畫面
+        case keepIncomplete
+        /// 不改資料，留在編輯畫面
+        case continueEditing
+    }
+
+    /// 依選項處理沒打勾但填了數字的組；回傳要不要關閉編輯畫面
+    @discardableResult
+    static func resolveFilledSets(_ choice: FilledSetsChoice, in session: WorkoutSession, context: ModelContext) -> Bool {
+        switch choice {
+        case .complete:
+            completeFilledSets(in: session, context: context)
+            return true
+        case .keepIncomplete:
+            return true
+        case .continueEditing:
+            return false
+        }
+    }
+
     /// 把 filledIncompleteSets 標為完成，完成時間記成那次訓練的結束時間；回傳標了幾組
     @discardableResult
     static func completeFilledSets(in session: WorkoutSession, context: ModelContext) -> Int {
