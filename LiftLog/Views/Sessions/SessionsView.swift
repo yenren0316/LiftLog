@@ -54,6 +54,7 @@ struct SessionsView: View {
             }
             .listSectionSpacing(12)
             .scrollContentBackground(.hidden)
+            .hidesTabBarOnScroll()
             .screenBackground()
             .toolbar(.hidden, for: .navigationBar)
             .confirmationDialog(

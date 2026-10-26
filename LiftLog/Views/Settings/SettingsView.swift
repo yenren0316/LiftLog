@@ -112,6 +112,7 @@ struct SettingsView: View {
             }
             .padding(16)
         }
+        .hidesTabBarOnScroll()
         .screenBackground()
         .onAppear(perform: refresh)
         .fileImporter(isPresented: $showingImporter, allowedContentTypes: [.json], onCompletion: readImport)

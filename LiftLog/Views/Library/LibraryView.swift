@@ -50,6 +50,7 @@ struct LibraryView: View {
             }
             .listSectionSpacing(12)
             .scrollContentBackground(.hidden)
+            .hidesTabBarOnScroll()
             .screenBackground()
             .navigationTitle("動作庫")
             .toolbar {

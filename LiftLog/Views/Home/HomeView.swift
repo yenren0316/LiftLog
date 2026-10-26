@@ -19,16 +19,15 @@ struct HomeView: View {
     @State private var pendingPlan: PlanRequest?
     /// 建立菜單後，等 sheet 關掉再展開訓練中畫面
     @State private var startedFromPlan = false
+    /// 往下滑時分頁列隱藏，右下角改出現「＋」
+    @State private var tabBarHidden = false
 
     var body: some View {
         NavigationStack(path: $path) {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
-                        ScreenHeader(title: "該練什麼") {
-                            CircleIconButton(systemName: "plus") { openPlan(nil) }
-                                .accessibilityLabel("建立菜單")
-                        }
+                        ScreenHeader(title: "該練什麼")
                         let history = PlanHistory(sessions: endedSessions)
                         NextPlanCard(history: history) { openPlan($0) }
                         ActivityGraph(days: trainingDays)
@@ -56,6 +55,7 @@ struct HomeView: View {
                     }
                     .padding(16)
                 }
+                .hidesTabBarOnScroll($tabBarHidden)
             }
             .screenBackground()
             .toolbar(.hidden, for: .navigationBar)
@@ -65,6 +65,16 @@ struct HomeView: View {
             #if DEBUG
             .navigationDestination(for: DebugDetailRoute.self) { ExerciseDetailView(exercise: $0.exercise) }
             #endif
+        }
+        // 放在 NavigationStack 外面才會排在訓練中橫條的上方；進入下一頁時 tabBarHidden 會恢復成 false
+        .overlay(alignment: .bottomTrailing) {
+            if tabBarHidden {
+                FloatingActionButton(systemName: "plus") { openPlan(nil) }
+                    .accessibilityLabel("建立菜單")
+                    .padding(.trailing, 20)
+                    .padding(.bottom, 8)
+                    .transition(.scale(scale: 0.4).combined(with: .opacity))
+            }
         }
         .sheet(item: $planRequest, onDismiss: {
             if startedFromPlan {

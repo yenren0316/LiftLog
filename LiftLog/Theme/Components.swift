@@ -44,20 +44,22 @@ struct ThinBar: View {
     }
 }
 
-/// 右上角的圓形按鈕
-struct CircleIconButton: View {
+/// 右下角懸浮的圓形按鈕（首頁的「＋」）
+struct FloatingActionButton: View {
     var systemName: String
     var action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Image(systemName: systemName)
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(Theme.textPrimary)
-                .frame(width: 48, height: 48)
-                .background(Theme.card, in: .circle)
-                .overlay(Circle().stroke(Theme.separator))
+                .font(.title2.weight(.bold))
+                .foregroundStyle(Theme.onAccent)
+                .frame(width: 60, height: 60)
+                .background(Theme.accent, in: .circle)
+                .shadow(color: .black.opacity(0.4), radius: 12, y: 6)
+                .contentShape(.circle)
         }
+        .buttonStyle(.pressable(scale: 0.9))
     }
 }
 
@@ -161,4 +163,58 @@ extension ButtonStyle where Self == PressableButtonStyle {
 
     /// 小按鈕（例如打勾）縮得明顯一點
     static func pressable(scale: CGFloat) -> PressableButtonStyle { PressableButtonStyle(scale: scale) }
+}
+
+// MARK: - 捲動時隱藏分頁列
+
+extension View {
+    /// 分頁裡的捲動畫面用：往下滑隱藏分頁列，往上滑或回到頂端時出現（像 Threads）。
+    /// 畫面要跟著顯示其他按鈕時傳入 isHidden
+    func hidesTabBarOnScroll(_ isHidden: Binding<Bool>) -> some View {
+        modifier(TabBarAutoHideModifier(isHidden: isHidden))
+    }
+
+    func hidesTabBarOnScroll() -> some View {
+        modifier(OwnTabBarAutoHide())
+    }
+}
+
+private struct TabBarAutoHideModifier: ViewModifier {
+    @Binding var isHidden: Bool
+    @State private var autoHide = TabBarAutoHide()
+    @State private var isScrolling = false
+
+    private struct Metrics: Equatable {
+        var offset: CGFloat
+        var maxOffset: CGFloat
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .onScrollPhaseChange { _, phase in isScrolling = phase.isScrolling }
+            .onScrollGeometryChange(for: Metrics.self) { geometry in
+                let insets = geometry.contentInsets
+                return Metrics(offset: geometry.contentOffset.y + insets.top,
+                               maxOffset: geometry.contentSize.height + insets.top + insets.bottom - geometry.containerSize.height)
+            } action: { _, metrics in
+                autoHide.update(offset: metrics.offset, maxOffset: metrics.maxOffset, isScrolling: isScrolling)
+                if autoHide.isHidden != isHidden {
+                    withAnimation(.snappy(duration: 0.3)) { isHidden = autoHide.isHidden }
+                }
+            }
+            .toolbarVisibility(isHidden ? .hidden : .visible, for: .tabBar)
+            // 切換分頁或進入下一頁時恢復顯示
+            .onDisappear {
+                autoHide.reset()
+                isHidden = false
+            }
+    }
+}
+
+private struct OwnTabBarAutoHide: ViewModifier {
+    @State private var isHidden = false
+
+    func body(content: Content) -> some View {
+        content.hidesTabBarOnScroll($isHidden)
+    }
 }
