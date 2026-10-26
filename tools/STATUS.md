@@ -3,7 +3,8 @@
 - 更新時間：2026-10-26，對應 CHANGE_07 完成後的 main（commit `19c689c` 之後的文件 commit）。上一版是 CHANGE_06 完成時（`a356646`）。
 - 對象：負責 review 和規劃、看不到程式碼的人。內容根據實際程式碼、建置、測試與模擬器截圖整理。
 - 平台：iOS 26、SwiftUI＋SwiftData，App 只給自己用，用免費 Apple ID 安裝。
-- 規模：App＋共用＋小工具約 10,800 行 Swift，測試約 3,100 行（205 個測試）。
+- 規模：App＋共用＋小工具約 10,800 行 Swift，測試約 3,200 行（208 個測試）。
+- CHANGE_07 開始前的版本打了 git tag `before-change07`（`6f72de3`）。
 - CHANGE_07 的完整驗收結果、自行決定的事項和實機確認清單在 `tools/CHANGE_07_REPORT.md`。
 
 ---
@@ -33,7 +34,7 @@
 ### 1-3. 實作和文件不一樣的地方（CHANGE_07）
 完整清單在報告第 2 節「自行決定」。重點：
 - 輔助重量轉負數的分界日用 2026-10-26（CHANGE_06 上線日），之後的正數視為真的加重。
-- 遷移沒有要改的資料時不寫自動備份；從自動備份還原不會再跑遷移；從檔案匯入第 5 版以前的備份會再跑一次遷移。
+- 遷移沒有要改的資料時不寫自動備份。匯入備份（從 JSON 匯入或還原自動備份）後，備份產生時還沒套用的遷移會再跑一次，不看「只執行一次」的旗標（執行規則 7，依備份檔的 `migrations` 欄位判斷）。
 - 「已有進行中的訓練」時不再提供「加入目前的訓練」，只有「繼續目前訓練／建立新菜單」。
 - 統計（上次日期、次數、近 30 天）只算已結束的訓練；歷程的紀錄不列進行中的訓練。
 - 主項進步只列 90 天內有紀錄的主項，其他寫一行數量。
@@ -168,14 +169,14 @@ tools/      parse_log.py、migration_review.py、icon 產生器、截圖（scree
   - 一次性旗標：`libraryAdditions.v1/v2`、`conjugateLibrary.v1`、`guidesImported.v2`、`migration.assistToNegative`、`migration.autoTitles`。
   - Documents/AutoBackups：遷移前的自動備份。
   - App Group：小工具快照 `widgetSnapshot.v1`、小工具＋的待處理連結 `pendingDeepLink`。
-- **備份 JSON**：version 6；可以讀 v2（seed）～v5，v5 以前匯入後會再跑遷移。
+- **備份 JSON**：version 6，多了 `migrations`（已經套用的遷移）；可以讀 v2（seed）～v5。匯入後補做檔案裡沒套用的遷移，沒有這個欄位的視為都沒套用。
 
 ### 4-3. 服務與狀態
 - `LiftLogStore.container`：唯一的 ModelContainer，畫面和 intent 共用 mainContext。
 - `WorkoutLauncher`（@Observable，environment）：開始訓練的唯一入口，管建立菜單的 sheet、繼續／新菜單的問題、結束舊訓練的確認、補登、再做一次。
 - `WorkoutCoordinator`（@Observable）：目前分頁、今天的導覽路徑、全螢幕或縮小、完成摘要、摘要浮窗要開哪一次。
 - `StatsCache.shared`（@Observable）：今天、動作庫、統計要用的數字；存檔後 0.3 秒重算。
-- `DataMigrations`／`AutoBackup`：啟動時的遷移與遷移前備份。
+- `DataMigrations`／`AutoBackup`：啟動時的遷移與遷移前備份；`DataMigrations.restore` 是匯入和還原的唯一入口（還原後補做沒套用的遷移）。
 - `RestTimer.shared`、`WorkoutService.shared`、`WorkoutActions`、`DeepLinkRouter.shared`、`SnapshotWriter.shared`、`LiveActivityController.shared`：同 CHANGE_06。
 - 純邏輯（可單元測試）：PlanBuilder、Roles、SetLogic（含 SessionTitle）、SessionTimeEdit、BodyWeightLog、RelativeDay、ExerciseStats、Recency、LibrarySort、TabBarAutoHide、ProvisioningProfile。
 
@@ -193,8 +194,8 @@ tools/      parse_log.py、migration_review.py、icon 產生器、截圖（scree
 - Debug 與 Release（模擬器，clean build）：**0 個 warning、0 個 error**（App、小工具、測試）。
 
 ### 5-2. 測試
-- **205 個全部通過，0 失敗**（31 個測試檔，iPhone 17 Pro 模擬器，`-parallel-testing-enabled NO`）。
-- CHANGE_07 新增或改寫：DataMigrationsTests 4、WorkoutLauncherTests 6、StatsCacheTests 3、SessionTitleTests 5、SessionTimeEditTests 4、BodyWeightLogTests 6、DeepLinkTests 9、WorkoutActionsTests（上一次只取之前的訓練）、LibraryTests、ExerciseListsTests、FilterTests、RestTimerTests（改用隔離的設定和安靜的通知）。
+- **208 個全部通過，0 失敗**（31 個測試檔，iPhone 17 Pro 模擬器，`-parallel-testing-enabled NO`）。
+- CHANGE_07 新增或改寫：DataMigrationsTests 6、WorkoutLauncherTests 6、StatsCacheTests 3、SessionTitleTests 6、SessionTimeEditTests 4、BodyWeightLogTests 6、DeepLinkTests 9、WorkoutActionsTests（上一次只取之前的訓練）、LibraryTests、ExerciseListsTests、FilterTests、RestTimerTests（改用隔離的設定和安靜的通知）。
 - 沒有 UI 測試；畫面用 DEBUG 啟動參數配合 `simctl io screenshot` 驗證（`tools/screens/final/`）。
 
 ### 5-3. 上一版的問題現在的狀態

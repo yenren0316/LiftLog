@@ -404,8 +404,9 @@ CHANGE_04 刪除了 15 個從沒練過的動作（前抱式深蹲、分腿蹲、
 
 ### 10. 備份
 - 設定 → 備份與還原：「匯出 JSON」（ShareLink）與「從 JSON 匯入」（取代全部資料）。
-- 格式 version 6：exercises（含說明、我的筆記、meRotation、deRotation）、sessions（含 region、modeID、dayType、isTitleCustom、items 與 sets；item 含 role）、bodyWeights。
-- 匯入 version 5 以前的檔案時，isTitleCustom 依名稱推斷（符合舊的自動格式為 false），匯入後所有資料遷移重新跑一次（一樣先自動備份），讓舊檔的輔助重量和名稱也更新；完成訊息列出更新了哪些。
+- 格式 version 6：exercises（含說明、我的筆記、meRotation、deRotation）、sessions（含 region、modeID、dayType、isTitleCustom、items 與 sets；item 含 role）、bodyWeights，以及 `migrations`：這份資料已經套用過的資料遷移 id（例如 `["assistToNegative","autoTitles"]`）。
+- 匯入後補做遷移（執行規則 7）：備份產生時還沒套用的遷移，匯入後不看「只執行一次」的旗標，對匯入的資料再跑一次（一樣先自動備份）；備份裡已經套用的不再跑。沒有 `migrations` 欄位的檔案（CHANGE_07 之前匯出的，以及這個欄位加入前寫的自動備份）視為一個都還沒套用。完成訊息列出補做了哪些。入口是 `DataMigrations.restore`，「從 JSON 匯入」和「還原自動備份」都走這裡。
+- 匯入 version 5 以前的檔案時，isTitleCustom 依名稱推斷（符合舊的自動格式為 false，其他為 true）。
 - 匯入 version 4 時，dayType 和輪替順序為空。匯入 version 3 時，role 依分類判定、region 依動作推算、modeID 為空。（沒有 version 1 的檔案：手機上第一個匯出的版本就是 v3。）
 - 匯入時也能讀 version 2（CHANGE_01 的格式；`seed.json` 也是 v2），轉換後同樣推算 role 與 region：
   - 依日期分組，每個日期一次已完成的訓練（hasTime = false），動作順序照原本順序；同一天同一動作合併成一張卡片。
@@ -416,10 +417,12 @@ CHANGE_04 刪除了 15 個從沒練過的動作（前抱式深蹲、分腿蹲、
   - 匯入的組一律已完成，kind 為正式（原本 MAX 的為 MAX）。
 
 ### 10-1. 資料遷移與自動備份（CHANGE_07）
-- `Logic/DataMigrations.swift`：啟動時依序執行，每個只跑一次（旗標 `migration.<id>`）。先看有沒有要改的資料；有的話先在 `Documents/AutoBackups/` 寫一份完整備份 `auto-yyyy-MM-dd-HHmm-<遷移>.json`（目前格式），備份失敗就不改資料、下次啟動再試；沒有要改的資料就不備份，只記為已執行。
-- 設定 → 備份與還原的「自動備份」列出這些檔案（新到舊，顯示遷移名稱和時間），每一份都能匯出（分享）或還原（確認後取代全部資料；還原自動備份不會再跑遷移，因為就是要回到遷移前）。
+- `Logic/DataMigrations.swift`：啟動時依序執行，每個只跑一次（旗標 `migration.<id>`）。先看有沒有要改的資料；有的話先在 `Documents/AutoBackups/` 寫一份完整備份 `auto-yyyy-MM-dd-HHmm-<遷移>.json`（目前格式，`migrations` 只列這個遷移之前已經套用的），備份失敗就不改資料、下次啟動再試；沒有要改的資料就不備份，只記為已執行。
+- 旗標為 true 表示目前的資料已經套用過那個遷移（沒有要改的資料也算）。匯出的備份依旗標寫 `migrations`；匯入時依檔案的 `migrations` 重設旗標，再補做沒套用的（見「10. 備份」）。
+- 每個遷移都可以重複執行：輔助重量只轉 cutoff 之前的正數；訓練名稱只處理不是自訂、而且還不是訓練目的的訓練。所以補做時即使資料其實已經轉換過，結果也不會變。
+- 設定 → 備份與還原的「自動備份」列出這些檔案（新到舊，顯示遷移名稱和時間），每一份都能匯出（分享）或還原（確認後取代全部資料）。還原和「從 JSON 匯入」一樣會補做備份裡沒套用的遷移：自動備份保存的是遷移前的原始數字（匯出就能看到），還原後的資料則一律是目前 App 的格式。
 - `assistToNegative`（輔助重量改記負數，A-1）：輔助引體向上在 CHANGE_06 改成負重制（weight 型、可以記負數）之前記的是輔助重量（正數）。2026-10-26（CHANGE_06 上線日，當地時間）之前、正數的組改成負數，並把動作備註換成轉換後的說明。之後的正數可能真的是加重，不動；0 和負數不動。雙槓撐仍是 assisted 型時不動。審查清單在 `tools/assist_review.txt`（`tools/migration_review.py` 產生）。
-- `autoTitles`（訓練名稱改成訓練目的，C-5）：符合舊自動格式的名稱改成訓練目的，其他名稱標成自訂、不動。清單在 `tools/custom_titles.txt`。
+- `autoTitles`（訓練名稱改成訓練目的，C-5）：不是自訂、名稱也還不是訓練目的的訓練中，符合舊自動格式的名稱改成訓練目的，其他名稱標成自訂、不動。清單在 `tools/custom_titles.txt`。
 
 ### 11. 小工具與即時動態（CHANGE_05）
 

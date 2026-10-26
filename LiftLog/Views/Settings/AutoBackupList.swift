@@ -41,7 +41,7 @@ struct AutoBackupList: View {
             Button("還原", role: .destructive) { restore(entry) }
             Button("取消", role: .cancel) {}
         } message: { entry in
-            Text("會回到「\(entry.title)」之前的狀態，之後新增的紀錄會不見。建議先匯出一份目前的資料。")
+            Text("會回到「\(entry.title)」之前的資料，之後新增的紀錄會不見；這份備份還沒套用的轉換（例如輔助重量改負數）會在還原後重新套用。建議先匯出一份目前的資料。")
         }
         .alert(message ?? "", isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } })) {
             Button("好") {}
@@ -50,8 +50,10 @@ struct AutoBackupList: View {
 
     private func restore(_ entry: AutoBackup.Entry) {
         do {
-            try BackupService.restore(BackupFile.decode(Data(contentsOf: entry.url)), into: context)
-            message = "還原完成"
+            // 和「從 JSON 匯入」一樣：備份產生時還沒套用的遷移，還原後補做
+            let migrated = try DataMigrations.restore(BackupFile.decode(Data(contentsOf: entry.url)), into: context)
+            entries = AutoBackup.list()
+            message = migrated.isEmpty ? "還原完成" : "還原完成，並重新套用了：\(migrated.map(DataMigrations.title(of:)).joined(separator: "、"))"
         } catch {
             message = "還原失敗：\(error.localizedDescription)"
         }

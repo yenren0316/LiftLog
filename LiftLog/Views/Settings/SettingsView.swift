@@ -258,9 +258,8 @@ private struct BackupSettings: View {
 
     private func restore(_ file: BackupFile) {
         do {
-            try BackupService.restore(file, into: context)
-            // 舊版備份匯入後補做資料遷移（輔助重量改負數、訓練名稱改成目的），一樣先自動備份
-            let migrated = DataMigrations.rerunAfterImport(fileVersion: file.version, context: context)
+            // 備份產生時還沒套用的資料遷移（輔助重量改負數、訓練名稱改成目的），匯入後補做，一樣先自動備份
+            let migrated = try DataMigrations.restore(file, into: context)
             refresh()
             message = migrated.isEmpty ? "匯入完成" : "匯入完成，並更新了舊版資料：\(migrated.map(DataMigrations.title(of:)).joined(separator: "、"))"
         } catch {

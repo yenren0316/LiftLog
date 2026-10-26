@@ -1,7 +1,8 @@
 # CHANGE_07 資訊架構重整：最終報告
 
 - 日期：2026-10-26
-- 範圍：階段 A～D 全部完成，加上驗收時發現的修正。每個階段都是編譯成功、全部測試通過後才 commit。
+- 範圍：階段 A～D 全部完成，加上驗收時發現的修正，以及之後追加的**執行規則 7**（匯入遷移前的備份也要轉換，見第 1 節最後）。每個階段都是編譯成功、全部測試通過後才 commit。
+- 復原點：CHANGE_07 開始前的 commit `6f72de3` 打了 git tag `before-change07`。
 - 驗證環境：Xcode（`/Applications/Xcode.app`），iPhone 17 Pro 模擬器（iOS 26），測試一律 `-parallel-testing-enabled NO`。
 - 文件：`SPEC.md` 已更新（新增「12. 統計與體重」「13. 開發用啟動參數」「10-1. 資料遷移與自動備份」，改寫今天、開始訓練、歷程、動作庫、設定、備份、深層連結、小工具各節）；`tools/STATUS.md` 已依現況重寫。
 
@@ -13,18 +14,18 @@
 | 項目 | 結果 | 證據 |
 |---|---|---|
 | G1 Debug／Release 建置 0 error 0 warning | **通過** | clean build：Debug（模擬器）、Release（模擬器）、Release（iphoneos，不簽署）、build-for-testing（含測試 target）都是 0 warning、0 error。註：階段 D 的 commit 在測試 target 留了一個 warning（多餘的 `#require`），驗收時發現並在最後的 commit 修掉。 |
-| G2 全部測試通過（含 T1～T10） | **通過** | 205 個測試全部通過、0 失敗（31 個測試檔）。 |
+| G2 全部測試通過（含 T1～T10） | **通過** | 208 個測試全部通過、0 失敗（31 個測試檔；含規則 7 追加的 3 個）。 |
 | G3 DEBUG 參數與預覽頁都在 `#if DEBUG` 裡 | **通過** | 用腳本檢查所有開發用啟動參數（22 個）的讀取位置都在 `#if DEBUG` 區塊內；`DemoData.swift`、`WidgetGalleryView.swift` 整個檔案包在 `#if DEBUG`。Release 建置會編譯不帶這些程式碼的版本。 |
 
 ### T：自動測試
 | 項目 | 測試 | 結果 |
 |---|---|---|
-| T1 輔助重量轉負數與遷移前備份 | `DataMigrationsTests`：assistConversionFilter、migrationBacksUpFirstThenConvertsOnce、nothingToMigrateMeansNoBackup、importingAnOldBackupRerunsTheMigrations | 通過 |
+| T1 輔助重量轉負數與遷移前備份 | `DataMigrationsTests`：assistConversionFilter、migrationBacksUpFirstThenConvertsOnce、nothingToMigrateMeansNoBackup | 通過 |
 | T2 單一開始入口（繼續／新菜單、只在開始時確認、取消不動） | `WorkoutLauncherTests`：withoutAnActiveWorkoutThePlanOpensDirectly、continueCurrentOpensTheWorkout、cancellingThePlanLeavesTheCurrentWorkoutAlone、confirmingEndsTheCurrentWorkoutStopsTheRestAndStarts、repeatCarriesRolesAndDayType | 通過 |
 | T3 上一次只取之前的訓練 | `WorkoutActionsTests.previousSetsInAPastSessionComeOnlyFromEarlierSessions` | 通過 |
 | T4 30 天視窗與統計快取 | `StatsCacheTests`：recentWindowIsThirtyCalendarDaysIncludingToday、snapshotCountsOnlySessionsInTheWindow、mainLiftTrend | 通過 |
 | T5 動作庫排序與篩選 | `LibraryTests`：fourSorts、sortChoiceIsRemembered、tagFilterIsAnIntersection | 通過 |
-| T6 訓練目的名稱與遷移 | `SessionTitleTests`：purposeByDayType、purposeWithoutDayType、legacyAutomaticDetection、migrationRegeneratesAutomaticAndKeepsCustomTitles、restoringAnOldBackupKeepsCustomTitles | 通過 |
+| T6 訓練目的名稱與遷移 | `SessionTitleTests`：purposeByDayType、purposeWithoutDayType、legacyAutomaticDetection、migrationRegeneratesAutomaticAndKeepsCustomTitles、titleMigrationIsIdempotent、restoringAnOldBackupKeepsCustomTitles | 通過 |
 | T7 編輯時間 | `SessionTimeEditTests`：movingTheStartShiftsEverything、settingTheEndClampsCompletions、combineKeepsTheTimeOfDay、summaryTimeTextUsesTwentyFourHours | 通過 |
 | T8 補登 | `WorkoutLauncherTests.backfillIsAnEndedSessionWithoutRestOrConflict` | 通過 |
 | T9 體重 | `BodyWeightLogTests`：savingTheSameDayOverwritesInsteadOfAdding、savingCleansUpOldDuplicatesOnThatDay、perDayKeepsTheLatestRecordOfEachDay、movingAverageUsesTheLastSevenDays、changeComparesWithThirtyDaysAgo、filterByRange | 通過 |
@@ -51,6 +52,16 @@
 | V7 空資料的今天／歷程／動作庫和空狀態文字 | **通過** | 另外截了空資料的統計。 |
 | 檢查：沒有被截斷的「…」、沒有重疊、顏色都是主題 token | **通過** | 逐張看過；所有顏色都來自 `Theme.*`。 |
 
+### 執行規則 7：匯入遷移前的備份
+> 從 JSON 匯入時，如果備份是在 A-1 和 C-5 遷移之前產生的，匯入後也要套用同樣的轉換，不受「只執行一次」標記的影響。
+
+| 項目 | 結果 | 證據 |
+|---|---|---|
+| 判斷備份是不是遷移前產生的 | **完成** | 備份檔多了 `migrations` 欄位，記下資料已經套用過的遷移。沒有這個欄位的檔案（CHANGE_07 之前匯出的、欄位加入前寫的自動備份）視為都沒套用。只看版本號不夠：自動備份是第 6 版格式，內容卻是遷移前的數字。 |
+| 匯入後補做轉換，不看旗標 | **完成** | `DataMigrations.restore`：依檔案重設旗標，沒套用的遷移再跑一次，一樣先自動備份；「從 JSON 匯入」和「還原自動備份」共用。 |
+| 測試 | **通過** | `DataMigrationsTests`：importingABackupWithoutTheFieldAppliesEveryMigration（這台旗標都已是 true，仍轉換＋備份）、importingSkipsMigrationsTheBackupAlreadyHas（已套用的不再跑）、autoBackupsAreReconvertedWhenRestored（自動備份只記之前的遷移，還原後重新轉換）；`SessionTitleTests.titleMigrationIsIdempotent`。 |
+| 建置 | **通過** | Debug（含測試）、Release 都是 0 warning、0 error。 |
+
 ---
 
 ## 2. 自行決定
@@ -62,7 +73,7 @@
 2. 雙槓撐還是 assisted 型（輔助重量，越少越好），照指示不動。
 3. 遷移沒有要改的資料時不寫自動備份，只記為已執行，避免每次空跑都多一份備份。
 4. 自動備份不會自動刪除（檔名到分鐘：`auto-2026-10-26-1333-assistToNegative.json`）。
-5. 從「自動備份」還原不會再跑遷移，因為使用者就是要回到遷移前。從檔案匯入**第 5 版以前**的備份會再跑一次遷移（一樣先自動備份），不然舊檔的輔助重量會被當成加重；完成訊息會列出更新了哪些。這一點是驗收時發現的。
+5. **（規則 7 追加後改寫，review 同意）** 「還原自動備份」和「從 JSON 匯入」一樣，會補做備份裡沒套用的遷移。原本的決定是還原自動備份不再跑遷移（回到遷移前）；但那樣資料是遷移前的數字、旗標卻是「已執行」，App 會把舊的輔助量當成加重，之後匯出的檔案也會被標成已遷移。現在自動備份仍保存遷移前的原始數字（匯出就看得到），還原後的資料一律是目前 App 的格式。還原的確認訊息有說明這一點。
 6. 已有進行中的訓練時不再提供「加入目前的訓練」，只有「繼續目前訓練／建立新菜單」。`liftlog://new` 和其他開始入口在這時也先問。
 7. 結束舊訓練的確認對話框出現在最上層的 sheet 上（建立菜單或摘要浮窗），不跳回底下的畫面。
 8. 「不照建議，自由選動作」建立一個沒有日型的訓練，並直接打開「新增動作」。
@@ -102,6 +113,11 @@
 33. `liftlog://today` 會關掉摘要浮窗和訓練的全螢幕畫面，並清掉今天的導覽路徑。
 34. 分頁列自動隱藏在「不隱藏」時改用 `.automatic`，動作詳情才能照設計隱藏分頁列（驗收時發現）。
 35. 空資料（`-emptyData`）連動作庫都清空，才能檢查動作庫的空狀態文字。示範資料（`-demoData`）是 5 次有時間、日型、角色和備註的訓練（其中 10/24 和 seed 同一天，用來測「同一天多次」），加 5 筆體重。兩者都只在 DEBUG。
+
+**執行規則 7（追加）**
+
+36. 備份檔用 `migrations` 欄位判斷，而不是版本號：自動備份是第 6 版格式，內容卻是遷移前的。格式版本維持 6（新欄位可以省略；沒有這個欄位的 CHANGE_07 版本讀到時會忽略它）。
+37. **（review 同意）** 為了讓補做安全，「訓練名稱」遷移改成可以重複執行：只處理不是自訂、而且名稱還不是訓練目的的訓練。輔助重量本來就只轉 cutoff 之前的正數。極少數情況下會誤轉：遷移後又在 10/26 以前的訓練裡記了正數的輔助引體向上（例如補登時記成加重），而匯入的又是這個欄位加入前（`b946bc3` 那一版）匯出的檔案，這組會被轉成負數。之後匯出的檔案都有這個欄位，不受影響。
 
 ---
 
@@ -174,4 +190,6 @@
 | C | `eb8f17f` | 歷程（紀錄｜統計）、摘要浮窗與 ⋯、編輯訓練的時間規則、補登、訓練目的名稱與遷移 |
 | D | `0d647b7` | 統計 5 張卡、體重（卡、記錄、HealthKit、摘要與完成畫面）、小工具＋與 `liftlog://today` |
 | 驗收修正 | `19c689c` | DEBUG 示範／空資料、空狀態文字、24 小時制、歷程日期與月份、主項卡、分頁列隱藏、舊備份匯入補做遷移 |
-| 文件 | 最後一個 commit | SPEC.md、tools/STATUS.md、本報告、截圖，以及測試 target 的 warning 修正 |
+| 文件 | `b946bc3` | SPEC.md、tools/STATUS.md、本報告、截圖，以及測試 target 的 warning 修正 |
+| 規則 7 | 「CHANGE_07 rule 7」commit（review 通過，CHANGE_08 開始前） | 備份檔的 `migrations` 欄位、`DataMigrations.restore`、名稱遷移可重複執行、測試、文件 |
+| tag | `before-change07` → `6f72de3` | CHANGE_07 開始前的版本（已推上 GitHub） |

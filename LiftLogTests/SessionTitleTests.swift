@@ -66,6 +66,31 @@ struct SessionTitleTests {
         #expect(custom.title == "腿日")
     }
 
+    /// 匯入的備份可能已經遷移過：再跑一次不會把訓練目的名稱標成自訂，也不會改自訂的名稱
+    @Test func titleMigrationIsIdempotent() throws {
+        let context = ModelContext(try ModelContainer(for: LiftLogStore.schema,
+                                                      configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
+        let squat = Exercise(name: "深蹲", category: .kneeDominant, tags: [.main], equipment: .barbell)
+        context.insert(squat)
+        let date = Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 1, hour: 19))!
+        func session(_ title: String) -> WorkoutSession {
+            let s = WorkoutSession(startedAt: date, endedAt: date, title: title, dayType: .meLower)
+            context.insert(s)
+            context.insert(SessionExercise(session: s, exercise: squat, order: 0, role: .maxEffort))
+            return s
+        }
+        let legacy = session("深蹲"), custom = session("腿日")
+        #expect(try AutoTitles.isNeeded(in: context))
+        let first = try AutoTitles.apply(in: context)
+        #expect(first.regenerated == 1 && first.custom.map(\.title) == ["腿日"])
+        #expect(legacy.title == "下肢最大肌力・深蹲" && !legacy.isTitleCustom)
+
+        #expect(try !AutoTitles.isNeeded(in: context))
+        let second = try AutoTitles.apply(in: context)
+        #expect(second.regenerated == 0 && second.custom.isEmpty)
+        #expect(!legacy.isTitleCustom && custom.isTitleCustom && custom.title == "腿日")
+    }
+
     @Test func restoringAnOldBackupKeepsCustomTitles() throws {
         let context = ModelContext(try ModelContainer(for: LiftLogStore.schema,
                                                       configurations: ModelConfiguration(isStoredInMemoryOnly: true)))

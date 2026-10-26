@@ -89,38 +89,94 @@ struct DataMigrationsTests {
         #expect(defaults.bool(forKey: DataMigrations.flagKey(AssistToNegative.id)))
     }
 
-    /// 從檔案匯入舊版（第 5 版）備份：遷移已經跑過也要對匯入的資料再跑一次；第 6 版的備份不動
-    @Test func importingAnOldBackupRerunsTheMigrations() throws {
+    /// 執行規則 7 的共用資料：輔助引體向上 9/1 一組 +19（遷移前的輔助量）、名稱是舊的自動格式
+    private struct ImportFixture {
+        var context: ModelContext
+        var defaults: UserDefaults
+        var folder: URL
+        var session: WorkoutSession
+    }
+
+    private func makeImportFixture() throws -> ImportFixture {
         let context = ModelContext(try ModelContainer(for: LiftLogStore.schema,
                                                       configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
         let defaults = try #require(UserDefaults(suiteName: "DataMigrationsTests.\(UUID().uuidString)"))
-        let folder = tempFolder()
         let pullUp = Exercise(name: "輔助引體向上", category: .verticalPull, equipment: .bodyweight, logType: .weight,
                               note: ConjugateLibrary.negativeLoadNote)
         context.insert(pullUp)
         let session = WorkoutSession(startedAt: date(9, 1), endedAt: date(9, 1), title: "輔助引體向上")
         context.insert(session)
-        let item = SessionExercise(session: session, exercise: pullUp, order: 0)
+        let item = SessionExercise(session: session, exercise: pullUp, order: 0, role: .pull)
         context.insert(item)
         context.insert(SetRecord(sessionExercise: item, order: 0, weightKg: 19, reps: 5, isCompleted: true, completedAt: date(9, 1)))
         try context.save()
-        // 這台已經跑過遷移
-        DataMigrations.all.forEach { defaults.set(true, forKey: DataMigrations.flagKey($0.id)) }
+        return ImportFixture(context: context, defaults: defaults, folder: tempFolder(), session: session)
+    }
 
-        var file = try BackupService.makeBackup(from: context)
-        let current = DataMigrations.rerunAfterImport(fileVersion: file.version, context: context, defaults: defaults,
-                                                      backupFolder: folder, now: date(10, 28))
-        #expect(current.isEmpty)
-        #expect(AutoBackup.list(folder: folder).isEmpty)
+    private func weights(_ context: ModelContext) throws -> [Double] {
+        try context.fetch(FetchDescriptor<SetRecord>()).compactMap(\.weightKg)
+    }
 
+    private func titles(_ context: ModelContext) throws -> [String] {
+        try context.fetch(FetchDescriptor<WorkoutSession>()).map(\.title)
+    }
+
+    /// 規則 7：沒有 migrations 欄位的舊檔（CHANGE_07 之前匯出的）視為一個遷移都沒套用；
+    /// 這台已經跑過遷移（旗標都是 true）也要對匯入的資料再轉換一次，而且一樣先自動備份
+    @Test func importingABackupWithoutTheFieldAppliesEveryMigration() throws {
+        let f = try makeImportFixture()
+        DataMigrations.all.forEach { f.defaults.set(true, forKey: DataMigrations.flagKey($0.id)) }
+        var file = try BackupService.makeBackup(from: f.context, migrations: [])
+        file.migrations = nil
         file.version = 5
-        try BackupService.restore(file, into: context)
-        let ran = DataMigrations.rerunAfterImport(fileVersion: file.version, context: context, defaults: defaults,
-                                                  backupFolder: folder, now: date(10, 28))
+        let decoded = try BackupFile.decode(file.encode())
+        #expect(decoded.migrations == nil)
+
+        let ran = try DataMigrations.restore(decoded, into: f.context, defaults: f.defaults, backupFolder: f.folder, now: date(10, 28))
         #expect(ran == [AssistToNegative.id, AutoTitles.id])
-        #expect(AutoBackup.list(folder: folder).count == 2)
-        let restored = try context.fetch(FetchDescriptor<SetRecord>())
-        #expect(restored.compactMap(\.weightKg) == [-19])
-        #expect(DataMigrations.all.allSatisfy { defaults.bool(forKey: DataMigrations.flagKey($0.id)) })
+        #expect(try weights(f.context) == [-19])
+        #expect(try titles(f.context) == ["上肢訓練"])
+        #expect(AutoBackup.list(folder: f.folder).map(\.migration) == [AutoTitles.id, AssistToNegative.id])
+        #expect(DataMigrations.all.allSatisfy { f.defaults.bool(forKey: DataMigrations.flagKey($0.id)) })
+    }
+
+    /// 備份裡已經標記套用過的遷移不再跑（也不備份），沒標記的才跑
+    @Test func importingSkipsMigrationsTheBackupAlreadyHas() throws {
+        let f = try makeImportFixture()
+        let all = try BackupService.makeBackup(from: f.context, migrations: DataMigrations.all.map(\.id))
+        #expect(try DataMigrations.restore(all, into: f.context, defaults: f.defaults, backupFolder: f.folder).isEmpty)
+        #expect(try weights(f.context) == [19])
+        #expect(AutoBackup.list(folder: f.folder).isEmpty)
+
+        // 只套用過輔助重量：名稱還要轉換，輔助重量不再動
+        let assistOnly = try BackupService.makeBackup(from: f.context, migrations: [AssistToNegative.id])
+        let ran = try DataMigrations.restore(assistOnly, into: f.context, defaults: f.defaults, backupFolder: f.folder,
+                                             now: date(10, 28))
+        #expect(ran == [AutoTitles.id])
+        #expect(try weights(f.context) == [19])
+        #expect(try titles(f.context) == ["上肢訓練"])
+    }
+
+    /// 自動備份記下「這個遷移之前」已經套用的遷移；不管用「從 JSON 匯入」還是「還原自動備份」，還原後都會重新轉換
+    @Test func autoBackupsAreReconvertedWhenRestored() throws {
+        let f = try makeImportFixture()
+        #expect(DataMigrations.runIfNeeded(context: f.context, defaults: f.defaults, backupFolder: f.folder, now: date(10, 28))
+                == [AssistToNegative.id, AutoTitles.id])
+        let backups = AutoBackup.list(folder: f.folder)
+        let beforeAssist = try BackupFile.decode(Data(contentsOf: try #require(backups.first { $0.migration == AssistToNegative.id }).url))
+        let beforeTitles = try BackupFile.decode(Data(contentsOf: try #require(backups.first { $0.migration == AutoTitles.id }).url))
+        #expect(beforeAssist.migrations == [])
+        #expect(beforeTitles.migrations == [AssistToNegative.id])
+        // 一般匯出：兩個都套用過了
+        #expect(try BackupService.makeBackup(from: f.context, migrations: DataMigrations.applied(defaults: f.defaults)).migrations
+                == [AssistToNegative.id, AutoTitles.id])
+
+        // 備份裡還是遷移前的數字；還原後重新轉換，結果和遷移後一樣
+        #expect(beforeAssist.sessions.flatMap { $0.items.flatMap { $0.sets.compactMap(\.weightKg) } } == [19])
+        let ran = try DataMigrations.restore(beforeAssist, into: f.context, defaults: f.defaults, backupFolder: f.folder,
+                                             now: date(10, 29))
+        #expect(ran == [AssistToNegative.id, AutoTitles.id])
+        #expect(try weights(f.context) == [-19])
+        #expect(try titles(f.context) == ["上肢訓練"])
     }
 }

@@ -62,7 +62,7 @@ enum DataMigrations {
                   isNeeded: { try !AssistToNegative.targets(in: $0).isEmpty }),
         Migration(id: AutoTitles.id,
                   run: { try AutoTitles.apply(in: $0).regenerated },
-                  isNeeded: { try $0.fetchCount(FetchDescriptor<WorkoutSession>()) > 0 }),
+                  isNeeded: { try AutoTitles.isNeeded(in: $0) }),
     ]
 
     static func flagKey(_ id: String) -> String { "migration.\(id)" }
@@ -82,9 +82,9 @@ enum DataMigrations {
         for migration in migrations where !defaults.bool(forKey: flagKey(migration.id)) {
             do {
                 if try migration.isNeeded(context) {
-                    // 先備份，備份失敗就不改資料，下次啟動再試
-                    _ = try AutoBackup.write(BackupService.makeBackup(from: context), migration: migration.id,
-                                             date: now, folder: backupFolder)
+                    // 先備份，備份失敗就不改資料，下次啟動再試。備份裡記下已經套用的遷移（不含這一個）
+                    _ = try AutoBackup.write(BackupService.makeBackup(from: context, migrations: applied(migrations: migrations, defaults: defaults)),
+                                             migration: migration.id, date: now, folder: backupFolder)
                     _ = try migration.run(context)
                     try context.save()
                     ran.append(migration.id)
@@ -97,17 +97,26 @@ enum DataMigrations {
         return ran
     }
 
-    /// 遷移之後的備份格式（CHANGE_07 起是第 6 版）
-    static let migratedBackupVersion = 6
+    /// 目前的資料已經套用過的遷移（旗標為 true；沒有要改的資料也算），寫進備份檔
+    static func applied(migrations: [Migration] = all, defaults: UserDefaults = .standard) -> [String] {
+        migrations.map(\.id).filter { defaults.bool(forKey: flagKey($0)) }
+    }
 
-    /// 從檔案匯入比較舊的備份（第 5 版以前）時，匯入的資料還是遷移前的樣子：不看旗標，所有遷移重新跑一次（一樣先自動備份）。
-    /// 從「自動備份」還原不呼叫這裡：使用者就是要回到遷移前
+    /// 執行規則 7：從 JSON 匯入（包括還原自動備份）。備份產生時還沒套用的遷移，匯入後不看「只執行一次」的旗標，
+    /// 對匯入的資料再跑一次（一樣先自動備份）；備份裡已經套用的遷移不再跑。回傳這次實際改了資料的遷移
     @discardableResult
-    static func rerunAfterImport(fileVersion: Int, context: ModelContext, migrations: [Migration] = all,
-                                 defaults: UserDefaults = .standard, backupFolder: URL = AutoBackup.defaultFolder,
-                                 now: Date = .now) -> [String] {
-        guard fileVersion < migratedBackupVersion else { return [] }
-        migrations.forEach { defaults.removeObject(forKey: flagKey($0.id)) }
+    static func restore(_ file: BackupFile, into context: ModelContext, migrations: [Migration] = all,
+                        defaults: UserDefaults = .standard, backupFolder: URL = AutoBackup.defaultFolder,
+                        now: Date = .now) throws -> [String] {
+        try BackupService.restore(file, into: context)
+        let done = Set(file.migrations ?? [])
+        for migration in migrations {
+            if done.contains(migration.id) {
+                defaults.set(true, forKey: flagKey(migration.id))
+            } else {
+                defaults.removeObject(forKey: flagKey(migration.id))
+            }
+        }
         return runIfNeeded(context: context, migrations: migrations, defaults: defaults, backupFolder: backupFolder, now: now)
     }
 }
@@ -168,7 +177,8 @@ enum AssistToNegative {
 }
 
 /// C-5：訓練名稱改成訓練目的。符合舊自動格式（動作名稱用「＋」串起來、或「等 N 項」）的視為自動名稱，重新產生；
-/// 其他視為自訂，保留不動並標成 isTitleCustom
+/// 其他視為自訂，保留不動並標成 isTitleCustom。已經是自訂、或已經是訓練目的的不動，所以重複執行也不會改變結果
+/// （匯入的備份可能已經遷移過）
 enum AutoTitles {
     static let id = "autoTitles"
 
@@ -182,11 +192,21 @@ enum AutoTitles {
         Set(try context.fetch(FetchDescriptor<Exercise>()).flatMap { [$0.name] + $0.aliases })
     }
 
+    /// 要處理的訓練：不是自訂名稱、名稱也還不是訓練目的
+    static func pending(in context: ModelContext) throws -> [WorkoutSession] {
+        try context.fetch(FetchDescriptor<WorkoutSession>(sortBy: [SortDescriptor(\.startedAt)]))
+            .filter { !$0.isTitleCustom && $0.title != $0.automaticTitle() }
+    }
+
+    static func isNeeded(in context: ModelContext) throws -> Bool {
+        try !pending(in: context).isEmpty
+    }
+
     @discardableResult
     static func apply(in context: ModelContext) throws -> Result {
         let names = try exerciseNames(in: context)
         var result = Result()
-        for session in try context.fetch(FetchDescriptor<WorkoutSession>(sortBy: [SortDescriptor(\.startedAt)])) {
+        for session in try pending(in: context) {
             if SessionTitle.isLegacyAutomatic(session.title, exerciseNames: names) {
                 session.restoreAutomaticTitle()
                 result.regenerated += 1

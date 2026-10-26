@@ -80,6 +80,9 @@ nonisolated struct BackupFile: Codable {
     var exercises: [ExerciseRecord]
     var sessions: [SessionRecord]
     var bodyWeights: [BodyWeightRecord]
+    /// 這份資料已經套用過的資料遷移（`DataMigrations` 的 id）。沒有這個欄位的舊檔視為一個都還沒套用；
+    /// 匯入後會補做沒套用的遷移（CHANGE_07 執行規則 7）
+    var migrations: [String]? = nil
 
     static func decode(_ data: Data) throws -> BackupFile {
         let decoder = JSONDecoder()
@@ -169,7 +172,8 @@ enum BackupError: LocalizedError {
 }
 
 enum BackupService {
-    static func makeBackup(from context: ModelContext) throws -> BackupFile {
+    /// migrations：目前資料已經套用過的遷移，寫進備份檔
+    static func makeBackup(from context: ModelContext, migrations: [String] = DataMigrations.applied()) throws -> BackupFile {
         let exercises = try context.fetch(FetchDescriptor<Exercise>(sortBy: [SortDescriptor(\.name)]))
         let sessions = try context.fetch(FetchDescriptor<WorkoutSession>(sortBy: [SortDescriptor(\.startedAt)]))
         let bodyWeights = try context.fetch(FetchDescriptor<BodyWeight>(sortBy: [SortDescriptor(\.date)]))
@@ -198,7 +202,8 @@ enum BackupService {
                                        })
                       })
             },
-            bodyWeights: bodyWeights.map { .init(date: $0.date, kg: $0.kg) }
+            bodyWeights: bodyWeights.map { .init(date: $0.date, kg: $0.kg) },
+            migrations: migrations
         )
     }
 
