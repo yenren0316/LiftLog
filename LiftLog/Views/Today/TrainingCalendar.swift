@@ -15,6 +15,8 @@ struct TrainingCalendar: View {
     var title = "訓練日曆"
     /// 標題列右邊的說明（例如「本週 2 次・近 12 週平均 2.5 次」）
     var caption: String?
+    /// 一次訓練都沒有時，格子下面的說明
+    var emptyText: String?
     var onSelectDay: (StatsSnapshot.DayStat) -> Void
 
     private static let fitCell: CGFloat = 12
@@ -44,6 +46,9 @@ struct TrainingCalendar: View {
                         grid(weeks: 53, cell: cell, gap: cell * 0.25)
                     }
                 }
+            }
+            if days.isEmpty, let emptyText {
+                Text(emptyText).font(.footnote).foregroundStyle(Theme.textSecondary)
             }
         }
         .card(padding: 16)

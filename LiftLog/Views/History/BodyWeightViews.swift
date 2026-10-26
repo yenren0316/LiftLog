@@ -26,7 +26,7 @@ struct BodyWeightCard: View {
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
                     Text(unit.formatWithUnit(kg: latest.kg)).font(.title.bold().monospacedDigit())
                     if let change = BodyWeightLog.change(entries) {
-                        Text("比 30 天前 \(change >= 0 ? "+" : "−")\(unit.format(kg: abs(change))) \(unit.symbol)")
+                        Text("近 30 天 \(change >= 0 ? "+" : "−")\(unit.format(kg: abs(change))) \(unit.symbol)")
                             .font(.subheadline.monospacedDigit())
                             .foregroundStyle(Theme.textSecondary)
                     }

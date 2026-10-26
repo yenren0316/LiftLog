@@ -239,7 +239,8 @@ private struct TabBarAutoHideModifier: ViewModifier {
                     withAnimation(.snappy(duration: 0.3)) { isHidden = autoHide.isHidden }
                 }
             }
-            .toolbarVisibility(isHidden ? .hidden : .visible, for: .tabBar)
+            // 沒有要隱藏時交給系統（.automatic），下一頁的 .toolbar(.hidden, for: .tabBar) 才會生效
+            .toolbarVisibility(isHidden ? .hidden : .automatic, for: .tabBar)
             // 切換分頁或進入下一頁時恢復顯示
             .onDisappear {
                 autoHide.reset()

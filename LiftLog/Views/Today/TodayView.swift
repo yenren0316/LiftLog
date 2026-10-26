@@ -21,7 +21,8 @@ struct TodayView: View {
                     NextPlanCard(answers: stats.snapshot.nextPlan, suggestedMain: stats.snapshot.suggestedMain) {
                         launcher.requestPlan($0, context: context)
                     }
-                    TrainingCalendar(days: stats.snapshot.days, onSelectDay: open)
+                    TrainingCalendar(days: stats.snapshot.days, emptyText: "還沒有訓練紀錄。點上面的「下一次」建立第一份菜單。",
+                                     onSelectDay: open)
                     RecentSetsCard(sets: stats.snapshot.recentSets) { coordinator.todayPath.append($0) }
                 }
                 .padding(.horizontal, 16)
@@ -31,6 +32,14 @@ struct TodayView: View {
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: ExerciseCategory.self) { CategoryTodoList(category: $0) }
             .navigationDestination(for: Exercise.self) { ExerciseDetailView(exercise: $0) }
+            #if DEBUG
+            // 開發用：-todayCategory core 打開該分類的待練清單
+            .task {
+                if let raw = UserDefaults.standard.string(forKey: "todayCategory"), let category = ExerciseCategory(rawValue: raw) {
+                    coordinator.todayPath.append(category)
+                }
+            }
+            #endif
         }
         .modifier(DaySessionChooser(choices: $dayChoices))
     }

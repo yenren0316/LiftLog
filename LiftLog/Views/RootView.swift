@@ -151,12 +151,24 @@ struct RootView: View {
             Text("這次訓練沒有打勾的組，已經刪除。")
         }
         .task {
-            SeedImporter.importIfNeeded(into: context)
-            GuideImporter.importIfNeeded(into: context)
-            LibraryAdditions.applyIfNeeded(into: context)
-            ConjugateLibrary.applyIfNeeded(into: context)
-            // 資料遷移：每個遷移執行前先在 Documents/AutoBackups 自動備份
-            DataMigrations.runIfNeeded(context: context)
+            #if DEBUG
+            // 開發用：-emptyData YES 清空所有資料、不匯入 seed，檢查空狀態
+            let importsData = !DemoData.wipeIfRequested(in: context)
+            #else
+            let importsData = true
+            #endif
+            if importsData {
+                SeedImporter.importIfNeeded(into: context)
+                GuideImporter.importIfNeeded(into: context)
+                LibraryAdditions.applyIfNeeded(into: context)
+                ConjugateLibrary.applyIfNeeded(into: context)
+                // 資料遷移：每個遷移執行前先在 Documents/AutoBackups 自動備份
+                DataMigrations.runIfNeeded(context: context)
+            }
+            #if DEBUG
+            // 開發用：-demoData YES 在 seed 之外加幾筆示範訓練和近期體重（只加一次）
+            DemoData.addIfRequested(in: context)
+            #endif
             stats.start(context: context)
             SnapshotWriter.shared.start(context: context)
             LiveActivityController.shared.start()
@@ -175,6 +187,15 @@ struct RootView: View {
             // 開發用：-discardActive YES 捨棄進行中的訓練，測試沒有訓練時的狀態
             if UserDefaults.standard.bool(forKey: "discardActive"), let session = active.first {
                 WorkoutActions.discard(session, in: context)
+            }
+            // 開發用：-openSummary latest 打開最近一次訓練的摘要浮窗；-openSummary edit 直接進入編輯
+            if let mode = UserDefaults.standard.string(forKey: "openSummary") {
+                var latest = FetchDescriptor<WorkoutSession>(predicate: #Predicate { $0.endedAt != nil },
+                                                             sortBy: [SortDescriptor(\.startedAt, order: .reverse)])
+                latest.fetchLimit = 1
+                if let session = try? context.fetch(latest).first {
+                    coordinator.showSummary(of: session, editing: mode == "edit")
+                }
             }
             // 開發用：-openURL liftlog://new 模擬點小工具（simctl openurl 會先跳出確認視窗）
             if let link = UserDefaults.standard.string(forKey: "openURL"), let url = URL(string: link) {

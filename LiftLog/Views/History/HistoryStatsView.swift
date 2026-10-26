@@ -33,7 +33,8 @@ struct HistoryStatsView: View {
     }
 }
 
-/// 主項進步：每個「主」動作一列，最近 90 天的估算 1RM、近 12 週的迷你折線、和 4 週前相比；點一列到動作詳情
+/// 主項進步：90 天內有紀錄的「主」動作一列，估算 1RM、近 12 週的迷你折線、和 4 週前相比；點一列到動作詳情。
+/// 90 天內沒練的主項只寫一行數量
 private struct MainLiftProgressCard: View {
     var trends: [UUID: StatsSnapshot.MainLiftTrend]
 
@@ -42,9 +43,11 @@ private struct MainLiftProgressCard: View {
 
     var body: some View {
         let order = ExerciseCategory.allCases
-        let mains = exercises.filter { $0.tags.contains(.main) }.sorted {
+        let allMains = exercises.filter { $0.tags.contains(.main) }
+        let mains = allMains.filter { trends[$0.id]?.current != nil }.sorted {
             (order.firstIndex(of: $0.category)!, $0.meRotation ?? .max) < (order.firstIndex(of: $1.category)!, $1.meRotation ?? .max)
         }
+        let idle = allMains.count - mains.count
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .firstTextBaseline) {
                 Text("主項進步").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.textSecondary)
@@ -52,13 +55,18 @@ private struct MainLiftProgressCard: View {
                 Text("估算 1RM・近 12 週").font(.caption).foregroundStyle(Theme.textSecondary)
             }
             .padding(.bottom, 4)
-            if mains.isEmpty {
+            if allMains.isEmpty {
                 Text("沒有標「主」的動作").font(.subheadline).foregroundStyle(Theme.textSecondary)
+            } else if mains.isEmpty {
+                Text("近 90 天沒有主項的紀錄").font(.subheadline).foregroundStyle(Theme.textSecondary)
             }
             ForEach(Array(mains.enumerated()), id: \.element.id) { index, exercise in
                 if index > 0 { Divider().overlay(Theme.separator) }
                 NavigationLink(value: exercise) { row(exercise, trends[exercise.id]) }
                     .buttonStyle(.pressable)
+            }
+            if !mains.isEmpty, idle > 0 {
+                Text("另外 \(idle) 個主項 90 天內沒有紀錄").font(.caption).foregroundStyle(Theme.textSecondary).padding(.top, 4)
             }
         }
         .card(padding: 16)
@@ -78,7 +86,7 @@ private struct MainLiftProgressCard: View {
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(change > 0 ? Theme.done : Theme.danger)
                 } else {
-                    Text(trend?.current == nil ? "90 天內無紀錄" : "和 4 週前一樣").font(.caption2).foregroundStyle(Theme.textSecondary)
+                    Text("和 4 週前一樣").font(.caption2).foregroundStyle(Theme.textSecondary)
                 }
             }
             .frame(width: 92, alignment: .trailing)

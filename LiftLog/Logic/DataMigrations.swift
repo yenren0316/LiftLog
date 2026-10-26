@@ -96,6 +96,20 @@ enum DataMigrations {
         }
         return ran
     }
+
+    /// 遷移之後的備份格式（CHANGE_07 起是第 6 版）
+    static let migratedBackupVersion = 6
+
+    /// 從檔案匯入比較舊的備份（第 5 版以前）時，匯入的資料還是遷移前的樣子：不看旗標，所有遷移重新跑一次（一樣先自動備份）。
+    /// 從「自動備份」還原不呼叫這裡：使用者就是要回到遷移前
+    @discardableResult
+    static func rerunAfterImport(fileVersion: Int, context: ModelContext, migrations: [Migration] = all,
+                                 defaults: UserDefaults = .standard, backupFolder: URL = AutoBackup.defaultFolder,
+                                 now: Date = .now) -> [String] {
+        guard fileVersion < migratedBackupVersion else { return [] }
+        migrations.forEach { defaults.removeObject(forKey: flagKey($0.id)) }
+        return runIfNeeded(context: context, migrations: migrations, defaults: defaults, backupFolder: backupFolder, now: now)
+    }
 }
 
 /// A-1：輔助引體向上在 CHANGE_06 改成負重制之前記的是輔助重量（正數），改成負數。

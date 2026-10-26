@@ -107,11 +107,15 @@ struct WorkoutSummarySheet: View {
     }
 
     /// 「09:10–10:25・75 分」；沒有時間資料的舊紀錄「未記錄時間」
-    static func timeText(_ session: WorkoutSession) -> String {
+    static func timeText(_ session: WorkoutSession, calendar: Calendar = .current) -> String {
         guard session.hasTime, let end = session.endedAt else { return "未記錄時間" }
-        let time = Date.FormatStyle.dateTime.hour(.twoDigits(amPM: .omitted)).minute(.twoDigits)
+        // 固定 24 小時制：跟著地區格式在 12 小時制下會變成沒有上午／下午的「06:30」
+        func clock(_ date: Date) -> String {
+            let parts = calendar.dateComponents([.hour, .minute], from: date)
+            return String(format: "%02d:%02d", parts.hour ?? 0, parts.minute ?? 0)
+        }
         let minutes = Int((end.timeIntervalSince(session.startedAt) / 60).rounded())
-        return "\(session.startedAt.formatted(time))–\(end.formatted(time))・\(minutes) 分"
+        return "\(clock(session.startedAt))–\(clock(end))・\(minutes) 分"
     }
 
     /// 新紀錄：和這次訓練「之前」的紀錄比較

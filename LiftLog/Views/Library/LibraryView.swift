@@ -18,6 +18,12 @@ struct LibraryView: View {
         NavigationStack(path: $path) {
             List {
                 if query.isEmpty {
+                    if exercises.isEmpty {
+                        Text("動作庫是空的。按右上角的＋新增動作，或到「設定 → 備份與還原」匯入備份。")
+                            .font(.subheadline)
+                            .foregroundStyle(Theme.textSecondary)
+                            .listRowBackground(Theme.card)
+                    }
                     Section {
                         ForEach(ExerciseCategory.allCases) { category in
                             NavigationLink(value: Route.category(category)) { categoryRow(category) }
@@ -61,10 +67,15 @@ struct LibraryView: View {
             .libraryRowActionSheets()
             .sheet(isPresented: $showingNew) { ExerciseEditView(exercise: nil) }
             #if DEBUG
-            // 開發用：-libraryCategory kneeDominant 直接打開該分類；-openArchived YES 打開已封存
+            // 開發用：-libraryCategory kneeDominant 直接打開該分類；-openArchived YES 打開已封存；
+            // -openExercise 臥推 打開該動作的詳情（經過它的分類）
             .task {
                 if let raw = UserDefaults.standard.string(forKey: "libraryCategory"), let category = ExerciseCategory(rawValue: raw) {
                     path.append(Route.category(category))
+                }
+                if let name = UserDefaults.standard.string(forKey: "openExercise"), let exercise = exercises.first(where: { $0.name == name }) {
+                    path.append(Route.category(exercise.category))
+                    path.append(exercise)
                 }
                 if UserDefaults.standard.bool(forKey: "openArchived") { path.append(Route.archived) }
             }

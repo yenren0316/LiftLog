@@ -88,4 +88,39 @@ struct DataMigrationsTests {
         #expect(AutoBackup.list(folder: folder).isEmpty)
         #expect(defaults.bool(forKey: DataMigrations.flagKey(AssistToNegative.id)))
     }
+
+    /// 從檔案匯入舊版（第 5 版）備份：遷移已經跑過也要對匯入的資料再跑一次；第 6 版的備份不動
+    @Test func importingAnOldBackupRerunsTheMigrations() throws {
+        let context = ModelContext(try ModelContainer(for: LiftLogStore.schema,
+                                                      configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
+        let defaults = try #require(UserDefaults(suiteName: "DataMigrationsTests.\(UUID().uuidString)"))
+        let folder = tempFolder()
+        let pullUp = Exercise(name: "輔助引體向上", category: .verticalPull, equipment: .bodyweight, logType: .weight,
+                              note: ConjugateLibrary.negativeLoadNote)
+        context.insert(pullUp)
+        let session = WorkoutSession(startedAt: date(9, 1), endedAt: date(9, 1), title: "輔助引體向上")
+        context.insert(session)
+        let item = SessionExercise(session: session, exercise: pullUp, order: 0)
+        context.insert(item)
+        context.insert(SetRecord(sessionExercise: item, order: 0, weightKg: 19, reps: 5, isCompleted: true, completedAt: date(9, 1)))
+        try context.save()
+        // 這台已經跑過遷移
+        DataMigrations.all.forEach { defaults.set(true, forKey: DataMigrations.flagKey($0.id)) }
+
+        var file = try BackupService.makeBackup(from: context)
+        let current = DataMigrations.rerunAfterImport(fileVersion: file.version, context: context, defaults: defaults,
+                                                      backupFolder: folder, now: date(10, 28))
+        #expect(current.isEmpty)
+        #expect(AutoBackup.list(folder: folder).isEmpty)
+
+        file.version = 5
+        try BackupService.restore(file, into: context)
+        let ran = DataMigrations.rerunAfterImport(fileVersion: file.version, context: context, defaults: defaults,
+                                                  backupFolder: folder, now: date(10, 28))
+        #expect(ran == [AssistToNegative.id, AutoTitles.id])
+        #expect(AutoBackup.list(folder: folder).count == 2)
+        let restored = try context.fetch(FetchDescriptor<SetRecord>())
+        #expect(restored.compactMap(\.weightKg) == [-19])
+        #expect(DataMigrations.all.allSatisfy { defaults.bool(forKey: DataMigrations.flagKey($0.id)) })
+    }
 }

@@ -59,6 +59,12 @@ struct ExerciseDetailView: View {
         .sheet(isPresented: $showingEdit) {
             ExerciseEditView(exercise: exercise)
         }
+        #if DEBUG
+        // 開發用：-detailTab guide｜history 打開該分頁
+        .task {
+            if let raw = UserDefaults.standard.string(forKey: "detailTab"), let value = Tab(rawValue: raw) { tab = value }
+        }
+        #endif
     }
 
     /// 點紀錄或圖表上的點：打開那次訓練的摘要浮窗（第 3 層不再 push 頁面）

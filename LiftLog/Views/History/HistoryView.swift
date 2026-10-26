@@ -104,7 +104,7 @@ private struct HistoryRecordsList: View {
                         .listRowBackground(Theme.card)
                     }
                 } header: {
-                    Text("\(month.start.formatted(.dateTime.year().month(.defaultDigits)))・\(month.sessions.count) 次")
+                    Text(Self.monthTitle(month.start, count: month.sessions.count))
                         .font(.subheadline.weight(.semibold))
                 }
             }
@@ -112,6 +112,12 @@ private struct HistoryRecordsList: View {
         .listSectionSpacing(12)
         .scrollContentBackground(.hidden)
         .hidesTabBarOnScroll()
+    }
+
+    /// 「2026 年 10 月・12 次」
+    static func monthTitle(_ start: Date, count: Int, calendar: Calendar = .current) -> String {
+        let parts = calendar.dateComponents([.year, .month], from: start)
+        return "\(parts.year ?? 0) 年 \(parts.month ?? 0) 月・\(count) 次"
     }
 
     /// 由新到舊的月份
@@ -129,7 +135,8 @@ private struct HistoryRow: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
             VStack(alignment: .leading, spacing: 0) {
-                Text(session.startedAt.formatted(.dateTime.day()))
+                // 只有數字（中文的 .day() 會帶「日」而換行）
+                Text(String(Calendar.current.component(.day, from: session.startedAt)))
                     .font(.title3.bold().monospacedDigit())
                 Text(session.startedAt.formatted(.dateTime.weekday(.abbreviated)))
                     .font(.caption)
