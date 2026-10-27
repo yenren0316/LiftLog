@@ -25,6 +25,17 @@ extension XCUIElement {
 }
 
 extension XCUIApplication {
+    /// 先用 -discardActive 收掉上一次留下的進行中訓練（失敗的測試可能沒收），再用 arguments 啟動
+    func launchWithoutActiveWorkout(_ arguments: [String]) {
+        launchArguments = ["-discardActive", "YES"]
+        launch()
+        _ = wait(for: .runningForeground, timeout: 10)
+        Thread.sleep(forTimeInterval: 2)
+        terminate()
+        launchArguments = arguments
+        launch()
+    }
+
     /// 畫面上的座標（左上角為原點）
     func point(x: CGFloat, y: CGFloat) -> XCUICoordinate {
         coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: x, dy: y))

@@ -130,7 +130,6 @@ struct WorkoutSummaryView: View {
         }
         }
         .scrollDismissesKeyboard(.interactively)
-        .keyboardDoneButton()
         .screenBackground()
         #if DEBUG
         // 開發用：-focusWeight YES 直接輸入今天體重（截鍵盤的「完成」用）

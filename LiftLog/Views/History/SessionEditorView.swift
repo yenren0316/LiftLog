@@ -51,6 +51,7 @@ struct SessionEditorView: View {
 
     /// 「完成」：有沒打勾、但已經填了數字的組時先詢問；完全沒填數字的組不處理
     private func finishEditing() {
+        dismissKeyboard()
         filledCount = WorkoutActions.filledIncompleteSets(in: session).count
         if filledCount > 0 {
             confirmingFilled = true

@@ -15,8 +15,7 @@ final class DynamicIslandUITests: XCTestCase {
     private func capture(elapsed: Int, name: String) async throws {
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchArguments = ["-demoData", "YES", "-demoWorkout", "YES", "-demoWorkoutElapsed", "\(elapsed)"]
-        app.launch()
+        app.launchWithoutActiveWorkout(["-demoData", "YES", "-demoWorkout", "YES", "-demoWorkoutElapsed", "\(elapsed)"])
         XCTAssertTrue(app.buttons["縮小"].waitForExistence(timeout: 15))
         try await Task.sleep(for: .seconds(2))
         // 回到主畫面：動態島縮小

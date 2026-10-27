@@ -107,13 +107,17 @@ private struct GuideEditView: View {
             }
             .scrollContentBackground(.hidden)
             .scrollDismissesKeyboard(.interactively)
-            .keyboardDoneButton()
             .screenBackground()
             .navigationTitle(exercise.name)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button("儲存", action: save) }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("儲存") {
+                        dismissKeyboard()
+                        save()
+                    }
+                }
             }
             .onAppear {
                 core = exercise.guideCore

@@ -166,7 +166,6 @@ struct BodyWeightEntrySheet: View {
             }
             .padding(16)
             .screenBackground()
-            .keyboardDoneButton()
             .navigationTitle("記錄體重")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

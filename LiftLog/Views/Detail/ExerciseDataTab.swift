@@ -248,7 +248,6 @@ private struct IntensityCard: View {
                 HStack {
                     TextField("1RM", text: $manualText)
                         .keyboardType(.decimalPad)
-                        .keyboardDoneButton()
                         .font(.title3.weight(.semibold).monospacedDigit())
                         .padding(10)
                         .background(Theme.field, in: .rect(cornerRadius: 10))

@@ -6,8 +6,7 @@ final class DiscardWorkoutUITests: XCTestCase {
     func testDiscardButtonAtTheBottomAsksFirst() async throws {
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchArguments = ["-demoData", "YES", "-demoWorkout", "YES"]
-        app.launch()
+        app.launchWithoutActiveWorkout(["-demoData", "YES", "-demoWorkout", "YES"])
         XCTAssertTrue(app.buttons["縮小"].waitForExistence(timeout: 15))
         // 右上角沒有 ••• 選單
         XCTAssertFalse(app.navigationBars.buttons["More"].exists)

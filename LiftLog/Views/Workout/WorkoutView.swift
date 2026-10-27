@@ -84,6 +84,7 @@ struct WorkoutView: View {
     }
 
     private func finishTapped() {
+        dismissKeyboard()
         let hasIncomplete = session.items.contains { $0.sets.contains { !$0.isCompleted } }
         if hasIncomplete {
             askingIncomplete = true

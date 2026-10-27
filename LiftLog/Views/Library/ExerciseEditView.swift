@@ -114,13 +114,15 @@ struct ExerciseEditView: View {
             .navigationTitle(exercise == nil ? "新增動作" : "編輯動作")
             .navigationBarTitleDisplayMode(.inline)
             .scrollDismissesKeyboard(.interactively)
-            .keyboardDoneButton()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("取消") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("儲存", action: save)
+                    Button("儲存") {
+                        dismissKeyboard()
+                        save()
+                    }
                         .disabled(trimmedName.isEmpty || nameTaken)
                 }
             }

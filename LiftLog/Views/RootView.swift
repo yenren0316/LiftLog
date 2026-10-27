@@ -38,6 +38,9 @@ struct RootView: View {
             .id(theme)
             .animation(.easeInOut(duration: 0.35), value: theme)
             .tint(Theme.accent)
+            // 收起鍵盤（CHANGE_10 §1）：可以捲動的畫面往下捲時收起；點輸入框以外的地方收起（window 上的點擊，sheet 也適用）
+            .scrollDismissesKeyboard(.interactively)
+            .background(KeyboardDismissOnTap())
             .preferredColorScheme(.dark)
             .onChange(of: theme) {
                 SnapshotWriter.shared.update()

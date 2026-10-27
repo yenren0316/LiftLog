@@ -3,27 +3,6 @@ import UIKit
 
 // 共用的畫面元件，顏色都用 Theme 的 token（Shared/Theme.swift）
 
-// MARK: - 收起鍵盤
-
-/// 收起鍵盤：不管是哪個輸入框在輸入
-@MainActor
-func dismissKeyboard() {
-    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-}
-
-extension View {
-    /// 鍵盤上方右側加「完成」收起鍵盤：數字鍵盤沒有 return 鍵，多行輸入的 return 是換行，不加就收不起來。
-    /// 訓練中的組有自己的鍵盤列（含「完成」），不用這個
-    func keyboardDoneButton() -> some View {
-        toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("完成", action: dismissKeyboard).fontWeight(.semibold)
-            }
-        }
-    }
-}
-
 struct CardModifier: ViewModifier {
     var padding: CGFloat = 20
 
@@ -106,7 +85,11 @@ struct PrimaryButton: View {
     var action: () -> Void
 
     var body: some View {
-        Button(action: action) {
+        // 先收起鍵盤再執行（CHANGE_10 §1）
+        Button {
+            dismissKeyboard()
+            action()
+        } label: {
             PrimaryButtonLabel(title: title, systemImage: systemImage, prominent: prominent, isEnabled: isEnabled)
         }
         .buttonStyle(.pressable)

@@ -80,7 +80,9 @@ final class TabBarHidingUITests: XCTestCase {
 
     /// 分頁列收起時，「訓練中」橫條照樣顯示（可以點）
     func testWorkoutBarStaysWhenTabBarHides() async throws {
-        launch(["-startTab", "1", "-historySegment", "stats", "-demoWorkout", "YES"])
+        continueAfterFailure = false
+        app = XCUIApplication()
+        app.launchWithoutActiveWorkout(["-demoData", "YES", "-tabBarLog", "YES", "-startTab", "1", "-historySegment", "stats", "-demoWorkout", "YES"])
         let collapse = app.buttons["縮小"].firstMatch
         XCTAssertTrue(collapse.waitForExistence(timeout: 15))
         // 等全螢幕的訓練畫面出現完再縮小
