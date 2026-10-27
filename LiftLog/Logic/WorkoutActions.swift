@@ -71,6 +71,19 @@ enum WorkoutActions {
         }
     }
 
+    /// 捨棄訓練的確認（CHANGE_10 §0-3）：「取消」不改任何資料，「捨棄訓練」才刪除
+    enum DiscardChoice {
+        case cancel, discard
+    }
+
+    /// 回傳是否刪除了
+    @discardableResult
+    static func resolveDiscard(_ choice: DiscardChoice, session: WorkoutSession, in context: ModelContext) -> Bool {
+        guard choice == .discard else { return false }
+        discard(session, in: context)
+        return true
+    }
+
     /// 編輯已結束的訓練按「完成」、有沒打勾但填了數字的組時的三個選項（CHANGE_08 §1、CHANGE_09 §0-1）
     enum FilledSetsChoice {
         /// 把這些組標為完成，關閉編輯畫面

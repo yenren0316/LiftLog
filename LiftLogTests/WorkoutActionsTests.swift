@@ -350,6 +350,30 @@ struct WorkoutActionsTests {
         #expect(filled.isCompleted && weightOnly.isCompleted && weightOnly.reps == 5)
     }
 
+    /// CHANGE_10 §0-3：捨棄訓練按「取消」不改任何資料，確認後才刪除
+    @Test func discardOnlyAfterConfirming() throws {
+        let context = try makeContext()
+        let squat = Exercise(name: "深蹲", category: .kneeDominant, equipment: .barbell)
+        context.insert(squat)
+        let session = WorkoutActions.start(with: [squat], in: context)
+        let set = try #require(session.orderedItems.first?.orderedSets.first)
+        set.weightKg = 80
+        set.reps = 5
+        set.isCompleted = true
+        try context.save()
+
+        #expect(WorkoutActions.resolveDiscard(.cancel, session: session, in: context) == false)
+        #expect(!context.hasChanges)
+        #expect(try context.fetch(FetchDescriptor<WorkoutSession>()).count == 1)
+        #expect(set.weightKg == 80 && set.reps == 5 && set.isCompleted)
+
+        #expect(WorkoutActions.resolveDiscard(.discard, session: session, in: context))
+        #expect(try context.fetch(FetchDescriptor<WorkoutSession>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<SetRecord>()).isEmpty)
+        // 動作本身不受影響
+        #expect(try context.fetch(FetchDescriptor<Exercise>()).count == 1)
+    }
+
     /// 進行中的訓練不走這裡（由「完成訓練」處理）
     @Test func filledSetsPromptIsOnlyForEndedSessions() throws {
         let context = try makeContext()

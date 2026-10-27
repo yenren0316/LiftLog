@@ -57,7 +57,7 @@ struct WorkoutSummarySheet: View {
         }
         .presentationDetents([.medium, .large])
         .launchConfirmation(launcher, origin: .summary, context: context)
-        .confirmationDialog("刪除這次訓練？", isPresented: $confirmingDelete, titleVisibility: .visible) {
+        .alert("刪除這次訓練？", isPresented: $confirmingDelete) {
             Button("刪除", role: .destructive) {
                 // 等浮窗關掉才刪，畫面不會再讀到已刪除的資料
                 launcher.afterSheetDismiss { [session, context] in WorkoutActions.discard(session, in: context) }

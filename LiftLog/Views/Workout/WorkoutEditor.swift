@@ -7,6 +7,15 @@ final class SetDrafts {
     var texts: [FieldID: String] = [:]
 }
 
+extension WorkoutEditor where Footer == EmptyView {
+    /// 沒有 footer（編輯過去的訓練）
+    init(session: WorkoutSession, openAddOnAppear: Bool = false, onAutoOpenedAdd: @escaping () -> Void = {},
+         onSetCompleted: @escaping (SessionExercise) -> Void = { _ in }, @ViewBuilder header: () -> Header) {
+        self.init(session: session, openAddOnAppear: openAddOnAppear, onAutoOpenedAdd: onAutoOpenedAdd,
+                  onSetCompleted: onSetCompleted, header: header, footer: { EmptyView() })
+    }
+}
+
 /// 一列組的推導資訊
 struct SetRowInfo: Identifiable {
     var set: SetRecord
@@ -16,8 +25,8 @@ struct SetRowInfo: Identifiable {
     var id: UUID { self.set.id }
 }
 
-/// 訓練內容的編輯器：訓練中畫面與歷史訓練詳情共用
-struct WorkoutEditor<Header: View>: View {
+/// 訓練內容的編輯器：訓練中畫面與歷史訓練詳情共用。footer 放在最後一個動作和「新增動作」下面
+struct WorkoutEditor<Header: View, Footer: View>: View {
     let session: WorkoutSession
     /// 一出現就打開「新增動作」（自由選動作）；打開後呼叫 onAutoOpenedAdd
     var openAddOnAppear = false
@@ -25,6 +34,7 @@ struct WorkoutEditor<Header: View>: View {
     /// 打勾時通知（訓練中畫面用來開始休息計時）
     var onSetCompleted: (SessionExercise) -> Void = { _ in }
     @ViewBuilder var header: Header
+    @ViewBuilder var footer: Footer
 
     @Environment(\.modelContext) private var context
     @AppStorage(WeightUnit.storageKey) private var unit: WeightUnit = .kg
@@ -61,6 +71,11 @@ struct WorkoutEditor<Header: View>: View {
                             .frame(maxWidth: .infinity, minHeight: 48)
                     }
                     .listRowBackground(Theme.card)
+                }
+
+                if Footer.self != EmptyView.self {
+                    Section { footer }
+                        .listRowBackground(Color.clear)
                 }
             }
             .listSectionSpacing(16)

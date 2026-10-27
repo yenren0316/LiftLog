@@ -78,12 +78,12 @@ private struct LibraryRowActionSheets: ViewModifier {
         content
             .environment(actions)
             .sheet(item: $actions.mergeSource) { MergeTargetView(source: $0) }
-            .confirmationDialog(
+            .alert(
                 "刪除「\(actions.deleteCandidate?.name ?? "")」？",
                 isPresented: Binding(get: { actions.deleteCandidate != nil }, set: { if !$0 { actions.deleteCandidate = nil } }),
-                titleVisibility: .visible,
                 presenting: actions.deleteCandidate
             ) { exercise in
+                Button("取消", role: .cancel) {}
                 Button("刪除", role: .destructive) {
                     if exercise.sessionItems.isEmpty {
                         context.delete(exercise)

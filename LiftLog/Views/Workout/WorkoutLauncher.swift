@@ -147,11 +147,10 @@ final class WorkoutLauncher {
 extension View {
     /// 「將結束目前的訓練，未完成的組會刪除」：全 App 唯一的開始衝突對話框，掛在發出請求的畫面上
     func launchConfirmation(_ launcher: WorkoutLauncher, origin: WorkoutLauncher.Origin, context: ModelContext) -> some View {
-        confirmationDialog(
+        alert(
             "將結束目前的訓練，未完成的組會刪除",
             isPresented: Binding(get: { launcher.pendingStart?.origin == origin },
-                                 set: { if !$0 { launcher.cancelPendingStart() } }),
-            titleVisibility: .visible
+                                 set: { if !$0 { launcher.cancelPendingStart() } })
         ) {
             Button("結束並開始新的訓練", role: .destructive) { launcher.confirmPendingStart(context: context) }
             Button("取消", role: .cancel) { launcher.cancelPendingStart() }
@@ -160,10 +159,9 @@ extension View {
 
     /// 有進行中的訓練時進入建立菜單：「繼續目前訓練」或「建立新菜單」（選建立新菜單時還不結束目前的訓練）
     func planEntryQuestion(_ launcher: WorkoutLauncher) -> some View {
-        confirmationDialog(
+        alert(
             "已經有進行中的訓練",
-            isPresented: Binding(get: { launcher.planWithActive != nil }, set: { if !$0 { launcher.planWithActive = nil } }),
-            titleVisibility: .visible
+            isPresented: Binding(get: { launcher.planWithActive != nil }, set: { if !$0 { launcher.planWithActive = nil } })
         ) {
             Button("繼續目前訓練") { launcher.continueCurrent() }
             Button("建立新菜單") { launcher.openPlanKeepingCurrent() }

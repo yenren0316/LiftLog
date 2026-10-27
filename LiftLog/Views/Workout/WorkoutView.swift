@@ -18,6 +18,12 @@ struct WorkoutView: View {
             WorkoutEditor(session: session, openAddOnAppear: coordinator.openAddOnExpand,
                           onAutoOpenedAdd: { coordinator.openAddOnExpand = false }, onSetCompleted: setCompleted) {
                 header
+            } footer: {
+                // 最後一個動作下面的紅字按鈕（CHANGE_10 §0-3，取代右上角的 ••• 選單）
+                Button("捨棄訓練", role: .destructive) { confirmingDiscard = true }
+                    .font(.headline)
+                    .foregroundStyle(Theme.danger)
+                    .frame(maxWidth: .infinity, minHeight: 48)
             }
             .safeAreaInset(edge: .top) { RestTimerBar() }
             .animation(.snappy, value: restTimer.isRunning)
@@ -38,29 +44,23 @@ struct WorkoutView: View {
                     RestTimerMenu(defaultSeconds: session.orderedItems.last?.restSeconds ?? 90)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Button("捨棄訓練", systemImage: "trash", role: .destructive) { confirmingDiscard = true }
-                    } label: {
-                        Image(systemName: "ellipsis")
-                    }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
                     Button("完成", action: finishTapped)
                         .buttonStyle(.borderedProminent)
                         .tint(Theme.accent)
                         .foregroundStyle(Theme.onAccent)
                 }
             }
-            .confirmationDialog("捨棄這次訓練？", isPresented: $confirmingDiscard, titleVisibility: .visible) {
+            .alert("捨棄這次訓練？", isPresented: $confirmingDiscard) {
+                Button("取消", role: .cancel) { WorkoutActions.resolveDiscard(.cancel, session: session, in: context) }
                 Button("捨棄訓練", role: .destructive) {
                     restTimer.skip()
                     coordinator.isExpanded = false
-                    WorkoutActions.discard(session, in: context)
+                    WorkoutActions.resolveDiscard(.discard, session: session, in: context)
                 }
             } message: {
                 Text("這次訓練的所有組都會刪除，無法復原。")
             }
-            .confirmationDialog("還有沒打勾的組", isPresented: $askingIncomplete, titleVisibility: .visible) {
+            .alert("還有沒打勾的組", isPresented: $askingIncomplete) {
                 Button("刪除未完成的組", role: .destructive) { finish(.deleteIncomplete) }
                 Button("全部標為完成") { finish(.completeAll) }
                 Button("取消", role: .cancel) {}

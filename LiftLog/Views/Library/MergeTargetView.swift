@@ -54,11 +54,11 @@ struct MergeTargetView: View {
                     Button("取消") { dismiss() }
                 }
             }
-            .confirmationDialog(
+            .alert(
                 "合併到「\(target?.name ?? "")」？",
-                isPresented: Binding(get: { target != nil }, set: { if !$0 { target = nil } }),
-                titleVisibility: .visible
+                isPresented: Binding(get: { target != nil }, set: { if !$0 { target = nil } })
             ) {
+                Button("取消", role: .cancel) {}
                 Button("合併", role: .destructive, action: merge)
             } message: {
                 Text("這個動作無法復原。")
