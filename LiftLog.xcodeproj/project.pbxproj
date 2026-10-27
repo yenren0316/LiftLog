@@ -27,6 +27,13 @@
 			remoteGlobalIDString = A10000000000000000000006;
 			remoteInfo = LiftLog;
 		};
+		C10000000000000000000007 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A10000000000000000000009 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A10000000000000000000006;
+			remoteInfo = LiftLog;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -50,6 +57,7 @@
 		93EE80B4308E106900B53D29 /* LiftLogWidgetsExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = LiftLogWidgetsExtension.entitlements; sourceTree = "<group>"; };
 		A10000000000000000000001 /* LiftLog.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LiftLog.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B10000000000000000000001 /* LiftLogTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LiftLogTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		C10000000000000000000001 /* LiftLogUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LiftLogUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -96,6 +104,11 @@
 			path = LiftLogTests;
 			sourceTree = "<group>";
 		};
+		C10000000000000000000002 /* LiftLogUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = LiftLogUITests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -122,6 +135,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C10000000000000000000004 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -141,6 +161,7 @@
 				93EE80B5308E109F00B53D29 /* Shared */,
 				A10000000000000000000002 /* LiftLog */,
 				B10000000000000000000002 /* LiftLogTests */,
+				C10000000000000000000002 /* LiftLogUITests */,
 				93EE809E308E0D6D00B53D29 /* LiftLogWidgets */,
 				93EE8099308E0D6C00B53D29 /* Frameworks */,
 				A10000000000000000000005 /* Products */,
@@ -152,6 +173,7 @@
 			children = (
 				A10000000000000000000001 /* LiftLog.app */,
 				B10000000000000000000001 /* LiftLogTests.xctest */,
+				C10000000000000000000001 /* LiftLogUITests.xctest */,
 				93EE8098308E0D6C00B53D29 /* LiftLogWidgetsExtension.appex */,
 			);
 			name = Products;
@@ -227,6 +249,27 @@
 			productReference = B10000000000000000000001 /* LiftLogTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		C10000000000000000000006 /* LiftLogUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C10000000000000000000009 /* Build configuration list for PBXNativeTarget "LiftLogUITests" */;
+			buildPhases = (
+				C10000000000000000000003 /* Sources */,
+				C10000000000000000000004 /* Frameworks */,
+				C10000000000000000000005 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				C10000000000000000000008 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				C10000000000000000000002 /* LiftLogUITests */,
+			);
+			name = LiftLogUITests;
+			productName = LiftLogUITests;
+			productReference = C10000000000000000000001 /* LiftLogUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -244,6 +287,10 @@
 						CreatedOnToolsVersion = 27.1;
 					};
 					B10000000000000000000006 = {
+						CreatedOnToolsVersion = 27.1;
+						TestTargetID = A10000000000000000000006;
+					};
+					C10000000000000000000006 = {
 						CreatedOnToolsVersion = 27.1;
 						TestTargetID = A10000000000000000000006;
 					};
@@ -266,6 +313,7 @@
 			targets = (
 				A10000000000000000000006 /* LiftLog */,
 				B10000000000000000000006 /* LiftLogTests */,
+				C10000000000000000000006 /* LiftLogUITests */,
 				93EE8097308E0D6C00B53D29 /* LiftLogWidgetsExtension */,
 			);
 		};
@@ -287,6 +335,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		B10000000000000000000005 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C10000000000000000000005 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -317,6 +372,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C10000000000000000000003 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -329,6 +391,11 @@
 			isa = PBXTargetDependency;
 			target = A10000000000000000000006 /* LiftLog */;
 			targetProxy = B10000000000000000000007 /* PBXContainerItemProxy */;
+		};
+		C10000000000000000000008 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A10000000000000000000006 /* LiftLog */;
+			targetProxy = C10000000000000000000007 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -626,6 +693,42 @@
 			};
 			name = Release;
 		};
+		C1000000000000000000000A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.aaronhou.LiftLogUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = LiftLog;
+			};
+			name = Debug;
+		};
+		C1000000000000000000000B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.aaronhou.LiftLogUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = LiftLog;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -661,6 +764,15 @@
 			buildConfigurations = (
 				B1000000000000000000000A /* Debug */,
 				B1000000000000000000000B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C10000000000000000000009 /* Build configuration list for PBXNativeTarget "LiftLogUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C1000000000000000000000A /* Debug */,
+				C1000000000000000000000B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

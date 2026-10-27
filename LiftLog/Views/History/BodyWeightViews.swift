@@ -8,6 +8,8 @@ struct BodyWeightCard: View {
     @AppStorage(WeightUnit.storageKey) private var unit: WeightUnit = .kg
     @State private var range: ChartRange = .sixMonths
     @State private var entry: BodyWeightEntryRequest?
+    /// 點一下或按住拖曳選取的日期（浮出那天的體重）
+    @State private var selected: Date?
 
     var body: some View {
         let entries = BodyWeightLog.perDay(records.map { BodyWeightLog.Entry(date: $0.date, kg: $0.kg) })
@@ -62,6 +64,8 @@ struct BodyWeightCard: View {
     private func chart(_ entries: [BodyWeightLog.Entry], average: [BodyWeightLog.Entry]) -> some View {
         let values = entries.map { unit.fromKg($0.kg) }
         let low = (values.min() ?? 0) - 1, high = (values.max() ?? 0) + 1
+        // 最接近選取位置的那一筆
+        let current = selected.flatMap { date in entries.min { abs($0.date.timeIntervalSince(date)) < abs($1.date.timeIntervalSince(date)) } }
         return Chart {
             ForEach(entries) { entry in
                 LineMark(x: .value("日期", entry.date), y: .value("體重", unit.fromKg(entry.kg)), series: .value("線", "體重"))
@@ -75,13 +79,32 @@ struct BodyWeightCard: View {
                     .foregroundStyle(Theme.done)
                     .lineStyle(StrokeStyle(lineWidth: 2))
             }
+            if let current {
+                RuleMark(x: .value("日期", current.date))
+                    .foregroundStyle(Theme.textSecondary.opacity(0.4))
+                    .annotation(position: .overlay, alignment: .top, spacing: 0,
+                                overflowResolution: .init(x: .fit(to: .chart), y: .fit(to: .chart))) {
+                        PeekLabel(text: label(current))
+                    }
+            }
         }
-        .chartYScale(domain: low...high)
+        // 上面留空間給標籤
+        .chartYScale(domain: low...(high + (high - low) * 0.5))
         .chartLegend(.hidden)
+        // 點一下顯示 2 秒；按住 0.2 秒後拖曳跟著手指；上下滑交給捲動
+        .chartDateSelection($selected)
         .frame(height: 160)
+        .accessibilityValue(current.map(label) ?? "")
         .overlay(alignment: .topTrailing) {
             Label("7 日平均", systemImage: "line.diagonal").font(.caption2).foregroundStyle(Theme.done)
         }
+    }
+}
+
+extension BodyWeightCard {
+    /// 「10/20・69.3 kg」
+    private func label(_ entry: BodyWeightLog.Entry) -> String {
+        "\(entry.date.formatted(.dateTime.month(.defaultDigits).day()))・\(unit.formatWithUnit(kg: entry.kg))"
     }
 }
 

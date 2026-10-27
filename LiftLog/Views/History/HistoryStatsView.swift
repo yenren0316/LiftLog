@@ -124,9 +124,11 @@ private struct Sparkline: View {
     }
 }
 
-/// 有氧：近 12 週，每週跑步機的分鐘數
+/// 有氧：近 12 週，每週跑步機的分鐘數。點一下長條（或按住拖曳）浮出「10/19–10/25・120 分鐘」
 private struct CardioCard: View {
     var minutes: [Double]
+
+    @State private var selected: Date?
 
     var body: some View {
         let weeks = Self.weekStarts(count: minutes.count)
@@ -139,17 +141,32 @@ private struct CardioCard: View {
             if minutes.allSatisfy({ $0 == 0 }) {
                 Text("近 12 週沒有跑步機紀錄").font(.subheadline).foregroundStyle(Theme.textSecondary)
             } else {
-                Chart(Array(zip(weeks, minutes)), id: \.0) { week, value in
-                    BarMark(x: .value("週", week, unit: .weekOfYear, calendar: Self.calendar), y: .value("分鐘", value))
-                        .foregroundStyle(Theme.accent)
-                        .cornerRadius(3)
+                let current = selected.flatMap { date in weeks.indices.last { weeks[$0] <= date } }
+                Chart {
+                    ForEach(Array(zip(weeks, minutes)), id: \.0) { week, value in
+                        BarMark(x: .value("週", week, unit: .weekOfYear, calendar: Self.calendar), y: .value("分鐘", value))
+                            .foregroundStyle(Theme.accent)
+                            .cornerRadius(3)
+                    }
+                    if let current {
+                        RuleMark(x: .value("週", weeks[current], unit: .weekOfYear, calendar: Self.calendar))
+                            .foregroundStyle(Theme.textSecondary.opacity(0.25))
+                            .annotation(position: .overlay, alignment: .top, spacing: 0,
+                                        overflowResolution: .init(x: .fit(to: .chart), y: .fit(to: .chart))) {
+                                PeekLabel(text: label(week: weeks[current], minutes: minutes[current]))
+                            }
+                    }
                 }
+                // 上面留空間給標籤
+                .chartYScale(domain: 0...((minutes.max() ?? 0) * 1.4))
                 .chartXAxis {
                     AxisMarks(values: .stride(by: .weekOfYear, count: 3, calendar: Self.calendar)) { _ in
                         AxisValueLabel(format: .dateTime.month(.defaultDigits).day())
                     }
                 }
-                .frame(height: 120)
+                .chartDateSelection($selected)
+                .frame(height: 140)
+                .accessibilityValue(current.map { label(week: weeks[$0], minutes: minutes[$0]) } ?? "")
             }
         }
         .card(padding: 16)
@@ -157,6 +174,13 @@ private struct CardioCard: View {
 
     /// 週一開始的週（和訓練頻率、今天的日曆一致）
     private static let calendar = TrainingCount.weekCalendar()
+
+    /// 「10/19–10/25・120 分鐘」
+    private func label(week: Date, minutes: Double) -> String {
+        let last = Self.calendar.date(byAdding: .day, value: 6, to: week) ?? week
+        let format = Date.FormatStyle.dateTime.month(.defaultDigits).day()
+        return "\(week.formatted(format))–\(last.formatted(format))・\(Units.number(minutes)) 分鐘"
+    }
 
     private static func weekStarts(count: Int) -> [Date] {
         (0..<count).reversed().compactMap { back in
@@ -176,7 +200,6 @@ private struct FrequencyCard: View {
 
     @AppStorage("history.frequencyPeriod") private var period: TrainingFrequency.Period = .week
     @State private var selected: Date?
-    @State private var hideTask: Task<Void, Never>?
 
     var body: some View {
         let series = period == .week ? weeks : months
@@ -317,48 +340,18 @@ private struct FrequencyCard: View {
                     .foregroundStyle(Theme.textSecondary)
             }
         }
-        .chartOverlay { proxy in
-            GeometryReader { geometry in
-                Rectangle().fill(.clear).contentShape(.rect)
-                    // 點一下：顯示 2 秒
-                    .gesture(SpatialTapGesture().onEnded { value in
-                        select(at: value.location, proxy: proxy, geometry: geometry)
-                        hide(after: .seconds(2))
-                    })
-                    // 按住拖曳：跟著手指，放開就消失（短按住才開始，捲動頁面不受影響）
-                    .simultaneousGesture(LongPressGesture(minimumDuration: 0.2)
-                        .sequenced(before: DragGesture(minimumDistance: 0))
-                        .onChanged { value in
-                            if case .second(true, let drag?) = value {
-                                hideTask?.cancel()
-                                select(at: drag.location, proxy: proxy, geometry: geometry)
-                            }
-                        }
-                        .onEnded { _ in hide(after: .zero) })
-            }
-        }
+        // 點一下顯示 2 秒；按住 0.2 秒後拖曳跟著手指，放開就消失；上下滑交給捲動
+        .chartDateSelection($selected)
         .frame(height: 150)
+        // 選取的那一段也給 VoiceOver（UI 測試用它確認點一下有選到）
+        .accessibilityIdentifier("frequencyChart")
+        .accessibilityValue(current.map(label) ?? "")
     }
 
     /// 0 到最高值之間的整數刻度（2～4 個）
     static func ticks(upTo top: Double) -> [Double] {
         let step: Double = top <= 4 ? 1 : top <= 10 ? 2 : top <= 25 ? 5 : top <= 50 ? 10 : 20
         return Array(stride(from: 0, through: top, by: step))
-    }
-
-    private func select(at location: CGPoint, proxy: ChartProxy, geometry: GeometryProxy) {
-        guard let plot = proxy.plotFrame else { return }
-        let x = location.x - geometry[plot].origin.x
-        selected = proxy.value(atX: x, as: Date.self)
-    }
-
-    private func hide(after delay: Duration) {
-        hideTask?.cancel()
-        hideTask = Task {
-            try? await Task.sleep(for: delay)
-            guard !Task.isCancelled else { return }
-            selected = nil
-        }
     }
 
     /// 「10/13–10/19・3 次」或「2026 年 9 月・12 次」
