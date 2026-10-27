@@ -386,7 +386,8 @@ struct WorkoutActionsTests {
         #expect(WorkoutActions.filledIncompleteSets(in: active).isEmpty)
     }
 
-    @Test func previousSetsDependOnMainRole() throws {
+    /// CHANGE_10 §0-6：「上一次」同角色優先；同角色沒有紀錄時，用任何角色最近的一次並標出角色
+    @Test func previousColumnPrefersTheSameRole() throws {
         let context = try makeContext()
         let squat = Exercise(name: "深蹲", category: .kneeDominant, tags: [.main], equipment: .barbell)
         context.insert(squat)
@@ -402,21 +403,50 @@ struct WorkoutActionsTests {
         }
         record(.maxEffort, [(100, 3)], daysAgo: 10)
         record(.lowerAssist, [(60, 10)], daysAgo: 6)
-        // DE 主項沒有上次 DE 紀錄：上一次是空的，預填建議重量（ME 100 × 3 → 估算 1RM 110 × 60% = 65）和固定次數
+
+        // DE 主項沒有 DE 紀錄：「上一次」是最近一次（下肢輔助 60 × 10），標出角色；
+        // 灰字預填是建議重量（強度換算表 60%：估算 1RM 110 → 65），不拿其他角色的紀錄
         let de = WorkoutActions.start(with: [squat], roles: [.dynamicEffort], in: context)
         let hints = de.orderedItems[0].setHints()
-        #expect(hints.count == 8 && hints.allSatisfy { $0.previous == nil })
-        // 強度換算表 60% 那一列（kg、槓鈴進位 2.5 時是 65）
+        #expect(hints.count == 8)
+        #expect(hints[0].previous?.weightKg == 60 && hints[0].previous?.reps == 10 && hints[0].previousRole == .lowerAssist)
+        #expect(hints.dropFirst().allSatisfy { $0.previous == nil && $0.previousRole == nil })
         let expected = IntensityTable.weightKg(percent: 60, base1RMKg: 110, unit: .current,
                                                step: RoundingSteps.step(equipment: .barbell, unit: .current))
         #expect(hints.allSatisfy { $0.placeholder?.weightKg == expected && $0.placeholder?.reps == 2 })
-        // ME 主項先看上次 ME；其他角色看最近一次
-        #expect(squat.lastSets(role: .maxEffort).map(\.weightKg) == [100])
-        #expect(squat.lastSets(role: .lowerAssist).map(\.weightKg) == [60])
         WorkoutActions.discard(de, in: context)
+
+        // 同角色優先：ME 主項找 10 天前的 ME，不是 6 天前的下肢輔助
+        let me = try #require(squat.previousItem(role: .maxEffort))
+        #expect(me.otherRole == nil && me.item.completedSets.first?.weightKg == 100)
+        #expect(squat.previousItem(role: .lowerAssist)?.otherRole == nil)
+        // 沒有同角色（推）：最近一次，標出角色
+        let push = try #require(squat.previousItem(role: .push))
+        #expect(push.otherRole == .lowerAssist && push.item.completedSets.first?.weightKg == 60)
+        // 不指定角色：最近一次
+        #expect(squat.lastSets().map(\.weightKg) == [60])
+
         record(.dynamicEffort, [(60, 2), (60, 2)], daysAgo: 3)
         #expect(squat.lastSets(role: .dynamicEffort).map(\.weightKg) == [60, 60])
         #expect(squat.lastSets(role: .maxEffort).map(\.weightKg) == [100])
-        #expect(squat.lastSets().map(\.weightKg) == [60, 60])
+        #expect(squat.previousItem(role: .pull)?.otherRole == .dynamicEffort)
+        #expect(Role.maxEffort.shortTitle == "ME" && Role.dynamicEffort.shortTitle == "DE" && Role.push.shortTitle == "推")
+
+        // ME 主項只有其他角色的紀錄時：「上一次」照樣顯示（標出角色），但不拿來預填、也不決定組數
+        let bench = Exercise(name: "臥推", category: .horizontalPush, tags: [.main], equipment: .barbell)
+        context.insert(bench)
+        let date = Date.now.addingTimeInterval(-2 * 86_400)
+        let old = WorkoutSession(startedAt: date, endedAt: date)
+        context.insert(old)
+        let oldItem = SessionExercise(session: old, exercise: bench, order: 0, role: .push)
+        context.insert(oldItem)
+        for i in 0..<7 {
+            context.insert(SetRecord(sessionExercise: oldItem, order: i, weightKg: 40, reps: 3, isCompleted: true, completedAt: date))
+        }
+        let meBench = WorkoutActions.start(with: [bench], roles: [.maxEffort], in: context)
+        let meHints = meBench.orderedItems[0].setHints()
+        #expect(meHints.count == Prescription.of(role: .maxEffort, name: "臥推", tags: [.main]).setCount)
+        #expect(meHints[0].previous?.weightKg == 40 && meHints[0].previousRole == .push)
+        #expect(meHints.allSatisfy { $0.placeholder?.weightKg == nil && $0.placeholder?.reps == nil })
     }
 }

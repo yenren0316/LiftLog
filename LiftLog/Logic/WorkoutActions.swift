@@ -35,7 +35,7 @@ enum WorkoutActions {
         let item = SessionExercise(session: session, exercise: exercise, order: (session.items.map(\.order).max() ?? -1) + 1,
                                    role: role)
         context.insert(item)
-        let last = exercise.lastSets(excluding: session, role: item.role)
+        let last = exercise.prefillSets(excluding: session, role: item.role)
         let prescription = item.prescription
         let count = prescription.fixedReps != nil || last.isEmpty ? prescription.setCount : last.count
         for i in 0..<count {

@@ -21,6 +21,8 @@ struct SetRowInfo: Identifiable {
     var set: SetRecord
     var number: String
     var previous: SetValues?
+    /// 「上一次」來自其他角色時的角色
+    var previousRole: Role?
     var placeholder: SetValues?
     var id: UUID { self.set.id }
 }
@@ -187,6 +189,7 @@ struct WorkoutEditor<Header: View, Footer: View>: View {
                     set: row.set,
                     number: row.number,
                     previous: row.previous,
+                    previousRole: row.previousRole,
                     placeholder: row.placeholder,
                     logType: logType,
                     unit: unit,
@@ -259,7 +262,7 @@ struct WorkoutEditor<Header: View, Footer: View>: View {
         return item.setHints().map { hint in
             if hint.set.kind == .normal { normalCount += 1 }
             return SetRowInfo(set: hint.set, number: hint.set.kind.badge(number: normalCount),
-                              previous: hint.previous, placeholder: hint.placeholder)
+                              previous: hint.previous, previousRole: hint.previousRole, placeholder: hint.placeholder)
         }
     }
 

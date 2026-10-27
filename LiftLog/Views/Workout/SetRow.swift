@@ -35,6 +35,8 @@ struct SetRow: View {
     let set: SetRecord
     let number: String
     let previous: SetValues?
+    /// 「上一次」來自其他角色時，後面加小字的角色（「40×3・ME」）
+    var previousRole: Role? = nil
     let placeholder: SetValues?
     let logType: LogType
     let unit: WeightUnit
@@ -46,6 +48,13 @@ struct SetRow: View {
     let onDelete: () -> Void
 
     @State private var shakes = 0
+
+    private var previousText: Text {
+        guard let previous else { return Text("—") }
+        let value = SetFormat.short(previous, logType: logType, unit: unit)
+        guard let previousRole else { return Text(value) }
+        return Text("\(value)\(Text("・\(previousRole.shortTitle)").font(.caption2))")
+    }
 
     var body: some View {
         HStack(spacing: 8) {
@@ -64,7 +73,7 @@ struct SetRow: View {
                 }
             }
 
-            Text(previous.map { SetFormat.short($0, logType: logType, unit: unit) } ?? "—")
+            previousText
                 .font(.subheadline.monospacedDigit())
                 .foregroundStyle(Theme.textSecondary)
                 .lineLimit(1)

@@ -27,6 +27,15 @@ nonisolated enum Role: String, Codable, CaseIterable, Identifiable {
         }
     }
 
+    /// 「上一次」欄的小字（「40×3・ME」）：主項用 ME／DE，其他和名稱一樣
+    var shortTitle: String {
+        switch self {
+        case .maxEffort: "ME"
+        case .dynamicEffort: "DE"
+        default: title
+        }
+    }
+
     /// 完整說明；第一句是簡短說明
     var guide: String {
         switch self {
