@@ -164,9 +164,8 @@ struct WorkoutEditor<Header: View, Footer: View>: View {
                 Button { detailExercise = exercise } label: {
                     HStack(spacing: 6) {
                         Text(exercise.name).font(.title3.bold()).foregroundStyle(Theme.accent)
+                        // 只顯示這次的角色，不顯示動作庫的主、單、爆標籤（CHANGE_10 §0-7）
                         RoleBadge(role: item.role)
-                        // 和角色同名的標籤不重複顯示
-                        ForEach(exercise.tags.filter { $0.title != item.role.title }) { Chip(text: $0.title) }
                     }
                 }
                 .buttonStyle(.pressable)
