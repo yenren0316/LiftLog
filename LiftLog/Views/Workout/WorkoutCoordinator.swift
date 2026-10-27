@@ -48,6 +48,8 @@ final class WorkoutCoordinator {
     var openAddOnExpand = false
     /// 訓練摘要浮窗（RootView 呈現，任何畫面都可以打開）
     var summarySession: WorkoutSession?
+    /// 「訓練狀態」浮窗（今天的日曆卡打開，RootView 呈現；CHANGE_10 §3）
+    var showingTrainingStatus = false
     /// 浮窗打開後直接進入編輯（補登）；編輯畫面打開後直接打開「新增動作」
     var editOnSummaryOpen = false
     var openAddInEditor = false

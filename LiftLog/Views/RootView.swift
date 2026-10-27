@@ -117,6 +117,12 @@ struct RootView: View {
                 .environment(launcher)
                 .environment(stats)
         }
+        .sheet(isPresented: $coordinator.showingTrainingStatus, onDismiss: launcher.sheetDismissed) {
+            TrainingStatusSheet()
+                .environment(coordinator)
+                .environment(launcher)
+                .environment(stats)
+        }
         .sheet(item: $coordinator.summarySession, onDismiss: launcher.sheetDismissed) { session in
             WorkoutSummarySheet(session: session)
                 .environment(coordinator)
@@ -196,6 +202,8 @@ struct RootView: View {
             } else if UserDefaults.standard.bool(forKey: "demoWorkout") {
                 coordinator.isExpanded = true
             }
+            // 開發用：-trainingStatus YES 打開「訓練狀態」浮窗（截圖用）
+            if UserDefaults.standard.bool(forKey: "trainingStatus") { coordinator.showingTrainingStatus = true }
             // 開發用：-discardActive YES 捨棄進行中的訓練，測試沒有訓練時的狀態
             if UserDefaults.standard.bool(forKey: "discardActive"), let session = active.first {
                 WorkoutActions.discard(session, in: context)

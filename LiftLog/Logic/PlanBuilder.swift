@@ -49,9 +49,22 @@ nonisolated struct PlanHistory: Sendable {
 
     /// 近 30 天符合條件的動作完成了幾組（不含熱身）
     func setCount(within now: Date, where match: (Item) -> Bool) -> Int {
-        let start = Self.windowStart(now: now)
-        return sessions.filter { $0.date >= start }.flatMap(\.items).filter(match)
-            .reduce(0) { $0 + $1.sets.filter { $0.isCompleted && $0.kind != .warmup }.count }
+        setCount(in: Self.windowStart(now: now)..<Date.distantFuture, where: match)
+    }
+
+    /// 這段期間符合條件的動作完成了幾組：打勾的正式組和 MAX 組，不含熱身（sessions 只有已結束的訓練）。
+    /// 首頁的近 30 天和「訓練狀態」的本週、上週同期共用這一個
+    func setCount(in range: Range<Date>, where match: (Item) -> Bool) -> Int {
+        let items: [Item] = sessions.filter { range.contains($0.date) }.flatMap(\.items).filter(match)
+        let sets: [SetValues] = items.flatMap(\.sets)
+        return sets.filter { $0.isCompleted && $0.kind != .warmup }.count
+    }
+
+    /// 這段期間跑步機（有氧分類）完成的分鐘數：歷程的有氧卡和「訓練狀態」共用
+    func cardioMinutes(in range: Range<Date>) -> Double {
+        let items: [Item] = sessions.filter { range.contains($0.date) }.flatMap(\.items).filter { $0.category == .cardio }
+        let sets: [SetValues] = items.flatMap(\.sets)
+        return sets.filter(\.isCompleted).compactMap(\.minutes).reduce(0, +)
     }
 
     /// 某個動作每次訓練的紀錄，由新到舊
@@ -183,6 +196,12 @@ nonisolated struct RankedCandidates: Equatable, Sendable {
 nonisolated enum PlanRanking {
     /// 建立菜單每格最多顯示幾個候選
     static let visibleCount = 5
+
+    /// 某個日型主項格的第一個建議：「下一次」卡的建議主項、建立菜單主項格預設選的、「訓練狀態」的下次主項都用這個
+    static func suggestedMain(for dayType: DayType, exercises: [PlanExercise], history: PlanHistory, now: Date = .now) -> PlanExercise? {
+        candidates(for: Slot.main(for: dayType), dayType: dayType, exercises: exercises.filter { !$0.isArchived },
+                   history: history, now: now).items.first?.exercise
+    }
 
     /// 某一格的候選：已經選在其他格的動作（excluding）不列入；main 是這次選的主項（下肢輔助依它排序）
     static func candidates(for slot: Slot, dayType: DayType?, exercises: [PlanExercise], history: PlanHistory,

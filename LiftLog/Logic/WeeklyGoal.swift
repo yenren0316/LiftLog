@@ -36,6 +36,11 @@ nonisolated enum TrainingCount {
         return weeks
     }
 
+    /// 這段期間算進次數的天數（「訓練狀態」的本週、上週同期）
+    static func count(in range: Range<Date>, days: [Date: DayRegion]) -> Int {
+        days.keys.filter { range.contains($0) }.count
+    }
+
     static func weekStart(of date: Date, calendar: Calendar) -> Date? {
         calendar.dateInterval(of: .weekOfYear, for: date)?.start
     }

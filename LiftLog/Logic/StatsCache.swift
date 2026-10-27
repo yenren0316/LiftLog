@@ -77,6 +77,8 @@ nonisolated struct StatsSnapshot: Sendable {
     var weekCounts: [Date: Int] = [:]
     /// 每週目標的預設值（使用者沒設定過時用，CHANGE_09 §1）
     var automaticWeeklyGoal = WeeklyGoal.fallback
+    /// 「訓練狀態」浮窗：本週、上週同期、輪替狀態（CHANGE_10 §3）
+    var trainingStatus = TrainingStatus()
     /// 訓練頻率卡：近 12 週、近 12 個月，依部位分開（CHANGE_08 §3）；以天為單位（CHANGE_09 §4），平均只算過完的週或月（§0-2）
     var frequencyWeeks = TrainingFrequency.Series()
     var frequencyMonths = TrainingFrequency.Series()
@@ -137,10 +139,8 @@ nonisolated struct StatsSnapshot: Sendable {
             return e
         }
         snapshot.nextPlan = PlanDefaults.answers(history)
-        snapshot.suggestedMain = PlanRanking.candidates(
-            for: Slot.main(for: snapshot.nextPlan.dayType), dayType: snapshot.nextPlan.dayType,
-            exercises: planExercises.filter { !$0.isArchived }, history: history, now: now
-        ).items.first?.exercise.name
+        snapshot.suggestedMain = PlanRanking.suggestedMain(for: snapshot.nextPlan.dayType, exercises: planExercises,
+                                                           history: history, now: now)?.name
 
         // 訓練次數：全 App 同一套規則（以天為單位、只有有氧的處理），頻率卡的長條、每週目標都從這裡算
         snapshot.countedDays = TrainingCount.days(history.sessions, cardioOnlyCounts: cardioOnlyCounts, calendar: calendar)
@@ -155,11 +155,11 @@ nonisolated struct StatsSnapshot: Sendable {
             guard let day = weekCalendar.date(byAdding: .weekOfYear, value: -back, to: today) else { return nil }
             return weekCalendar.dateInterval(of: .weekOfYear, for: day)
         }
-        snapshot.weeklyCardioMinutes = weeks.map { week -> Double in
-            let items: [PlanHistory.Item] = history.sessions.filter { week.contains($0.date) }.flatMap(\.items)
-            let sets: [SetValues] = items.filter { $0.category == .cardio }.flatMap(\.sets)
-            return sets.filter(\.isCompleted).compactMap(\.minutes).reduce(0, +)
-        }
+        snapshot.weeklyCardioMinutes = weeks.map { history.cardioMinutes(in: $0.start..<$0.end) }
+
+        // 訓練狀態：天數、組數、有氧分鐘、下次主項都用上面同一套函式
+        snapshot.trainingStatus = TrainingStatus.make(history: history, exercises: planExercises, countedDays: snapshot.countedDays,
+                                                      nextDayType: snapshot.nextPlan.dayType, now: now, calendar: calendar)
 
         // 主項：最近 90 天的估算 1RM、4 週前的、近 12 週每週最好的
         for exercise in exercises where exercise.has(.main) && !exercise.isArchived {
