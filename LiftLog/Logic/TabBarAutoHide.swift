@@ -1,4 +1,5 @@
 import CoreGraphics
+import Foundation
 
 /// 往下滑時隱藏分頁列、往上滑或回到頂端時再出現（像 Threads）。CHANGE_08 §2 的規則：
 /// - 同一個方向要「連續」滑至少 threshold（24 pt）才切換；中途換方向就從換方向的地方重新算。
@@ -7,10 +8,16 @@ import CoreGraphics
 ///   可捲動範圍短的畫面（例如動作庫第 1 層，約 120 pt），底部的範圍縮小，中間至少留 48 pt（兩段 24 pt）可以切換（CHANGE_10 §0-2）。
 /// - 頂端附近（threshold 以內）一律顯示；頂端往下拉的回彈也顯示（快速滑回頂端時可能直接跳進回彈，跳過頂端那一段）。
 /// - 只在使用者捲動中（拖動、慣性、捲動動畫）才切換；其他原因的位移（版面重算、收合區塊）只當作新的起點。
+/// - 切換之後 settleTime 內的位移不算，之後從停下來的位置重新算（CHANGE_10 §0-2：動作庫第 1 層有大標題和搜尋列，
+///   分頁列消失時清單的 inset 會跳幾格，算出來的位置變成 0，頂端的規則又讓分頁列出現）。
 nonisolated struct TabBarAutoHide: Equatable {
     private(set) var isHidden = false
     var threshold: CGFloat = 24
     var bottomZone: CGFloat = 80
+    /// 切換後這段時間內的位移不算（畫面裡用 0.35 秒；邏輯測試預設 0）
+    var settleTime: TimeInterval = 0
+    /// 這個時間之前的位移只當作新的起點
+    private var settledAt: Date = .distantPast
     /// 上一個位置；nil 表示下一個位置只當起點
     private var lastY: CGFloat?
     /// 這一段同方向捲動的起點
@@ -20,20 +27,28 @@ nonisolated struct TabBarAutoHide: Equatable {
 
     /// offset：捲動位置（頂端為 0，回彈時會小於 0 或大於 maxOffset）；maxOffset：捲到最底部時的 offset；
     /// isScrolling：手指拖動、慣性滑動或捲動動畫中
-    mutating func update(offset: CGFloat, maxOffset: CGFloat, isScrolling: Bool) {
+    mutating func update(offset: CGFloat, maxOffset: CGFloat, isScrolling: Bool, now: Date = .now) {
         let limit = max(maxOffset, 0)
-        guard isScrolling, let last = lastY else {
+        guard isScrolling, now >= settledAt, let last = lastY else {
             restart(at: min(max(offset, 0), limit))
             return
         }
         // 頂端：一律顯示（包括往下拉的回彈）
         if offset <= threshold {
+            if isHidden { settledAt = now.addingTimeInterval(settleTime) }
             isHidden = false
             restart(at: max(offset, 0))
             return
         }
-        // 底部回彈中，或距離底部 bottomZone 以內：不切換，離開之後從這裡重新算
-        if offset > limit || limit - offset <= bottomZone(limit: limit) {
+        // 底部回彈中，或距離底部 bottomZone 以內：不切換，離開之後從這裡重新算。
+        // 例外：從區域外往下滑進來、已經連續滑了 threshold 以上，就先隱藏。捲動位置更新得稀疏時（清單第一次捲動卡一下），
+        // 一格就可能從頂端跳進底部、跳過中間那段；隱藏不會改變版面，也不會造成以前的循環（出現在這裡照樣不切換）
+        let zone = bottomZone(limit: limit)
+        if offset > limit || limit - offset <= zone {
+            if !isHidden, offset > last, direction >= 0, limit - runStart > zone, offset - runStart >= threshold {
+                isHidden = true
+                settledAt = now.addingTimeInterval(settleTime)
+            }
             restart(at: min(offset, limit))
             return
         }
@@ -49,9 +64,11 @@ nonisolated struct TabBarAutoHide: Equatable {
         if step > 0, !isHidden {
             isHidden = true
             runStart = offset
+            settledAt = now.addingTimeInterval(settleTime)
         } else if step < 0, isHidden {
             isHidden = false
             runStart = offset
+            settledAt = now.addingTimeInterval(settleTime)
         }
     }
 

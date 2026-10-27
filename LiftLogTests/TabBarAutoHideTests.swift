@@ -1,4 +1,5 @@
 import CoreGraphics
+import Foundation
 import Testing
 @testable import LiftLog
 
@@ -191,8 +192,49 @@ struct TabBarAutoHideTests {
         scroll(&short, [50, 30], max: 117)
         #expect(!short.isHidden)
         // 底部 45 pt 以內照樣不切換
-        scroll(&short, [50, 75, 100], max: 117)
+        short.update(offset: 80, maxOffset: 117, isScrolling: false)
+        scroll(&short, [90, 100, 110, 120, 100], max: 117)
         #expect(!short.isHidden)
+    }
+
+    /// 位置更新得稀疏時，一格就從頂端跳進底部的區域：往下滑了夠遠，照樣隱藏；出現照樣不在底部切換
+    @Test func sparseUpdatesJumpingIntoTheBottomZoneStillHide() {
+        var state = TabBarAutoHide()
+        state.update(offset: 0, maxOffset: 100, isScrolling: false)
+        scroll(&state, [8, 74, 100, 120, 100], max: 100)
+        #expect(state.isHidden)
+        // 在底部往上一點（回彈）不出現
+        scroll(&state, [90, 80], max: 100)
+        #expect(state.isHidden)
+        // 只滑了一點點就進到區域：不隱藏
+        var short = TabBarAutoHide()
+        short.update(offset: 60, maxOffset: 100, isScrolling: false)
+        scroll(&short, [75], max: 100)
+        #expect(!short.isHidden)
+    }
+
+    /// CHANGE_10 §0-2：切換之後一段時間內的位移不算（動作庫第 1 層：分頁列消失時清單的 inset 跳幾格，
+    /// 位置看起來變成 0，以前會馬上又出現）；之後從停下來的位置重新算
+    @Test func layoutJumpRightAfterTogglingIsIgnored() {
+        let start = Date(timeIntervalSince1970: 0)
+        func at(_ seconds: Double) -> Date { start.addingTimeInterval(seconds) }
+        var state = TabBarAutoHide(settleTime: 0.35)
+        state.update(offset: 0, maxOffset: 117, isScrolling: false, now: at(0))
+        state.update(offset: 10, maxOffset: 117, isScrolling: true, now: at(0.05))
+        state.update(offset: 34, maxOffset: 117, isScrolling: true, now: at(0.10))
+        state.update(offset: 50, maxOffset: 117, isScrolling: true, now: at(0.15))
+        #expect(state.isHidden)
+        // 切換那一刻的版面跳動：位置看起來回到 0、範圍忽大忽小
+        for (i, (offset, max)) in [(0.0, 117.0), (0.0, 68.3), (0.0, 166.3), (74.0, 117.3)].enumerated() {
+            state.update(offset: offset, maxOffset: max, isScrolling: true, now: at(0.2 + Double(i) * 0.03))
+        }
+        #expect(state.isHidden)
+        // 穩定之後照常：往上捲 24 pt 才出現
+        state.update(offset: 70, maxOffset: 117, isScrolling: true, now: at(0.6))
+        state.update(offset: 60, maxOffset: 117, isScrolling: true, now: at(0.65))
+        #expect(state.isHidden)
+        state.update(offset: 45, maxOffset: 117, isScrolling: true, now: at(0.7))
+        #expect(!state.isHidden)
     }
 
     // MARK: 底部留白（CHANGE_09 §0-4）

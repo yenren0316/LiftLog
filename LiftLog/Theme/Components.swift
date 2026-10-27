@@ -306,7 +306,7 @@ private struct TabBarAutoHideModifier: ViewModifier {
     var name: String
     @Environment(\.workoutMiniBarTop) private var miniBarTop
     @State private var isHidden = false
-    @State private var autoHide = TabBarAutoHide()
+    @State private var autoHide = TabBarAutoHide(settleTime: 0.35)
     @State private var isScrolling = false
     @State private var phase: ScrollPhase = .idle
     /// List 不回報手指拖動的狀態（iOS 26 的 List 收不到 interacting，CHANGE_10 §0-2 查到的原因）：
