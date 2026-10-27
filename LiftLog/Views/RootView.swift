@@ -176,11 +176,16 @@ struct RootView: View {
             // 開發用：啟動參數 -startTab 1 直接切到該分頁（0 今天、1 歷程、2 動作庫、3 設定）
             let index = UserDefaults.standard.integer(forKey: "startTab")
             if AppTab.allCases.indices.contains(index) { coordinator.tab = AppTab.allCases[index] }
-            // 開發用：啟動參數 -demoWorkout YES 開一個示範訓練
+            // 開發用：啟動參數 -demoWorkout YES 開一個示範訓練；-demoWorkoutElapsed 3930 把開始時間往前推（即時動態的經過時間）
             if UserDefaults.standard.bool(forKey: "demoWorkout"), active.isEmpty {
                 let names = ["臥推", "輔助引體向上", "跑步機"]
                 let all = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
-                launcher.start(.init(exercises: names.compactMap { n in all.first { $0.name == n } }), context: context)
+                let session = launcher.start(.init(exercises: names.compactMap { n in all.first { $0.name == n } }), context: context)
+                let elapsed = UserDefaults.standard.double(forKey: "demoWorkoutElapsed")
+                if let session, elapsed > 0 {
+                    session.startedAt = .now.addingTimeInterval(-elapsed)
+                    WorkoutActions.save(context)
+                }
             } else if UserDefaults.standard.bool(forKey: "demoWorkout") {
                 coordinator.isExpanded = true
             }

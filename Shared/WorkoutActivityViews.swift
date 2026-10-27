@@ -49,6 +49,23 @@ struct WorkoutActivityLockScreenView: View {
     }
 }
 
+/// 經過時間（CHANGE_10 §0-4）：一定完整顯示，包括超過 1 小時的「1:05:30」。等寬數字、一行；
+/// 空間不夠時先縮小（最小 80%），不設寬度上限（以前固定 64 pt，動態島展開時「1:05:30」被裁掉）。
+/// 動態島展開時另外加 belowIfTooWide：縮小了還放不下，系統把它移到下一行
+struct WorkoutActivityElapsedTime: View {
+    var startedAt: Date
+    var font: Font
+
+    var body: some View {
+        Text(startedAt, style: .timer)
+            .font(font.monospacedDigit())
+            .foregroundStyle(.secondary)
+            .multilineTextAlignment(.trailing)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+    }
+}
+
 /// 第 1 列：訓練名稱（小字），右側是經過時間；兩種狀態位置相同
 struct WorkoutActivityHeader: View {
     var state: WorkoutActivityState
@@ -61,12 +78,8 @@ struct WorkoutActivityHeader: View {
                 .lineLimit(1)
                 .truncationMode(.tail)
             Spacer(minLength: 8)
-            Text(state.startedAt, style: .timer)
-                .font(.subheadline.monospacedDigit())
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.trailing)
-                .lineLimit(1)
-                .frame(maxWidth: 72, alignment: .trailing)
+            WorkoutActivityElapsedTime(startedAt: state.startedAt, font: .subheadline)
+                .layoutPriority(1)
         }
     }
 }
@@ -215,6 +228,7 @@ struct WorkoutActivityCompactTrailing: View {
                 Text(timerInterval: rest, countsDown: true)
                     .monospacedDigit()
                     .multilineTextAlignment(.trailing)
+                    .minimumScaleFactor(0.6)
                     .frame(maxWidth: 44)
                     .foregroundStyle(Color(hex: attributes.accent))
             } else if state.hasCurrentSet {
@@ -240,6 +254,7 @@ struct WorkoutActivityMinimal: View {
                 Text(timerInterval: rest, countsDown: true)
                     .monospacedDigit()
                     .multilineTextAlignment(.center)
+                    .minimumScaleFactor(0.6)
                     .frame(maxWidth: 40)
                     .font(.caption2)
                     .foregroundStyle(Color(hex: attributes.accent))

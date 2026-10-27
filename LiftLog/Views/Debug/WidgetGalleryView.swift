@@ -147,11 +147,8 @@ struct WidgetGalleryView: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                     Spacer(minLength: 8)
-                    Text(state.startedAt, style: .timer)
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.trailing)
-                        .frame(maxWidth: 64, alignment: .trailing)
+                    WorkoutActivityElapsedTime(startedAt: state.startedAt, font: .caption)
+                        .layoutPriority(1)
                 }
                 WorkoutActivityBody(attributes: activityAttributes, state: state, isStale: false,
                                     middleHeight: LiveActivityLayout.islandMiddleHeight,
@@ -212,7 +209,8 @@ struct WidgetGalleryView: View {
     private static func activityState(resting: Bool) -> WorkoutActivityState {
         let now = Date.now
         return WorkoutActivityState(
-            title: "下肢速度與爆發・坐姿分腿壺鈴三點搬移", startedAt: now.addingTimeInterval(-24 * 60 - 32),
+            // 經過 1:05:30（超過 1 小時，CHANGE_10 §0-4 的 V6）
+            title: "下肢速度與爆發・坐姿分腿壺鈴三點搬移", startedAt: now.addingTimeInterval(-(3600 + 5 * 60 + 30)),
             exerciseName: "坐姿分腿壺鈴三點搬移", roleTitle: "核心", roleSymbol: Role.core.symbol,
             setNumber: 2, setCount: 6, target: "60 kg × 5", canComplete: true,
             completedSets: 6, totalSets: 15,

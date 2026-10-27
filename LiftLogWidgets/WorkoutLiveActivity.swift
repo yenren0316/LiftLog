@@ -23,13 +23,11 @@ struct WorkoutLiveActivity: Widget {
                         .dynamicTypeSize(...DynamicTypeSize.large)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    Text(context.state.startedAt, style: .timer)
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.trailing)
-                        .lineLimit(1)
-                        .frame(maxWidth: 64, alignment: .trailing)
+                    // 經過時間一定完整顯示：先縮小，還是放不下就移到下一行（CHANGE_10 §0-4）
+                    WorkoutActivityElapsedTime(startedAt: context.state.startedAt, font: .caption)
+                        .padding(.trailing, 4)
                         .dynamicTypeSize(...DynamicTypeSize.large)
+                        .dynamicIsland(verticalPlacement: .belowIfTooWide)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
                     WorkoutActivityBody(attributes: context.attributes, state: context.state, isStale: context.isStale,
