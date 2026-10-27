@@ -95,7 +95,7 @@ struct AddExercisesSheet: View {
         let added = alreadyAdded.contains(exercise.id)
         let isSelected = selected.contains { $0 === exercise }
         let days = Recency.daysSince(exercise.lastCompletedDate)
-        return Button { withAnimation(.tap) { toggle(exercise) } } label: {
+        return TapListRow { withAnimation(.tap) { toggle(exercise) } } label: {
             HStack(spacing: 12) {
                 Image(systemName: added || isSelected ? "checkmark.circle.fill" : "circle")
                     .font(.title2)
@@ -114,10 +114,7 @@ struct AddExercisesSheet: View {
                     AccentChip(text: "新")
                 }
             }
-            .padding(.vertical, 4)
-            .contentShape(.rect)
         }
-        .buttonStyle(.pressable)
         .disabled(added)
     }
 

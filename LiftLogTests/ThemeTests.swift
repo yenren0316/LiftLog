@@ -9,8 +9,8 @@ struct ThemeTests {
         #expect(AppTheme.allCases.count == 6)
         for theme in AppTheme.allCases {
             let tokens = theme.palette.tokens
-            #expect(tokens.count == 12, "\(theme)")
-            #expect(Set(tokens.map(\.name)).count == 12, "\(theme)")
+            #expect(tokens.count == 13, "\(theme)")
+            #expect(Set(tokens.map(\.name)).count == 13, "\(theme)")
             #expect(tokens.allSatisfy { $0.hex <= 0xFFFFFF }, "\(theme)")
         }
     }
@@ -120,5 +120,18 @@ struct OffMainThreadRenderingTests {
             Shake(animatableData: 0.125).effectValue(size: CGSize(width: 100, height: 40)).m31
         }.value
         #expect(abs(transform - 8) < 0.001)
+    }
+
+    /// CHANGE_10 §4：按壓色比卡片亮、和輸入框分得開，每個主題都有
+    @Test func pressedIsVisibleOnCards() {
+        func brightness(_ hex: UInt32) -> Double {
+            let r = Double((hex >> 16) & 0xFF), g = Double((hex >> 8) & 0xFF), b = Double(hex & 0xFF)
+            return (0.299 * r + 0.587 * g + 0.114 * b) / 255
+        }
+        for theme in AppTheme.allCases {
+            let p = theme.palette
+            #expect(brightness(p.pressed) - brightness(p.card) >= 0.06, "\(theme)")
+            #expect(p.pressed != p.field && p.pressed != p.separator, "\(theme)")
+        }
     }
 }

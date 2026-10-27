@@ -51,11 +51,11 @@ private struct RecordsCard: View {
                         Text(valueText(record))
                             .font(.title3.bold().monospacedDigit())
                             .foregroundStyle(Theme.accent)
-                        Image(systemName: "chevron.right").font(.footnote).foregroundStyle(.tertiary)
                     }
-                    .contentShape(.rect)
+                    .tapRowInset()
                 }
-                .buttonStyle(.pressable)
+                .buttonStyle(.tapRow)
+                .tapRowOutset()
             }
         }
         .card()

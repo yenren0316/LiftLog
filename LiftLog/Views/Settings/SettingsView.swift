@@ -36,10 +36,9 @@ struct SettingsView: View {
         NavigationStack(path: $path) {
             List {
                 ForEach(Page.allCases) { page in
-                    NavigationLink(value: page) {
+                    TapListRow { path.append(page) } label: {
                         Label(page.title, systemImage: page.systemImage).font(.body.weight(.semibold))
                     }
-                    .listRowBackground(Theme.card)
                 }
             }
             .scrollContentBackground(.hidden)

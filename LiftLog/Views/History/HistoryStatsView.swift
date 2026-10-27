@@ -68,7 +68,8 @@ private struct MainLiftProgressCard: View {
             ForEach(Array(mains.enumerated()), id: \.element.id) { index, exercise in
                 if index > 0 { Divider().overlay(Theme.separator) }
                 NavigationLink(value: exercise) { row(exercise, trends[exercise.id]) }
-                    .buttonStyle(.pressable)
+                    .buttonStyle(.tapRow)
+                    .tapRowOutset()
             }
             if !mains.isEmpty, idle > 0 {
                 Text("另外 \(idle) 個主項 90 天內沒有紀錄").font(.caption).foregroundStyle(Theme.textSecondary).padding(.top, 4)
@@ -95,10 +96,9 @@ private struct MainLiftProgressCard: View {
                 }
             }
             .frame(width: 92, alignment: .trailing)
-            Image(systemName: "chevron.right").font(.caption).foregroundStyle(Theme.textSecondary)
         }
         .padding(.vertical, 6)
-        .contentShape(.rect)
+        .padding(.horizontal, 8)
     }
 }
 

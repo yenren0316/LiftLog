@@ -69,15 +69,12 @@ private struct NextPlanCard: View {
                     Text("\(answers.count) 個動作・\(answers.cardio ? "加跑步機" : "不加跑步機")")
                         .font(.subheadline.weight(.semibold))
                 }
-                Spacer(minLength: 8)
-                Image(systemName: "chevron.right")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(Theme.accent)
+                Spacer(minLength: 0)
             }
-            .contentShape(.rect)
+            .padding(16)
         }
-        .buttonStyle(.pressable)
-        .card(padding: 16)
+        // 整張卡都能點，按下時換成按壓色（CHANGE_10 §4）
+        .buttonStyle(.tapCard)
     }
 }
 
@@ -107,12 +104,12 @@ private struct RecentSetsCard: View {
                             .font(.subheadline.weight(.bold).monospacedDigit())
                             .foregroundStyle(color(count))
                             .frame(width: 32, alignment: .trailing)
-                        Image(systemName: "chevron.right").font(.caption).foregroundStyle(Theme.textSecondary)
                     }
                     .frame(minHeight: 24)
-                    .contentShape(.rect)
+                    .padding(.horizontal, 8)
                 }
-                .buttonStyle(.pressable)
+                .buttonStyle(.tapRow)
+                .tapRowOutset()
             }
         }
         .card(padding: 16)
@@ -128,6 +125,7 @@ private struct RecentSetsCard: View {
 struct CategoryTodoList: View {
     let category: ExerciseCategory
 
+    @Environment(WorkoutCoordinator.self) private var coordinator
     @Query(filter: #Predicate<Exercise> { !$0.isArchived }, sort: \Exercise.name) private var exercises: [Exercise]
     @Environment(StatsCache.self) private var stats
     @AppStorage(WeightUnit.storageKey) private var unit: WeightUnit = .kg
@@ -141,10 +139,9 @@ struct CategoryTodoList: View {
                 Text("這個分類沒有動作").foregroundStyle(Theme.textSecondary).listRowBackground(Theme.card)
             }
             ForEach(sorted) { exercise in
-                NavigationLink(value: exercise) {
+                TapListRow { coordinator.todayPath.append(exercise) } label: {
                     TodoRow(exercise: exercise, stat: stats.snapshot.exercises[exercise.id], unit: unit)
                 }
-                .listRowBackground(Theme.card)
             }
         }
         .scrollContentBackground(.hidden)

@@ -122,9 +122,10 @@ private struct HistoryCard: View {
                 if index > 0 { Divider().overlay(Theme.separator) }
                 if let session = item.session {
                     Button { onOpen(session) } label: {
-                        HistoryLine(item: item, date: session.startedAt).contentShape(.rect)
+                        HistoryLine(item: item, date: session.startedAt).tapRowInset()
                     }
-                    .buttonStyle(.pressable)
+                    .buttonStyle(.tapRow)
+                    .tapRowOutset()
                 }
             }
         }

@@ -102,11 +102,9 @@ private struct HistoryRecordsList: View {
             ForEach(months, id: \.start) { month in
                 Section {
                     ForEach(month.sessions) { session in
-                        Button { coordinator.showSummary(of: session) } label: {
-                            HistoryRow(session: session).contentShape(.rect)
+                        TapListRow { coordinator.showSummary(of: session) } label: {
+                            HistoryRow(session: session)
                         }
-                        .buttonStyle(.pressable)
-                        .listRowBackground(Theme.card)
                         .id(session.id)
                     }
                 } header: {

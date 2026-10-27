@@ -30,14 +30,12 @@ struct HealthImportSheet: View {
                 }
 
                 ForEach(available) { workout in
-                    Button {
+                    TapListRow {
                         onPick(workout)
                         dismiss()
                     } label: {
                         WorkoutRow(workout: workout)
                     }
-                    .buttonStyle(.pressable)
-                    .listRowBackground(Theme.card)
                 }
             }
             .scrollContentBackground(.hidden)

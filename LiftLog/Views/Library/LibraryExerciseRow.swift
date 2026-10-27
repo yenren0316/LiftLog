@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 /// 動作庫清單的一列：名稱、標籤、「N 天前」或「未練過」、「N 次」。
-/// 左滑封存／取消封存；長按合併、封存、刪除（只有沒有紀錄的動作能刪）。點一下到動作詳情
+/// 左滑封存／取消封存；長按合併、封存、刪除（只有沒有紀錄的動作能刪）。整列點一下到動作詳情（按下時換成按壓色）
 struct LibraryExerciseRow: View {
     let exercise: Exercise
     var stat: StatsSnapshot.ExerciseStat?
@@ -11,9 +11,10 @@ struct LibraryExerciseRow: View {
 
     @Environment(\.modelContext) private var context
     @Environment(LibraryRowActions.self) private var actions
+    @Environment(LibraryNavigation.self) private var navigation
 
     var body: some View {
-        NavigationLink(value: exercise) {
+        TapListRow { navigation.path.append(exercise) } label: {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
@@ -36,7 +37,6 @@ struct LibraryExerciseRow: View {
             .padding(.vertical, 2)
             .opacity(exercise.isArchived ? 0.6 : 1)
         }
-        .listRowBackground(Theme.card)
         .swipeActions {
             Button(exercise.isArchived ? "取消封存" : "封存", action: toggleArchived)
                 .tint(exercise.isArchived ? Theme.accent : Theme.warning)

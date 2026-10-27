@@ -29,11 +29,10 @@ struct ReplaceExerciseSheet: View {
                             Text("沒有符合的動作").foregroundStyle(Theme.textSecondary)
                         }
                         ForEach(Array(ranked.items.enumerated()), id: \.element.id) { index, candidate in
-                            Button { pick(candidate) } label: {
+                            TapListRow { pick(candidate) } label: {
                                 CandidateRow(candidate: candidate, isSelected: nil,
                                              suggestion: index == 0 ? .some(ranked.reason) : nil)
                             }
-                            .buttonStyle(.pressable)
                         }
                     }
                     .listRowBackground(Theme.card)

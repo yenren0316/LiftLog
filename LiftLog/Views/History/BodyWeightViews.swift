@@ -233,7 +233,7 @@ private struct HealthBodyMassImport: View {
                     }
                     ForEach(samples) { sample in
                         let taken = BodyWeightLog.existing(on: sample.date, in: context) != nil
-                        Button {
+                        TapListRow {
                             if selected.contains(sample.id) { selected.remove(sample.id) } else { selected.insert(sample.id) }
                         } label: {
                             HStack {
@@ -246,11 +246,8 @@ private struct HealthBodyMassImport: View {
                                 Spacer()
                                 if taken { Chip(text: "App 內已有") }
                             }
-                            .contentShape(.rect)
                         }
-                        .buttonStyle(.pressable)
                         .disabled(taken)
-                        .listRowBackground(Theme.card)
                     }
                 } else {
                     ProgressView().listRowBackground(Color.clear)

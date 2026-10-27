@@ -28,6 +28,8 @@ nonisolated struct Palette: Equatable, Sendable {
     var danger: UInt32
     /// 上肢（日曆格子、訓練頻率長條；下肢用 accent）。色相和 accent 明顯不同、亮度相近（CHANGE_08 §4）
     var upperBody: UInt32 = 0x4FA3FF
+    /// 可以點的卡片和列按下時的底色（CHANGE_10 §4）：比卡片亮，和輸入框分得開
+    var pressed: UInt32 = 0x2F3035
 
     /// 依 background / card / field / separator / textPrimary / textSecondary / accent / onAccent / done / warning / danger 的順序
     init(_ hex: [UInt32]) {
@@ -45,7 +47,7 @@ nonisolated struct Palette: Equatable, Sendable {
     var tokens: [(name: String, hex: UInt32)] {
         [("background", background), ("card", card), ("field", field), ("separator", separator),
          ("textPrimary", textPrimary), ("textSecondary", textSecondary), ("accent", accent), ("onAccent", onAccent),
-         ("done", done), ("warning", warning), ("danger", danger), ("upperBody", upperBody)]
+         ("done", done), ("warning", warning), ("danger", danger), ("upperBody", upperBody), ("pressed", pressed)]
     }
 }
 
@@ -125,6 +127,7 @@ enum Theme {
     static let warning = token { $0.warning }
     static let danger = token { $0.danger }
     static let upperBody = token { $0.upperBody }
+    static let pressed = token { $0.pressed }
 
     static let cardRadius: CGFloat = 28
 

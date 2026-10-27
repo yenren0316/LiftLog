@@ -328,8 +328,10 @@ private struct SlotCard: View {
         Button { withAnimation(.tap) { onPick(candidate.id) } } label: {
             CandidateRow(candidate: candidate, isSelected: state.selected?.id == candidate.id,
                          suggestion: isFirst ? .some(state.candidates.reason) : nil)
+                .tapRowInset()
         }
-        .buttonStyle(.pressable)
+        .buttonStyle(.tapRow)
+        .tapRowOutset()
     }
 }
 

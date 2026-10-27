@@ -193,7 +193,82 @@ extension Animation {
     nonisolated static let tap = Animation.snappy(duration: 0.3, extraBounce: 0.05)
 }
 
-/// 按下時微微縮小、變淡，放開時用彈簧彈回；取代 .plain，讓每次點擊都有回饋
+// MARK: - 可以點的卡片和列（CHANGE_10 §4）
+
+/// 可以點的卡片和列：整塊都能點，按下時背景換成主題的按壓色（Theme.pressed），放開恢復。
+/// 全 App 可以點的卡片和列都用這一個，不再用列尾的「›」當提示；不能點的卡片（有氧、平衡）不用
+struct TapSurfaceStyle: ButtonStyle {
+    enum Kind {
+        /// 一整張卡片：平常是卡片的底色和外框
+        case card
+        /// 卡片裡的一列：平常透明
+        case row
+        /// 清單（List）的一列：填滿整格，圓角交給清單
+        case listRow
+    }
+
+    var kind: Kind
+
+    private var radius: CGFloat {
+        switch kind {
+        case .card: Theme.cardRadius
+        case .row: 12
+        case .listRow: 0
+        }
+    }
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(.rect(cornerRadius: radius))
+            .background(configuration.isPressed ? Theme.pressed : (kind == .card ? Theme.card : Color.clear),
+                        in: .rect(cornerRadius: radius))
+            .overlay {
+                if kind == .card {
+                    RoundedRectangle(cornerRadius: radius).stroke(Theme.separator.opacity(0.6))
+                }
+            }
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
+extension ButtonStyle where Self == TapSurfaceStyle {
+    static var tapCard: TapSurfaceStyle { TapSurfaceStyle(kind: .card) }
+    static var tapRow: TapSurfaceStyle { TapSurfaceStyle(kind: .row) }
+    static var tapListRow: TapSurfaceStyle { TapSurfaceStyle(kind: .listRow) }
+}
+
+/// 清單（List）裡可以點的一列：整列都能點，按下時整列換成按壓色（TapSurfaceStyle）；沒有列尾的「›」。
+/// 列的內距和系統清單一樣，swipeActions、contextMenu 照樣掛在這一列上
+struct TapListRow<Label: View>: View {
+    var action: () -> Void
+    @ViewBuilder var label: Label
+
+    var body: some View {
+        Button(action: action) {
+            label
+                .padding(.horizontal, 16)
+                .padding(.vertical, 15)
+        }
+        .buttonStyle(.tapListRow)
+        .listRowInsets(EdgeInsets())
+        .listRowBackground(Theme.card)
+    }
+}
+
+/// 卡片裡可以點的一列：按壓色左右多留一點，文字還是和卡片裡其他內容對齊
+extension View {
+    func tapRowInset() -> some View {
+        padding(.horizontal, 8).padding(.vertical, 4)
+    }
+
+    func tapRowOutset() -> some View {
+        padding(.horizontal, -8)
+    }
+}
+
+/// 按下時微微縮小、變淡，放開時用彈簧彈回；取代 .plain，讓每次點擊都有回饋。
+/// 小按鈕用（膠囊、文字按鈕、圖示、打勾）；可以點的卡片和列用 TapSurfaceStyle
 struct PressableButtonStyle: ButtonStyle {
     var scale: CGFloat = 0.97
 

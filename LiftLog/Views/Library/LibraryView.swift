@@ -10,12 +10,14 @@ struct LibraryView: View {
 
     @Query(sort: \Exercise.name) private var exercises: [Exercise]
     @Environment(StatsCache.self) private var stats
-    @State private var path = NavigationPath()
+    /// 導覽路徑放在環境裡：分類清單、已封存裡的列（LibraryExerciseRow）也要能推下一頁
+    @State private var navigation = LibraryNavigation()
     @State private var query = ""
     @State private var showingNew = false
 
     var body: some View {
-        NavigationStack(path: $path) {
+        @Bindable var navigation = navigation
+        NavigationStack(path: $navigation.path) {
             List {
                 if query.isEmpty {
                     if exercises.isEmpty {
@@ -26,15 +28,13 @@ struct LibraryView: View {
                     }
                     Section {
                         ForEach(ExerciseCategory.allCases) { category in
-                            NavigationLink(value: Route.category(category)) { categoryRow(category) }
-                                .listRowBackground(Theme.card)
+                            TapListRow { navigation.path.append(Route.category(category)) } label: { categoryRow(category) }
                         }
                     }
                     Section {
-                        NavigationLink(value: Route.archived) {
+                        TapListRow { navigation.path.append(Route.archived) } label: {
                             Text("已封存（\(exercises.filter(\.isArchived).count)）").font(.body.weight(.semibold))
                         }
-                        .listRowBackground(Theme.card)
                         .id("archived")
                     }
                 } else {
@@ -75,16 +75,17 @@ struct LibraryView: View {
             // -openExercise 臥推 打開該動作的詳情（經過它的分類）
             .task {
                 if let raw = UserDefaults.standard.string(forKey: "libraryCategory"), let category = ExerciseCategory(rawValue: raw) {
-                    path.append(Route.category(category))
+                    navigation.path.append(Route.category(category))
                 }
                 if let name = UserDefaults.standard.string(forKey: "openExercise"), let exercise = exercises.first(where: { $0.name == name }) {
-                    path.append(Route.category(exercise.category))
-                    path.append(exercise)
+                    navigation.path.append(Route.category(exercise.category))
+                    navigation.path.append(exercise)
                 }
-                if UserDefaults.standard.bool(forKey: "openArchived") { path.append(Route.archived) }
+                if UserDefaults.standard.bool(forKey: "openArchived") { navigation.path.append(Route.archived) }
             }
             #endif
         }
+        .environment(navigation)
     }
 
     /// 分類名稱、「N 個動作・最久沒練：N 天」；有沒練過的動作時另外寫「M 個未練過」
@@ -103,6 +104,12 @@ struct LibraryView: View {
         }
         .padding(.vertical, 2)
     }
+}
+
+/// 動作庫的導覽路徑（CHANGE_10 §4：清單的列改成整列可點的按鈕，不用 NavigationLink 的「›」）
+@Observable
+final class LibraryNavigation {
+    var path = NavigationPath()
 }
 
 /// 第 2 層「分類清單」：右上角的排序和篩選（排序記住上次的選擇）
@@ -179,9 +186,10 @@ private struct SortFilterPanel: View {
                         Spacer()
                         if sort == option { Image(systemName: "checkmark").foregroundStyle(Theme.accent) }
                     }
-                    .contentShape(.rect)
+                    .tapRowInset()
                 }
-                .buttonStyle(.pressable)
+                .buttonStyle(.tapRow)
+                .tapRowOutset()
             }
             Divider().overlay(Theme.separator)
             Text("篩選").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.textSecondary)
