@@ -166,6 +166,7 @@ private struct CardioCard: View {
                 }
                 .chartDateSelection($selected)
                 .frame(height: 140)
+                .accessibilityIdentifier("cardioChart")
                 .accessibilityValue(current.map { label(week: weeks[$0], minutes: minutes[$0]) } ?? "")
             }
         }

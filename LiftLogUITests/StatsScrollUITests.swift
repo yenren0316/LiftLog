@@ -55,9 +55,13 @@ final class StatsScrollUITests: XCTestCase {
 
     func testTapOnFrequencyChartSelects() async throws {
         XCTAssertEqual(frequencyChart.value as? String ?? "", "")
-        frequencyChartPoint.tap()
-        try await Task.sleep(for: .seconds(0.5))
-        let value = frequencyChart.value as? String ?? ""
+        // 剛捲完時第一下可能只會停住慣性；最多點兩次
+        var value = ""
+        for _ in 0..<2 where value.isEmpty {
+            frequencyChartPoint.tap()
+            try await Task.sleep(for: .seconds(0.5))
+            value = frequencyChart.value as? String ?? ""
+        }
         XCTAssertTrue(value.contains("–") && value.contains("次"), "點一下長條沒有選到：「\(value)」")
     }
 

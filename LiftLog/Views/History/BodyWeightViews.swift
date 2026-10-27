@@ -94,6 +94,7 @@ struct BodyWeightCard: View {
         // 點一下顯示 2 秒；按住 0.2 秒後拖曳跟著手指；上下滑交給捲動
         .chartDateSelection($selected)
         .frame(height: 160)
+        .accessibilityIdentifier("weightChart")
         .accessibilityValue(current.map(label) ?? "")
         .overlay(alignment: .topTrailing) {
             Label("7 日平均", systemImage: "line.diagonal").font(.caption2).foregroundStyle(Theme.done)

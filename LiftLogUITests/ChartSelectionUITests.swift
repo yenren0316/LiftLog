@@ -11,25 +11,34 @@ final class ChartSelectionUITests: XCTestCase {
         app.launchArguments = ["-demoData", "YES", "-startTab", "1", "-historySegment", "stats", "-statsScrollTo", "weight"]
         app.launch()
         XCTAssertTrue(app.staticTexts["近 12 週・每週跑步機分鐘"].waitForExistence(timeout: 15))
-        try await Task.sleep(for: .seconds(1.5))
+        // 等 -statsScrollTo 捲完
+        try await Task.sleep(for: .seconds(2))
+    }
+
+    /// 在圖表裡點一下，等選取的文字出現（圖表的 accessibilityValue）
+    private func tapAndRead(_ identifier: String, at offset: CGVector) async -> String {
+        let chart = app.descendants(matching: .any)[identifier].firstMatch
+        guard chart.waitForExistence(timeout: 5) else { return "（找不到 \(identifier)）" }
+        // 頁面還在捲動時，第一下只會停住捲動；最多點兩次
+        for _ in 0..<2 {
+            chart.coordinate(withNormalizedOffset: offset).tap()
+            for _ in 0..<8 {
+                if let value = chart.value as? String, !value.isEmpty { return value }
+                try? await Task.sleep(for: .milliseconds(150))
+            }
+        }
+        return chart.value as? String ?? ""
     }
 
     func testTapOnCardioChartSelectsAWeek() async throws {
-        let title = app.staticTexts["近 12 週・每週跑步機分鐘"].firstMatch.frame
-        app.point(x: app.frame.midX - 40, y: title.maxY + 90).tap()
-        try await Task.sleep(for: .seconds(0.5))
+        let value = await tapAndRead("cardioChart", at: CGVector(dx: 0.3, dy: 0.7))
         attachScreenshot("cardio_peek")
-        let value = app.descendants(matching: .any).matching(NSPredicate(format: "value CONTAINS '分鐘'")).firstMatch
-        XCTAssertTrue(value.exists, "點有氧的長條沒有選到")
+        XCTAssertTrue(value.contains("分鐘") && value.contains("–"), "點有氧的長條沒有選到：「\(value)」")
     }
 
     func testTapOnWeightChartSelectsADay() async throws {
-        let picker = app.buttons["6 個月"].firstMatch
-        XCTAssertTrue(picker.exists)
-        app.point(x: app.frame.midX, y: picker.frame.maxY + 80).tap()
-        try await Task.sleep(for: .seconds(0.5))
+        let value = await tapAndRead("weightChart", at: CGVector(dx: 0.5, dy: 0.6))
         attachScreenshot("weight_peek")
-        let value = app.descendants(matching: .any).matching(NSPredicate(format: "value CONTAINS '・' AND value CONTAINS 'kg'")).firstMatch
-        XCTAssertTrue(value.exists, "點體重的折線沒有選到")
+        XCTAssertTrue(value.contains("・") && value.contains("kg"), "點體重的折線沒有選到：「\(value)」")
     }
 }
