@@ -1,4 +1,7 @@
 import XCTest
+// 每個 Swift target 建置時都會跑 App Intents 的 metadata 擷取，target 沒有連結 AppIntents 時會印一行警告；
+// UI 測試本身用不到，連結它只是為了建置沒有警告（CHANGE_10 G1）
+import AppIntents
 
 extension XCTestCase {
     /// 截圖存進測試結果（xcresulttool export attachments 取出），名稱用來辨識
