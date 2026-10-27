@@ -102,16 +102,21 @@ nonisolated struct SetHint {
 
 extension SessionExercise {
     /// 依組的順序算出每一組的「上一次」和預填值（訓練中畫面和即時動態共用）。
-    /// DE 速度主項沒有上次 DE 紀錄時，預填建議重量和固定次數
+    /// DE 速度主項有建議重量時（CHANGE_10 §0-5），每一組都灰字預填建議重量和固定次數（輸入過的組往下沿用）
     func setHints() -> [SetHint] {
         let last = exercise?.lastSets(excluding: session, role: role) ?? []
         var prior: SetValues?
-        if last.isEmpty, let reps = prescription.fixedReps {
-            prior = SetValues(weightKg: advice(unit: .current).speedWeightKg, reps: reps)
+        var prefillFrom = last
+        if let reps = prescription.fixedReps, let weight = advice(unit: .current).speedWeightKg {
+            prior = SetValues(weightKg: weight, reps: reps)
+            prefillFrom = []
+        } else if last.isEmpty, let reps = prescription.fixedReps {
+            prior = SetValues(reps: reps)
         }
         return orderedSets.enumerated().map { index, set in
             let previous = SetLogic.previous(at: index, lastSets: last)
-            let placeholder = SetLogic.placeholder(previous: previous, priorInSession: prior)
+            let placeholder = SetLogic.placeholder(previous: SetLogic.previous(at: index, lastSets: prefillFrom),
+                                                   priorInSession: prior)
             prior = SetLogic.resolved(entered: set.values, placeholder: placeholder)
             return SetHint(set: set, previous: previous, placeholder: placeholder)
         }

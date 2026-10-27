@@ -406,7 +406,9 @@ struct WorkoutActionsTests {
         let de = WorkoutActions.start(with: [squat], roles: [.dynamicEffort], in: context)
         let hints = de.orderedItems[0].setHints()
         #expect(hints.count == 8 && hints.allSatisfy { $0.previous == nil })
-        let expected = MaxEffortRecords.speedWeightKg(estimated1RM: 110, unit: .current)  // kg 單位時是 65
+        // 強度換算表 60% 那一列（kg、槓鈴進位 2.5 時是 65）
+        let expected = IntensityTable.weightKg(percent: 60, base1RMKg: 110, unit: .current,
+                                               step: RoundingSteps.step(equipment: .barbell, unit: .current))
         #expect(hints.allSatisfy { $0.placeholder?.weightKg == expected && $0.placeholder?.reps == 2 })
         // ME 主項先看上次 ME；其他角色看最近一次
         #expect(squat.lastSets(role: .maxEffort).map(\.weightKg) == [100])

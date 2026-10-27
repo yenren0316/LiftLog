@@ -216,20 +216,17 @@ private struct IntensityCard: View {
     @State private var base: Base = .estimate
     @State private var manualText = ""
 
+    /// 設定頁的進位（@AppStorage 讓改設定時重畫）
     private var step: Double {
-        switch (exercise.equipment == .barbell, unit) {
-        case (true, .kg): barbellKg
-        case (true, .lbs): barbellLbs
-        case (false, .kg): otherKg
-        case (false, .lbs): otherLbs
-        }
+        _ = (barbellKg, barbellLbs, otherKg, otherLbs)
+        return RoundingSteps.step(equipment: exercise.equipment, unit: unit)
     }
 
     /// 基準 1RM（kg）
     private var baseKg: Double? {
         switch base {
         case .estimate:
-            return PersonalRecords.estimated1RM(sessions)?.record.value
+            return IntensityTable.estimatedBase1RMKg(sessions)
         case .lastMax:
             return sessions.reversed().lazy
                 .compactMap { $0.sets.filter { $0.kind == .max && $0.isCompleted }.compactMap(\.weightKg).max() }

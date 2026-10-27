@@ -80,6 +80,8 @@ nonisolated struct PlanExercise: Sendable, Identifiable, Equatable {
     var meRotation: Int?
     var deRotation: Int?
     var logType: LogType = .weight
+    /// 建議重量的進位依器材（槓鈴或其他）
+    var equipment: Equipment = .other
 
     func has(_ tag: ExerciseTag) -> Bool { tags.contains(tag) }
 }
@@ -375,30 +377,30 @@ nonisolated enum MaxEffortRecords {
         }
     }
 
-    /// DE 速度主項的建議重量：最近一次 ME 紀錄的估算 1RM × 60%，kg 四捨五入到 2.5 kg（lbs 到 5 lb）
-    static func speedWeightKg(estimated1RM: Double, unit: WeightUnit) -> Double {
-        let step = unit == .kg ? 2.5 : 5
-        return unit.toKg((unit.fromKg(estimated1RM * 0.6) / step).rounded() * step)
-    }
 }
 
 /// 某一格選定動作的建議：重量、參數、提示（建立菜單第三步和訓練中畫面共用）
 nonisolated struct SlotAdvice: Equatable, Sendable {
     var prescription: Prescription
-    /// 「建議 65 kg（估算 1RM 110 kg × 60%）」「上次 60 kg」「用能做得很快的重量」
+    /// 「建議 32.5 kg（60%）」「上次 60 kg」「用能做得很快的重量」
     var weightText: String?
-    /// DE 速度主項的建議重量（kg）；沒有 ME 紀錄時為 nil
+    /// DE 速度主項的建議重量（kg）；沒有可以計算的紀錄時為 nil
     var speedWeightKg: Double?
 
-    static func make(role: Role, exercise: PlanExercise, logs: [ExerciseLog], unit: WeightUnit) -> SlotAdvice {
+    /// DE 速度主項的建議重量是強度換算表的 60% 那一列（CHANGE_10 §0-5）：基準是換算表預設的「估算 1RM」，
+    /// 用這個動作所有角色的紀錄（以前只看 ME 紀錄，角色是 CHANGE_06 才有的，舊紀錄的主項沒有 ME 紀錄）；
+    /// 進位用設定頁的值。step 為 nil 時讀設定
+    static func make(role: Role, exercise: PlanExercise, logs: [ExerciseLog], unit: WeightUnit,
+                     step: Double? = nil, now: Date = .now) -> SlotAdvice {
         let prescription = Prescription.of(role: role, name: exercise.name, tags: exercise.tags)
         if Prescription.isSpeed(role: role, tags: exercise.tags) {
-            guard let record = MaxEffortRecords.records(logs).first else {
+            let sessions = logs.map { SessionSets(sessionID: UUID(), date: $0.date, sets: $0.sets) }
+            let step = step ?? RoundingSteps.step(equipment: exercise.equipment, unit: unit)
+            guard let base = IntensityTable.estimatedBase1RMKg(sessions, now: now),
+                  let weight = IntensityTable.weightKg(percent: 60, base1RMKg: base, unit: unit, step: step) else {
                 return SlotAdvice(prescription: prescription, weightText: "用能做得很快的重量")
             }
-            let weight = MaxEffortRecords.speedWeightKg(estimated1RM: record.estimated1RM, unit: unit)
-            return SlotAdvice(prescription: prescription,
-                              weightText: "建議 \(unit.formatWithUnit(kg: weight))（估算 1RM \(unit.formatWithUnit(kg: record.estimated1RM)) × 60%）",
+            return SlotAdvice(prescription: prescription, weightText: "建議 \(unit.formatWithUnit(kg: weight))（60%）",
                               speedWeightKg: weight)
         }
         guard let last = logs.first(where: { $0.sets.contains(where: \.isCompleted) }) else {
@@ -438,6 +440,7 @@ nonisolated extension PlanExercise {
     init(snapshotOf exercise: Exercise) {
         self.init(id: exercise.id, name: exercise.name, category: exercise.category, tags: exercise.tags,
                   isArchived: exercise.isArchived, lastDate: nil,
-                  meRotation: exercise.meRotation, deRotation: exercise.deRotation, logType: exercise.logType)
+                  meRotation: exercise.meRotation, deRotation: exercise.deRotation, logType: exercise.logType,
+                  equipment: exercise.equipment)
     }
 }

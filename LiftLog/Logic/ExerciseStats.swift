@@ -271,4 +271,14 @@ nonisolated enum IntensityTable {
             Row(percent: p, weight: rounded(base * Double(p) / 100, step: step), purposes: purposes(p))
         }
     }
+
+    /// 基準「估算 1RM」（換算表的預設基準）：近 90 天最好的估算 1RM，沒有就取全期；不分角色
+    static func estimatedBase1RMKg(_ sessions: [SessionSets], now: Date = .now) -> Double? {
+        PersonalRecords.estimated1RM(sessions, now: now)?.record.value
+    }
+
+    /// 換算表某一列的重量（kg）：和換算表同一套計算與進位（DE 速度主項的建議重量用 60% 那一列）
+    static func weightKg(percent: Int, base1RMKg: Double, unit: WeightUnit, step: Double) -> Double? {
+        rows(base1RMKg: base1RMKg, unit: unit, step: step).first { $0.percent == percent }.map { unit.toKg($0.weight) }
+    }
 }

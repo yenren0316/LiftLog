@@ -167,15 +167,35 @@ struct PlanTests {
             SetValues(weightKg: 100, reps: 3, isCompleted: true),
             SetValues(weightKg: 105, reps: 1, isCompleted: false),
         ])]
-        let advice = SlotAdvice.make(role: .dynamicEffort, exercise: squat, logs: logs, unit: .kg)
+        let advice = SlotAdvice.make(role: .dynamicEffort, exercise: squat, logs: logs, unit: .kg, step: 2.5, now: day(0))
         #expect(advice.speedWeightKg == 65)
-        #expect(advice.weightText == "建議 65 kg（估算 1RM 110 kg × 60%）")
+        #expect(advice.weightText == "建議 65 kg（60%）")
         #expect(advice.prescription.summary == "8 組 × 2 下・休息 45–60 秒")
-        // 沒有 ME 紀錄：不顯示重量
-        let none = SlotAdvice.make(role: .dynamicEffort, exercise: squat,
-                                   logs: [ExerciseLog(date: day(3), role: .lowerAssist, sets: [SetValues(weightKg: 80, reps: 8, isCompleted: true)])],
-                                   unit: .kg)
+        // CHANGE_10 §0-5：沒有 ME 紀錄也算（估算 1RM 不分角色）：80 × 8 → 101.3 × 60% → 60
+        let other = SlotAdvice.make(role: .dynamicEffort, exercise: squat,
+                                    logs: [ExerciseLog(date: day(3), role: .lowerAssist, sets: [SetValues(weightKg: 80, reps: 8, isCompleted: true)])],
+                                    unit: .kg, step: 2.5, now: day(0))
+        #expect(other.speedWeightKg == 60 && other.weightText == "建議 60 kg（60%）")
+        // 完全沒有可以計算的紀錄：才顯示提示文字
+        let none = SlotAdvice.make(role: .dynamicEffort, exercise: squat, logs: [], unit: .kg, step: 2.5, now: day(0))
         #expect(none.speedWeightKg == nil && none.weightText == "用能做得很快的重量")
+    }
+
+    /// CHANGE_10 §0-5：DE 建議重量等於強度換算表 60% 那一列（同一個基準、同一個進位）
+    @Test func speedSuggestionIsTheSixtyPercentRowOfTheIntensityTable() {
+        let squat = library().first { $0.name == "深蹲" }!
+        let logs = [ExerciseLog(date: day(4), role: .push, sets: [SetValues(weightKg: 72.5, reps: 6, isCompleted: true)]),
+                    ExerciseLog(date: day(9), role: .maxEffort, sets: [SetValues(weightKg: 77.5, reps: 2, isCompleted: true)])]
+        let sessions = logs.map { SessionSets(sessionID: UUID(), date: $0.date, sets: $0.sets) }
+        for (unit, step) in [(WeightUnit.kg, 2.5), (.kg, 1), (.lbs, 5)] {
+            let advice = SlotAdvice.make(role: .dynamicEffort, exercise: squat, logs: logs, unit: unit, step: step, now: day(0))
+            let base = IntensityTable.estimatedBase1RMKg(sessions, now: day(0))!
+            let row = IntensityTable.rows(base1RMKg: base, unit: unit, step: step).first { $0.percent == 60 }!
+            #expect(advice.speedWeightKg == unit.toKg(row.weight))
+            #expect(advice.weightText == "建議 \(unit.formatWithUnit(kg: unit.toKg(row.weight)))（60%）")
+        }
+        // 換算表的基準：72.5 × 6 → 87；77.5 × 2 → 82.7，取 87
+        #expect(abs(IntensityTable.estimatedBase1RMKg(sessions, now: day(0))! - 87) < 0.01)
     }
 
     // MARK: 其他規則
