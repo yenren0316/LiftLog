@@ -4,6 +4,7 @@ import CoreGraphics
 /// - 同一個方向要「連續」滑至少 threshold（24 pt）才切換；中途換方向就從換方向的地方重新算。
 /// - 距離底部 bottomZone（80 pt）以內，或底部回彈中（捲動位置超出內容範圍）時不切換。
 ///   以前在底部會形成循環：分頁列隱藏 → 可捲動範圍變短 → 內容被拉回、回彈時看起來像往上滑 → 分頁列出現 → 範圍又變長…
+///   可捲動範圍短的畫面（例如動作庫第 1 層，約 120 pt），底部的範圍縮小，中間至少留 48 pt（兩段 24 pt）可以切換（CHANGE_10 §0-2）。
 /// - 頂端附近（threshold 以內）一律顯示；頂端往下拉的回彈也顯示（快速滑回頂端時可能直接跳進回彈，跳過頂端那一段）。
 /// - 只在使用者捲動中（拖動、慣性、捲動動畫）才切換；其他原因的位移（版面重算、收合區塊）只當作新的起點。
 nonisolated struct TabBarAutoHide: Equatable {
@@ -32,7 +33,7 @@ nonisolated struct TabBarAutoHide: Equatable {
             return
         }
         // 底部回彈中，或距離底部 bottomZone 以內：不切換，離開之後從這裡重新算
-        if offset > limit || limit - offset <= bottomZone {
+        if offset > limit || limit - offset <= bottomZone(limit: limit) {
             restart(at: min(offset, limit))
             return
         }
@@ -52,6 +53,11 @@ nonisolated struct TabBarAutoHide: Equatable {
             isHidden = false
             runStart = offset
         }
+    }
+
+    /// 底部不切換的範圍：最多 bottomZone；可捲動範圍短時縮小，頂端 threshold 以下至少留 2 × threshold 可以切換
+    func bottomZone(limit: CGFloat) -> CGFloat {
+        min(bottomZone, max(0, limit - 3 * threshold))
     }
 
     /// 離開畫面（切換分頁、進入下一頁）時恢復顯示

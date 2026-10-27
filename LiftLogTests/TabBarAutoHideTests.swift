@@ -176,6 +176,25 @@ struct TabBarAutoHideTests {
         #expect(!state.isHidden)
     }
 
+    /// CHANGE_10 §0-2：可捲動範圍短的畫面（動作庫第 1 層約 117 pt）也能切換；底部的範圍縮小，中間至少留 48 pt
+    @Test func shortPagesStillToggle() {
+        let state = TabBarAutoHide()
+        #expect(state.bottomZone(limit: 1000) == 80)
+        #expect(state.bottomZone(limit: 152) == 80)
+        #expect(state.bottomZone(limit: 117) == 45)
+        #expect(state.bottomZone(limit: 60) == 0)
+
+        var short = TabBarAutoHide()
+        short.update(offset: 0, maxOffset: 117, isScrolling: false)
+        scroll(&short, [10, 30, 60], max: 117)
+        #expect(short.isHidden)
+        scroll(&short, [50, 30], max: 117)
+        #expect(!short.isHidden)
+        // 底部 45 pt 以內照樣不切換
+        scroll(&short, [50, 75, 100], max: 117)
+        #expect(!short.isHidden)
+    }
+
     // MARK: 底部留白（CHANGE_09 §0-4）
 
     /// 分頁列隱藏或出現時留白不變（T2 的「版面不變」）

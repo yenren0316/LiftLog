@@ -28,6 +28,7 @@ struct TodayView: View {
                 .padding(.horizontal, 16)
                 .padding(.bottom, 12)
             }
+            .hidesTabBarOnScroll("today")
             .screenBackground()
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: ExerciseCategory.self) { CategoryTodoList(category: $0) }
@@ -147,6 +148,7 @@ struct CategoryTodoList: View {
             }
         }
         .scrollContentBackground(.hidden)
+        .hidesTabBarOnScroll("today.category")
         .screenBackground()
         .navigationTitle(category.title)
         .navigationBarTitleDisplayMode(.inline)
