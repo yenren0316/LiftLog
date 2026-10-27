@@ -1,97 +1,47 @@
 import SwiftUI
 
-/// 今天的訓練日曆（CHANGE_08 §4）：每天一格，顏色依那天的部位（同一天多次訓練依合併後的部位）：
-/// 下肢 accent、上肢 upperBody、全身沿對角線各一半、有氧與其他（只有有氧，或只有核心、補強）textSecondary 40%。格子固定大小，週數依寬度剛好塞滿，不橫向捲動。
-/// 點一下有訓練的那天：格子上方浮出「10/23 週五・下肢最大肌力・深蹲」，2 秒後消失；
-/// 按住拖曳：標籤跟著手指即時更新，每換一格震一下（selection），放開就消失。沒有任何導向。
-/// 每週目標（CHANGE_09 §3）：達標的週在欄位上方畫一個 accent 的小點；標題列右邊「本週 2/3・連續 5 週達標」
+/// 今天的訓練日曆（CHANGE_08 §4、CHANGE_10 §2）：每天一格，顏色依那天的部位（同一天多次訓練依合併後的部位）：
+/// 下肢 accent、上肢 upperBody、全身沿對角線各一半、有氧與其他（只有有氧，或只有核心、補強）textSecondary 40%。
+/// 每一欄是一週，從週一開始；格子固定大小，週數依寬度剛好塞滿，不橫向捲動。
+/// 整張卡是一個按鈕：點一下打開「訓練狀態」浮窗；格子本身沒有個別的點擊（CHANGE_09 的達標小點、標題列的
+/// 「本週 N/目標・連續 N 週達標」和 CHANGE_08 的浮出標籤、拖曳震動都拿掉了）
 struct TrainingCalendar: View {
     var days: [Date: StatsSnapshot.DayStat]
-    /// 每週算進次數的天數（TrainingCount.weeks）和目標
-    var weekCounts: [Date: Int]
-    var goal: Int
     /// 一次訓練都沒有時，格子下面的說明（取代圖例）
     var emptyText: String?
+    var onOpen: () -> Void
 
     private let calendar = TrainingCount.weekCalendar()
 
-    /// 標籤要顯示的那一天
-    @State private var peek: Date?
-    /// 拖曳中手指下的那一格（換格時震動）
-    @State private var dragCell: Date?
-    @State private var hideTask: Task<Void, Never>?
-    @State private var labelWidth: CGFloat = 0
-
     var body: some View {
-        let progress = WeeklyGoal.progress(weeks: weekCounts, goal: goal, calendar: calendar)
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline) {
+        Button(action: onOpen) {
+            VStack(alignment: .leading, spacing: 8) {
                 Text("訓練日曆").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.textSecondary)
-                Spacer()
-                Text(progress.text).font(.caption.monospacedDigit()).foregroundStyle(Theme.textSecondary).lineLimit(1)
-            }
-            GeometryReader { geo in
-                let weeks = ActivityCalendar.weeks(endingAt: .now, count: CalendarGrid.weekCount(width: geo.size.width),
-                                                   calendar: calendar)
-                grid(weeks)
-                    .contentShape(.rect)
-                    .gesture(SpatialTapGesture().onEnded { value in
-                        show(CalendarGrid.date(at: value.location, in: weeks))
-                        hide(after: .seconds(2))
-                    })
-                    // 短按住才開始拖曳，捲動畫面不受影響
-                    .simultaneousGesture(LongPressGesture(minimumDuration: 0.2)
-                        .sequenced(before: DragGesture(minimumDistance: 0))
-                        .onChanged { value in
-                            guard case .second(true, let drag?) = value else { return }
-                            hideTask?.cancel()
-                            let day = CalendarGrid.date(at: drag.location, in: weeks)
-                            if day != dragCell { dragCell = day }
-                            show(day)
-                        }
-                        .onEnded { _ in
-                            dragCell = nil
-                            peek = nil
-                        })
-                    .overlay(alignment: .topLeading) { peekLabel(weeks, width: geo.size.width) }
-            }
-            .frame(height: CalendarGrid.height)
-            if days.isEmpty, let emptyText {
-                Text(emptyText).font(.footnote).foregroundStyle(Theme.textSecondary)
-            } else {
-                HStack(spacing: 12) {
+                GeometryReader { geo in
+                    grid(ActivityCalendar.weeks(endingAt: .now, count: CalendarGrid.weekCount(width: geo.size.width),
+                                                calendar: calendar))
+                }
+                .frame(height: CalendarGrid.height)
+                if days.isEmpty, let emptyText {
+                    Text(emptyText).font(.footnote).foregroundStyle(Theme.textSecondary)
+                } else {
                     RegionLegend()
-                    Spacer(minLength: 0)
-                    HStack(spacing: 4) {
-                        Circle().fill(Theme.accent).frame(width: CalendarGrid.dot, height: CalendarGrid.dot)
-                        Text("達標")
-                    }
-                    .font(.caption2)
-                    .foregroundStyle(Theme.textSecondary)
                 }
             }
+            .padding(16)
         }
-        .card(padding: 16)
-        .sensoryFeedback(.selection, trigger: dragCell) { _, new in new != nil }
+        // 整張卡都能點，按下時換成按壓色（CHANGE_10 §4）
+        .buttonStyle(.tapCard)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("訓練日曆，本週 \(progress.count) 天，目標 \(progress.goal) 天\(progress.isMet ? "，已達標" : "")\(progress.streak > 0 ? "，連續 \(progress.streak) 週達標" : "")")
-        #if DEBUG
-        // 開發用：-calendarPeek 2026-10-24 顯示那天的標籤，而且不會自動消失（截圖用）
-        .task {
-            if let raw = UserDefaults.standard.string(forKey: "calendarPeek"),
-               let day = try? Date(raw, strategy: .iso8601.year().month().day().dateSeparator(.dash)) {
-                peek = Calendar.current.startOfDay(for: day)
-            }
-        }
-        #endif
+        .accessibilityLabel("訓練日曆")
+        .accessibilityHint("打開訓練狀態")
+        .accessibilityAddTraits(.isButton)
     }
 
     private func grid(_ weeks: [[Date?]]) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             monthLabels(weeks)
-            goalDots(weeks)
-                .padding(.top, 2)
-                .padding(.bottom, CalendarGrid.monthRow - CalendarGrid.monthLabel - 2 - CalendarGrid.dot)
+                .padding(.bottom, CalendarGrid.monthRow - CalendarGrid.monthLabel)
             HStack(alignment: .top, spacing: CalendarGrid.gap) {
                 ForEach(weeks.indices, id: \.self) { w in
                     VStack(spacing: CalendarGrid.gap) {
@@ -109,7 +59,6 @@ struct TrainingCalendar: View {
             if let day {
                 if let region = days[day]?.region {
                     shape.fill(region.fill)
-                        .overlay { if day == peek { shape.stroke(Theme.textPrimary, lineWidth: 1.5) } }
                 } else {
                     shape.fill(Theme.field)
                 }
@@ -118,20 +67,6 @@ struct TrainingCalendar: View {
             }
         }
         .frame(width: CalendarGrid.cell, height: CalendarGrid.cell)
-    }
-
-    /// 達標的週：欄位上方一個 accent 的小點（本週達標之後才出現）
-    private func goalDots(_ weeks: [[Date?]]) -> some View {
-        HStack(spacing: CalendarGrid.gap) {
-            ForEach(weeks.indices, id: \.self) { w in
-                let met = weeks[w].first.flatMap { $0 }.map { WeeklyGoal.isMet(week: $0, weeks: weekCounts, goal: goal) } ?? false
-                Circle()
-                    .fill(met ? Theme.accent : .clear)
-                    .frame(width: CalendarGrid.dot, height: CalendarGrid.dot)
-                    .frame(width: CalendarGrid.cell)
-            }
-        }
-        .frame(height: CalendarGrid.dot)
     }
 
     /// 每個月第一次出現的那週標上月份；下個月不到 3 週就開始時（例如最左邊不完整的月份）不標，避免字疊在一起
@@ -149,40 +84,6 @@ struct TrainingCalendar: View {
                     .fixedSize()
                     .frame(width: CalendarGrid.cell, height: CalendarGrid.monthLabel, alignment: .leading)
             }
-        }
-    }
-
-    /// 浮在那一格上方的標籤（最上面兩列上方沒有空間，改放在格子下方，不蓋到標題列）；左右不超出日曆
-    @ViewBuilder
-    private func peekLabel(_ weeks: [[Date?]], width: CGFloat) -> some View {
-        if let peek, let text = CalendarGrid.peekText(day: peek, titles: days[peek]?.titles ?? []),
-           let week = weeks.firstIndex(where: { $0.contains(peek) }),
-           let day = weeks[week].firstIndex(of: peek) {
-            let origin = CalendarGrid.origin(week: week, day: day)
-            let center = origin.x + CalendarGrid.cell / 2
-            let x = min(max(center - labelWidth / 2, 0), max(width - labelWidth, 0))
-            let above = origin.y - 34
-            PeekLabel(text: text)
-                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { labelWidth = $0 }
-                .offset(x: x, y: above >= 0 ? above : origin.y + CalendarGrid.cell + 6)
-                .allowsHitTesting(false)
-                .transition(.opacity)
-        }
-    }
-
-    /// 只有有訓練的日子顯示標籤
-    private func show(_ day: Date?) {
-        withAnimation(.tap) {
-            peek = day.flatMap { days[$0]?.region == nil ? nil : $0 }
-        }
-    }
-
-    private func hide(after delay: Duration) {
-        hideTask?.cancel()
-        hideTask = Task {
-            try? await Task.sleep(for: delay)
-            guard !Task.isCancelled else { return }
-            withAnimation(.tap) { peek = nil }
         }
     }
 }

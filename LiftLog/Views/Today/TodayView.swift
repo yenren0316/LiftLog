@@ -8,8 +8,6 @@ struct TodayView: View {
     @Environment(WorkoutCoordinator.self) private var coordinator
     @Environment(WorkoutLauncher.self) private var launcher
     @Environment(StatsCache.self) private var stats
-    /// 每週目標：設定過就用設定的，沒設定過用近 12 週的平均（CHANGE_09 §1）
-    @AppStorage(WeeklyGoal.goalKey) private var storedGoal = 0
 
     var body: some View {
         @Bindable var coordinator = coordinator
@@ -20,9 +18,10 @@ struct TodayView: View {
                     NextPlanCard(answers: stats.snapshot.nextPlan, suggestedMain: stats.snapshot.suggestedMain) {
                         launcher.requestPlan($0, context: context)
                     }
-                    TrainingCalendar(days: stats.snapshot.days, weekCounts: stats.snapshot.weekCounts,
-                                     goal: WeeklyGoal.goal(stored: storedGoal, automatic: stats.snapshot.automaticWeeklyGoal),
-                                     emptyText: "還沒有訓練紀錄。點上面的「下一次」建立第一份菜單。")
+                    TrainingCalendar(days: stats.snapshot.days,
+                                     emptyText: "還沒有訓練紀錄。點上面的「下一次」建立第一份菜單。") {
+                        coordinator.showingTrainingStatus = true
+                    }
                     RecentSetsCard(sets: stats.snapshot.recentSets) { coordinator.todayPath.append($0) }
                 }
                 .padding(.horizontal, 16)

@@ -3,7 +3,7 @@ import SwiftData
 import Testing
 @testable import LiftLog
 
-/// CHANGE_09 §2：全 App 唯一的訓練次數規則、週一開始的週、連續達標
+/// CHANGE_09 §2：全 App 唯一的訓練次數規則、週一開始的週（CHANGE_10 §2 拿掉了連續達標）
 @MainActor
 struct TrainingCountTests {
     /// 地區設定的一週從週日開始（像 en_US）：規則還是要從週一開始
@@ -123,66 +123,5 @@ struct TrainingCountTests {
         let days = TrainingCount.days(sessions, cardioOnlyCounts: false, calendar: calendar)
         let weeks = TrainingCount.weeks(days, calendar: weekCalendar)
         #expect(weeks == [day(12, 22, year: 2025): 1, day(12, 29, year: 2025): 3, day(1, 5): 1])
-        // 本週（1/5 那週）1 天；跨年那週 3 天達標，前一週 1 天沒達標
-        let progress = WeeklyGoal.progress(weeks: weeks, goal: 3, now: date(1, 7), calendar: weekCalendar)
-        #expect(progress == WeeklyGoal.Progress(count: 1, goal: 3, streak: 1))
-        #expect(progress.text == "本週 1/3・連續 1 週達標")
-    }
-
-    // MARK: 連續達標
-
-    /// counts：由新到舊，第一個是本週（now 是 2026/10/28 週三，本週從 10/26 開始）
-    private func weeks(_ counts: [Int]) -> [Date: Int] {
-        var weeks: [Date: Int] = [:]
-        for (back, count) in counts.enumerated() where count > 0 {
-            weeks[weekCalendar.date(byAdding: .day, value: -7 * back, to: day(10, 26))!] = count
-        }
-        return weeks
-    }
-
-    private let now = Calendar(identifier: .gregorian).date(from: DateComponents(
-        timeZone: TimeZone(identifier: "Asia/Taipei"), year: 2026, month: 10, day: 28, hour: 12))!
-
-    @Test func streakIncludesThisWeekOnceMet() {
-        let progress = WeeklyGoal.progress(weeks: weeks([3, 3, 4, 3, 1]), goal: 3, now: now, calendar: weekCalendar)
-        #expect(progress.isMet)
-        #expect(progress.streak == 4)
-        #expect(progress.text == "本週 3/3 ✓・連續 4 週達標")
-    }
-
-    @Test func thisWeekNotMetYetDoesNotBreakTheStreak() {
-        let progress = WeeklyGoal.progress(weeks: weeks([2, 3, 3, 5, 3, 3]), goal: 3, now: now, calendar: weekCalendar)
-        #expect(!progress.isMet)
-        #expect(progress.streak == 5)
-        #expect(progress.text == "本週 2/3・連續 5 週達標")
-    }
-
-    @Test func aMissedWeekBreaksTheStreak() {
-        let progress = WeeklyGoal.progress(weeks: weeks([0, 3, 4, 2, 3, 3, 3]), goal: 3, now: now, calendar: weekCalendar)
-        #expect(progress.streak == 2)
-        // 上週沒達標：連續 0 週，只寫本週
-        let broken = WeeklyGoal.progress(weeks: weeks([1, 2, 3, 3]), goal: 3, now: now, calendar: weekCalendar)
-        #expect(broken.streak == 0)
-        #expect(broken.text == "本週 1/3")
-    }
-
-    @Test func noRecordsAtAll() {
-        let progress = WeeklyGoal.progress(weeks: [:], goal: 3, now: now, calendar: weekCalendar)
-        #expect(progress == WeeklyGoal.Progress(count: 0, goal: 3, streak: 0))
-        #expect(progress.text == "本週 0/3")
-    }
-
-    @Test func changingTheGoalReevaluatesPastWeeks() {
-        let history = weeks([0, 2, 3, 2, 1])
-        let lastWeek = day(10, 19), twoWeeksAgo = day(10, 12)
-        #expect(!WeeklyGoal.isMet(week: lastWeek, weeks: history, goal: 3))
-        #expect(WeeklyGoal.isMet(week: twoWeeksAgo, weeks: history, goal: 3))
-        #expect(WeeklyGoal.progress(weeks: history, goal: 3, now: now, calendar: weekCalendar).streak == 0)
-        // 目標改成 2：上週也算達標，連續 3 週
-        #expect(WeeklyGoal.isMet(week: lastWeek, weeks: history, goal: 2))
-        #expect(WeeklyGoal.progress(weeks: history, goal: 2, now: now, calendar: weekCalendar).streak == 3)
-        // 改成 4：每一週都沒達標
-        #expect(!WeeklyGoal.isMet(week: twoWeeksAgo, weeks: history, goal: 4))
-        #expect(WeeklyGoal.progress(weeks: history, goal: 4, now: now, calendar: weekCalendar).streak == 0)
     }
 }

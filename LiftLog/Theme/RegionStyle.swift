@@ -69,7 +69,7 @@ struct RegionLegend: View {
     }
 }
 
-/// 浮在格子或長條上方的小標籤
+/// 浮在圖表上方的小標籤（訓練頻率、有氧、體重）
 struct PeekLabel: View {
     var text: String
 

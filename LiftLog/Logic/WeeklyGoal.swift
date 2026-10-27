@@ -46,7 +46,8 @@ nonisolated enum TrainingCount {
     }
 }
 
-/// 每週目標（CHANGE_09 §1、§2）：達標＝那一週算進次數的天數大於等於目標。目標改了之後，過去每一週都用新的目標重新判斷
+/// 每週目標（CHANGE_09 §1）：設定頁的 1–7 次、預設值。用在「訓練狀態」的本週和歷程訓練頻率卡的目標線；
+/// CHANGE_10 §2 拿掉首頁的達標小點和連續達標週數之後，不再判斷每一週有沒有達標
 nonisolated enum WeeklyGoal {
     /// 「只有有氧的訓練也算」，預設關閉
     static let cardioOnlyCountsKey = "weeklyGoal.cardioOnlyCounts"
@@ -76,44 +77,5 @@ nonisolated enum WeeklyGoal {
 
     static func goal(automatic: Int, defaults: UserDefaults = .standard) -> Int {
         goal(stored: defaults.integer(forKey: goalKey), automatic: automatic)
-    }
-
-    struct Progress: Equatable, Sendable {
-        /// 本週算進次數的天數
-        var count: Int
-        var goal: Int
-        /// 連續達標的週數：從上週往回數；本週已經達標也算進去，本週還沒達標不會中斷
-        var streak: Int
-
-        var isMet: Bool { count >= goal }
-
-        /// 「本週 2/3・連續 5 週達標」；本週已達標「本週 3/3 ✓・連續 6 週達標」；連續 0 週只寫「本週 1/3」
-        var text: String {
-            let week = "本週 \(count)/\(goal)\(isMet ? " ✓" : "")"
-            return streak > 0 ? "\(week)・連續 \(streak) 週達標" : week
-        }
-    }
-
-    /// weeks：TrainingCount.weeks 的結果
-    static func isMet(week start: Date, weeks: [Date: Int], goal: Int) -> Bool {
-        (weeks[start] ?? 0) >= goal
-    }
-
-    static func progress(weeks: [Date: Int], goal: Int, now: Date = .now, calendar: Calendar) -> Progress {
-        let goal = max(goal, 1)
-        guard let thisWeek = TrainingCount.weekStart(of: now, calendar: calendar) else {
-            return Progress(count: 0, goal: goal, streak: 0)
-        }
-        let count = weeks[thisWeek] ?? 0
-        var streak = count >= goal ? 1 : 0
-        var week = thisWeek
-        // 目標至少 1，往回數到第一個沒達標的週就停（再往前沒有紀錄的週一定沒達標）
-        while let day = calendar.date(byAdding: .day, value: -7, to: week),
-              let previous = TrainingCount.weekStart(of: day, calendar: calendar),
-              isMet(week: previous, weeks: weeks, goal: goal) {
-            streak += 1
-            week = previous
-        }
-        return Progress(count: count, goal: goal, streak: streak)
     }
 }

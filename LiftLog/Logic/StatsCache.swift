@@ -31,8 +31,6 @@ nonisolated struct StatsSnapshot: Sendable {
         var exerciseCount = 0
         /// 那天的訓練，依開始時間
         var sessionIDs: [UUID] = []
-        /// 那天有完成組的訓練的名稱，依開始時間（日曆的標籤，CHANGE_08 §4）
-        var titles: [String] = []
         /// 合併後的部位（日曆格子的顏色）；那天沒有完成任何組時為 nil
         var region: DayRegion?
         /// 各次訓練的部位，算 region 用
@@ -102,7 +100,6 @@ nonisolated struct StatsSnapshot: Sendable {
             dayStat.sessionIDs.insert(session.id, at: 0)
             if let region = DayRegion.of(session) {
                 dayStat.regions.insert(region, at: 0)
-                dayStat.titles.insert(session.title, at: 0)
                 dayStat.region = DayRegion.merged(dayStat.regions)
             }
             for item in session.items where item.sets.contains(where: \.isCompleted) {
