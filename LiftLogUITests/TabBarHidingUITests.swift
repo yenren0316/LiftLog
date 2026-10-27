@@ -20,11 +20,14 @@ final class TabBarHidingUITests: XCTestCase {
         XCTAssertTrue(tabButton.waitForExistence(timeout: 10), "\(screen)：一開始分頁列要顯示", file: file, line: line)
         let middle = app.point(x: app.frame.midX, y: app.frame.midY + 60)
         middle.press(forDuration: 0.05, thenDragTo: middle.withOffset(CGVector(dx: 0, dy: -160)), withVelocity: .slow, thenHoldForDuration: 0.3)
-        try await Task.sleep(for: .seconds(1.2))
-        XCTAssertFalse(tabButton.isHittable, "\(screen)：往下捲之後分頁列應該收起", file: file, line: line)
+        let hidden = await tabButton.waitForHittable(false)
+        if !hidden { attachScreenshot("\(screen)_not_hidden") }
+        XCTAssertTrue(hidden, "\(screen)：往下捲之後分頁列應該收起", file: file, line: line)
+        try await Task.sleep(for: .seconds(1))
         middle.press(forDuration: 0.05, thenDragTo: middle.withOffset(CGVector(dx: 0, dy: 120)), withVelocity: .slow, thenHoldForDuration: 0.3)
-        try await Task.sleep(for: .seconds(1.2))
-        XCTAssertTrue(tabButton.waitForExistence(timeout: 2) && tabButton.isHittable, "\(screen)：往上捲之後分頁列應該出現", file: file, line: line)
+        let shown = await tabButton.waitForHittable(true)
+        if !shown { attachScreenshot("\(screen)_not_shown") }
+        XCTAssertTrue(shown, "\(screen)：往上捲之後分頁列應該出現", file: file, line: line)
     }
 
     func testLibraryRoot() async throws {
@@ -68,15 +71,19 @@ final class TabBarHidingUITests: XCTestCase {
         launch(["-startTab", "1", "-historySegment", "stats", "-demoWorkout", "YES"])
         let collapse = app.buttons["縮小"].firstMatch
         XCTAssertTrue(collapse.waitForExistence(timeout: 15))
+        // 等全螢幕的訓練畫面出現完再縮小
+        try await Task.sleep(for: .seconds(1.5))
         collapse.tap()
         let bar = app.buttons.matching(NSPredicate(format: "label CONTAINS '訓練中'")).firstMatch
-        XCTAssertTrue(bar.waitForExistence(timeout: 5), "縮小之後要有訓練中橫條")
+        let barShown = await bar.waitForHittable(true, timeout: 10)
+        if !barShown { attachScreenshot("workout_bar_missing") }
+        XCTAssertTrue(barShown, "縮小之後要有訓練中橫條")
         try await assertHidesAndShows("歷程・統計（訓練中）")
         // 再收起一次，確認橫條還在
         let middle = app.point(x: app.frame.midX, y: app.frame.midY + 60)
         middle.press(forDuration: 0.05, thenDragTo: middle.withOffset(CGVector(dx: 0, dy: -160)), withVelocity: .slow, thenHoldForDuration: 0.3)
-        try await Task.sleep(for: .seconds(1.2))
-        XCTAssertFalse(tabButton.isHittable, "分頁列應該收起")
+        let hiddenAgain = await tabButton.waitForHittable(false)
+        XCTAssertTrue(hiddenAgain, "分頁列應該收起")
         attachScreenshot("workout_bar_tab_hidden")
         XCTAssertTrue(bar.isHittable, "分頁列收起時，訓練中橫條要照樣顯示")
         // 收掉示範訓練，不影響其他測試

@@ -251,8 +251,8 @@ private struct TabBarAutoHideModifier: ViewModifier {
     @State private var autoHide = TabBarAutoHide()
     @State private var isScrolling = false
     @State private var phase: ScrollPhase = .idle
-    /// List 不回報捲動狀態（iOS 26 的 onScrollPhaseChange 只有 ScrollView 會呼叫，CHANGE_10 §0-2 查到的原因）：
-    /// 從來沒收到過非 idle 的狀態時，捲動位置的變化一律當成使用者在捲動
+    /// List 不回報手指拖動的狀態（iOS 26 的 List 收不到 interacting，CHANGE_10 §0-2 查到的原因）：
+    /// 從來沒收到過 interacting 時，捲動位置的變化一律當成使用者在捲動
     @State private var reportsPhases = false
     /// 捲動內容底部固定留的高度，而且捲動畫面一律延伸到螢幕底部：分頁列隱藏或出現時，畫面大小和可捲動範圍都不變
     /// （CHANGE_08 §2）。包括訓練中的橫條，橫條出現或消失時重新量（CHANGE_09 §0-4）
@@ -275,7 +275,7 @@ private struct TabBarAutoHideModifier: ViewModifier {
             .onScrollPhaseChange { _, newPhase in
                 phase = newPhase
                 isScrolling = newPhase.isScrolling
-                if newPhase != .idle { reportsPhases = true }
+                if newPhase == .interacting { reportsPhases = true }
             }
             .onScrollGeometryChange(for: Metrics.self) { geometry in
                 let insets = geometry.contentInsets
