@@ -70,10 +70,6 @@ final class RestTimer {
     /// 這次休息開始的時間（進度條用）
     var startDate: Date? { endDate?.addingTimeInterval(-duration) }
 
-    func remaining(at date: Date) -> TimeInterval {
-        max(0, (endDate ?? date).timeIntervalSince(date))
-    }
-
     func start(seconds: Int) {
         duration = TimeInterval(seconds)
         set(endDate: .now.addingTimeInterval(duration))

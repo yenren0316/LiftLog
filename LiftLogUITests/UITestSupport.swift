@@ -12,6 +12,15 @@ extension XCTestCase {
         attachment.lifetime = .keepAlways
         add(attachment)
     }
+
+    /// 休息倒數第一次排通知時，系統會問通知權限（對話框在 SpringBoard，會擋住 App 的點擊）：按「允許」
+    @MainActor
+    func allowNotificationsIfAsked(timeout: TimeInterval = 3) {
+        let alert = XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.firstMatch
+        guard alert.waitForExistence(timeout: timeout) else { return }
+        let allow = alert.buttons["允許"]
+        (allow.exists ? allow : alert.buttons.element(boundBy: alert.buttons.count - 1)).tap()
+    }
 }
 
 extension XCUIElement {

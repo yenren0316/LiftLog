@@ -76,7 +76,7 @@ struct WorkoutView: View {
             HStack(spacing: 12) {
                 Text(session.startedAt.formatted(date: .abbreviated, time: .shortened))
                 // 經過時間一律用 startedAt 推算
-                Label { ElapsedTimeText(since: session.startedAt) } icon: { Image(systemName: "timer") }
+                Label { ElapsedTimeText(since: session.startedAt).accessibilityIdentifier("elapsedTime") } icon: { Image(systemName: "timer") }
             }
             .font(.subheadline)
             .foregroundStyle(Theme.textSecondary)

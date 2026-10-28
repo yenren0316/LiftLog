@@ -120,16 +120,15 @@ struct FilterCapsule: View {
     }
 }
 
-/// 經過時間（每秒更新）：「1:05:30」，可加前綴（「訓練中 」）
+/// 經過時間：「0:54」「24:30」「1:05:30」，可加前綴（「訓練中 」）。
+/// 系統的計時文字自己跳秒，不用每秒重畫（CHANGE_12 §1）
 struct ElapsedTimeText: View {
     var since: Date
     var prefix = ""
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 1)) { context in
-            Text(prefix + WorkoutSession.format(duration: context.date.timeIntervalSince(since)))
-                .monospacedDigit()
-        }
+        Text("\(prefix)\(Text(timerInterval: since...Date.distantFuture, countsDown: false))")
+            .monospacedDigit()
     }
 }
 

@@ -1,31 +1,36 @@
 import SwiftUI
 
-/// 訓練中畫面頂部的休息倒數：-15 秒、+15 秒、跳過
+/// 訓練中畫面頂部的休息倒數：-15 秒、+15 秒、跳過。
+/// 倒數和進度條是系統的計時文字和計時進度條，自己跳秒（CHANGE_12 §1）；調整或跳過時換掉時間區間，畫面立刻更新
 struct RestTimerBar: View {
     @Environment(RestTimer.self) private var timer
 
     var body: some View {
-        if timer.isRunning {
-            TimelineView(.periodic(from: .now, by: 0.5)) { context in
-                let remaining = timer.remaining(at: context.date)
-                VStack(spacing: 8) {
-                    HStack(spacing: 10) {
-                        Image(systemName: "timer").foregroundStyle(Theme.accent)
-                        Text("休息 \(WorkoutSession.format(duration: remaining.rounded(.up)))")
-                            .font(.title3.bold().monospacedDigit())
-                        Spacer()
-                        step("-15") { timer.adjust(by: -15) }
-                        step("+15") { timer.adjust(by: 15) }
-                        step("跳過") { timer.skip() }
-                    }
-                    ThinBar(fraction: timer.duration > 0 ? remaining / timer.duration : 0, color: Theme.accent)
+        if let start = timer.startDate, let end = timer.endDate {
+            let interval = start...end
+            VStack(spacing: 8) {
+                HStack(spacing: 10) {
+                    Image(systemName: "timer").foregroundStyle(Theme.accent)
+                    Text("休息 \(Text(timerInterval: interval, countsDown: true))")
+                        .font(.title3.bold().monospacedDigit())
+                        .accessibilityIdentifier("restCountdown")
+                    Spacer()
+                    step("-15") { timer.adjust(by: -15) }
+                    step("+15") { timer.adjust(by: 15) }
+                    step("跳過") { timer.skip() }
                 }
-                .padding(14)
-                .background(Theme.card, in: .rect(cornerRadius: 20))
-                .overlay(RoundedRectangle(cornerRadius: 20).stroke(Theme.accent.opacity(0.4)))
-                .padding(.horizontal, 16)
-                .padding(.bottom, 6)
+                ProgressView(timerInterval: interval, countsDown: true) {
+                    EmptyView()
+                } currentValueLabel: {
+                    EmptyView()
+                }
+                .tint(Theme.accent)
             }
+            .padding(14)
+            .background(Theme.card, in: .rect(cornerRadius: 20))
+            .overlay(RoundedRectangle(cornerRadius: 20).stroke(Theme.accent.opacity(0.4)))
+            .padding(.horizontal, 16)
+            .padding(.bottom, 6)
             .transition(.move(edge: .top).combined(with: .opacity))
         }
     }
