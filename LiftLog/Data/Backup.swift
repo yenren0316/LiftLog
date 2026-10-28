@@ -1,8 +1,8 @@
 import Foundation
 import SwiftData
 
-/// 備份檔格式（version 6：訓練 → 動作 → 組，加上 role、region、modeID、日型、主項輪替順序與自訂名稱）。
-/// 匯入時也能讀 version 3–5（缺的欄位依動作推算或留空）與 version 2（seed.json 也是 v2）。
+/// 備份檔格式（version 7：訓練 → 動作 → 組，加上 role、region、modeID、日型、主項輪替順序與自訂名稱，以及設定值）。
+/// 匯入時也能讀 version 3–6（缺的欄位依動作推算或留空，沒有設定時設定不變）與 version 2（seed.json 也是 v2）。
 nonisolated struct BackupFile: Codable {
     struct ExerciseRecord: Codable {
         var id: UUID
@@ -74,7 +74,7 @@ nonisolated struct BackupFile: Codable {
         var kg: Double
     }
 
-    static let currentVersion = 6
+    static let currentVersion = 7
 
     var version: Int
     var exercises: [ExerciseRecord]
@@ -83,13 +83,15 @@ nonisolated struct BackupFile: Codable {
     /// 這份資料已經套用過的資料遷移（`DataMigrations` 的 id）。沒有這個欄位的舊檔視為一個都還沒套用；
     /// 匯入後會補做沒套用的遷移（CHANGE_07 執行規則 7）
     var migrations: [String]? = nil
+    /// v7 新增（CHANGE_11 §8）：設定值。舊檔沒有時為 nil，還原時設定維持目前的值
+    var settings: SettingsSnapshot? = nil
 
     static func decode(_ data: Data) throws -> BackupFile {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         let version = try decoder.decode(VersionProbe.self, from: data).version
         switch version {
-        case 3, 4, 5, 6:
+        case 3, 4, 5, 6, 7:
             return try decoder.decode(BackupFile.self, from: data)
         case 2:
             return try decoder.decode(V2.self, from: data).upgraded()
@@ -172,8 +174,9 @@ enum BackupError: LocalizedError {
 }
 
 enum BackupService {
-    /// migrations：目前資料已經套用過的遷移，寫進備份檔
-    static func makeBackup(from context: ModelContext, migrations: [String] = DataMigrations.applied()) throws -> BackupFile {
+    /// migrations：目前資料已經套用過的遷移，寫進備份檔；settings：目前的設定值（CHANGE_11 §8）
+    static func makeBackup(from context: ModelContext, migrations: [String] = DataMigrations.applied(),
+                           settings: SettingsSnapshot = .read()) throws -> BackupFile {
         let exercises = try context.fetch(FetchDescriptor<Exercise>(sortBy: [SortDescriptor(\.name)]))
         let sessions = try context.fetch(FetchDescriptor<WorkoutSession>(sortBy: [SortDescriptor(\.startedAt)]))
         let bodyWeights = try context.fetch(FetchDescriptor<BodyWeight>(sortBy: [SortDescriptor(\.date)]))
@@ -203,7 +206,8 @@ enum BackupService {
                       })
             },
             bodyWeights: bodyWeights.map { .init(date: $0.date, kg: $0.kg) },
-            migrations: migrations
+            migrations: migrations,
+            settings: settings
         )
     }
 

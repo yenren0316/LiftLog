@@ -83,7 +83,8 @@ enum DataMigrations {
             do {
                 if try migration.isNeeded(context) {
                     // 先備份，備份失敗就不改資料，下次啟動再試。備份裡記下已經套用的遷移（不含這一個）
-                    _ = try AutoBackup.write(BackupService.makeBackup(from: context, migrations: applied(migrations: migrations, defaults: defaults)),
+                    _ = try AutoBackup.write(BackupService.makeBackup(from: context, migrations: applied(migrations: migrations, defaults: defaults),
+                                                                              settings: .read(from: defaults)),
                                              migration: migration.id, date: now, folder: backupFolder)
                     _ = try migration.run(context)
                     try context.save()
@@ -108,6 +109,8 @@ enum DataMigrations {
     static func restore(_ file: BackupFile, into context: ModelContext, migrations: [Migration] = all,
                         defaults: UserDefaults = .standard, backupFolder: URL = AutoBackup.defaultFolder,
                         now: Date = .now) throws -> [String] {
+        // 設定先寫回（CHANGE_11 §8），存檔後重算統計時就用還原的「只有有氧的訓練也算」；舊檔沒有設定時不動
+        file.settings?.apply(to: defaults)
         try BackupService.restore(file, into: context)
         let done = Set(file.migrations ?? [])
         for migration in migrations {

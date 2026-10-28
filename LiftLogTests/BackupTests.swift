@@ -143,4 +143,81 @@ struct BackupTests {
         #expect(sets.allSatisfy { $0.incline != nil && $0.speed != nil && $0.minutes != nil && $0.weightKg == nil })
         #expect(sets.contains { $0.incline == 13 && $0.speed == 4 && $0.minutes == 30 })
     }
+
+    // MARK: 設定（CHANGE_11 §8）
+
+    private func makeDefaults() throws -> UserDefaults {
+        try #require(UserDefaults(suiteName: "BackupTests.\(UUID().uuidString)"))
+    }
+
+    private func makeFolder() throws -> URL {
+        let url = FileManager.default.temporaryDirectory.appending(path: "BackupTests-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }
+
+    /// 備份包含所有設定值；還原時一併還原
+    @Test func settingsRoundTrip() throws {
+        let source = try makeDefaults()
+        source.set(4, forKey: WeeklyGoal.goalKey)
+        source.set(true, forKey: WeeklyGoal.cardioOnlyCountsKey)
+        source.set(WeightUnit.lbs.rawValue, forKey: WeightUnit.storageKey)
+        source.set(5.0, forKey: RoundingSteps.barbellKgKey)
+        source.set(2.0, forKey: RoundingSteps.otherKgKey)
+        source.set(10.0, forKey: RoundingSteps.barbellLbsKey)
+        source.set(5.0, forKey: RoundingSteps.otherLbsKey)
+        source.set(false, forKey: WorkoutService.autoRestKey)
+        source.set(false, forKey: LiveActivityController.enabledKey)
+        source.set(AppTheme.graphiteBlue.rawValue, forKey: AppTheme.storageKey)
+        let context = try makeContext()
+        let data = try BackupService.makeBackup(from: context, migrations: DataMigrations.all.map(\.id),
+                                                settings: .read(from: source)).encode()
+        let json = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        #expect(json["version"] as? Int == 7)
+        #expect((json["settings"] as? [String: Any])?["weeklyGoal"] as? Int == 4)
+
+        // 還原到另一份設定（全部是預設值）
+        let target = try makeDefaults()
+        try DataMigrations.restore(BackupFile.decode(data), into: makeContext(), defaults: target, backupFolder: makeFolder())
+        #expect(SettingsSnapshot.read(from: target) == SettingsSnapshot.read(from: source))
+        #expect(target.integer(forKey: WeeklyGoal.goalKey) == 4)
+        #expect(target.bool(forKey: WeeklyGoal.cardioOnlyCountsKey))
+        #expect(target.string(forKey: WeightUnit.storageKey) == "lbs")
+        #expect(target.double(forKey: RoundingSteps.barbellKgKey) == 5)
+        #expect(target.object(forKey: WorkoutService.autoRestKey) as? Bool == false)
+        #expect(target.object(forKey: LiveActivityController.enabledKey) as? Bool == false)
+        #expect(target.string(forKey: AppTheme.storageKey) == AppTheme.graphiteBlue.rawValue)
+    }
+
+    /// 沒設定過每週目標（用自動的值）：備份裡是 nil，還原時拿掉目前的設定，回到自動
+    @Test func automaticWeeklyGoalRoundTrips() throws {
+        let source = try makeDefaults()
+        let data = try BackupService.makeBackup(from: makeContext(), migrations: DataMigrations.all.map(\.id),
+                                                settings: .read(from: source)).encode()
+        let target = try makeDefaults()
+        target.set(6, forKey: WeeklyGoal.goalKey)
+        try DataMigrations.restore(BackupFile.decode(data), into: makeContext(), defaults: target, backupFolder: makeFolder())
+        #expect(target.object(forKey: WeeklyGoal.goalKey) == nil)
+    }
+
+    /// 舊格式（version 6，沒有 settings）照樣能匯入，設定維持目前的值
+    @Test func oldBackupWithoutSettingsKeepsCurrentSettings() throws {
+        let json = """
+        {"version":6,"migrations":["assistToNegative","autoTitles"],
+         "exercises":[{"id":"\(UUID().uuidString)","name":"深蹲","category":"kneeDominant","tags":["main"],"aliases":[],
+                       "englishName":"","equipment":"barbell","logType":"weight","note":"","isArchived":false}],
+         "sessions":[],"bodyWeights":[]}
+        """
+        let file = try BackupFile.decode(Data(json.utf8))
+        #expect(file.settings == nil)
+        let target = try makeDefaults()
+        target.set(5, forKey: WeeklyGoal.goalKey)
+        target.set(WeightUnit.lbs.rawValue, forKey: WeightUnit.storageKey)
+        target.set(AppTheme.graphitePink.rawValue, forKey: AppTheme.storageKey)
+        let before = SettingsSnapshot.read(from: target)
+        let context = try makeContext()
+        try DataMigrations.restore(file, into: context, defaults: target, backupFolder: makeFolder())
+        #expect(SettingsSnapshot.read(from: target) == before)
+        #expect(try context.fetch(FetchDescriptor<Exercise>()).map(\.name) == ["深蹲"])
+    }
 }
