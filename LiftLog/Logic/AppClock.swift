@@ -11,7 +11,7 @@ nonisolated enum AppClock {
     }
 
     #if DEBUG
-    // 開發用：-fakeNow 2026-11-02T00:05:00+08:00 固定 App 的「現在」（ISO 8601，沒有時區時用裝置的時區）
+    // 開發用：-fakeNow 2026-01-05T00:05:00+08:00 固定 App 的「現在」（ISO 8601，沒有時區時用裝置的時區）
     static let fakeNow: Date? = UserDefaults.standard.string(forKey: "fakeNow").flatMap { parse($0) }
     #endif
 

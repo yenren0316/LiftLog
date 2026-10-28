@@ -369,7 +369,7 @@ def main():
     parser.add_argument("command", choices=["times", "compare"])
     parser.add_argument("--backup", default=str(FIXTURES / "real_backup.json"))
     parser.add_argument("--tz", default="Asia/Taipei", help="模擬器的時區")
-    parser.add_argument("--now", help="ISO 8601，例如 2026-11-02T00:05:00+08:00")
+    parser.add_argument("--now", help="ISO 8601，例如 2026-01-05T00:05:00+08:00")
     parser.add_argument("--app", help="App 的 -dumpStats 輸出")
     parser.add_argument("--details", action="store_true")
     args = parser.parse_args()
