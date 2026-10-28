@@ -4,7 +4,11 @@ import Foundation
 /// 即時動態的資料（CHANGE_05 第 6-2 節）。App 用 ActivityKit 直接更新，不經過 App Group。
 nonisolated struct WorkoutActivityAttributes: ActivityAttributes, Sendable {
     nonisolated struct ContentState: Codable, Hashable, Sendable {
+        /// 訓練名稱（鎖定畫面）
         var title: String
+        /// 動態島展開時左上角的日型簡稱（「DE 上肢」，CHANGE_11 §6）；沒有日型為 nil，顯示「訓練」。
+        /// 選填：舊版 App 建立的即時動態沒有這個欄位也能解碼
+        var dayTypeTitle: String?
         var startedAt: Date
         /// 目前的組：依動作順序，第一個還沒打勾的組；全部打勾時這幾個欄位為 nil
         var exerciseName: String?
@@ -25,6 +29,13 @@ nonisolated struct WorkoutActivityAttributes: ActivityAttributes, Sendable {
         var restEndDate: Date?
 
         var hasCurrentSet: Bool { exerciseName != nil }
+
+        /// 動態島展開時左上角：日型簡稱，沒有日型時「訓練」（不顯示完整的訓練名稱）
+        var islandTitle: String { dayTypeTitle ?? Self.islandTitle(dayType: nil) }
+
+        static func islandTitle(dayType: DayType?) -> String {
+            dayType?.title ?? "訓練"
+        }
 
         /// 「第 2／5 組」
         var setText: String { "第 \(setNumber)／\(setCount) 組" }

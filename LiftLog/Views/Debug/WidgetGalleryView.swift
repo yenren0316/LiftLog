@@ -137,12 +137,12 @@ struct WidgetGalleryView: View {
             .environment(\.colorScheme, .dark)
     }
 
-    /// 和 WorkoutLiveActivity 的展開區域一樣：左右是名稱和經過時間，下面是第 2～4 列
+    /// 和 WorkoutLiveActivity 的展開區域一樣：左右是日型簡稱和經過時間，下面是第 2～4 列
     private func expanded(_ state: WorkoutActivityState) -> some View {
         MeasuredHeight(limit: 160) {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(alignment: .firstTextBaseline) {
-                    Text(state.title)
+                    Text(state.islandTitle)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -210,7 +210,8 @@ struct WidgetGalleryView: View {
         let now = Date.now
         return WorkoutActivityState(
             // 經過 1:05:30（超過 1 小時，CHANGE_10 §0-4 的 V6）
-            title: "下肢速度與爆發・坐姿分腿壺鈴三點搬移", startedAt: now.addingTimeInterval(-(3600 + 5 * 60 + 30)),
+            title: "下肢速度與爆發・坐姿分腿壺鈴三點搬移", dayTypeTitle: DayType.deLower.title,
+            startedAt: now.addingTimeInterval(-(3600 + 5 * 60 + 30)),
             exerciseName: "坐姿分腿壺鈴三點搬移", roleTitle: "核心", roleSymbol: Role.core.symbol,
             setNumber: 2, setCount: 6, target: "60 kg × 5", canComplete: true,
             completedSets: 6, totalSets: 15,

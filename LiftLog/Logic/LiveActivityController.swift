@@ -8,6 +8,7 @@ extension WorkoutActivityAttributes.ContentState {
         let items = session.orderedItems.filter { $0.exercise != nil }
         var state = Self(
             title: session.title.isEmpty ? "訓練中" : session.title,
+            dayTypeTitle: session.dayType.map { Self.islandTitle(dayType: $0) },
             startedAt: session.startedAt,
             setNumber: 0, setCount: 0, canComplete: false,
             completedSets: items.reduce(0) { $0 + $1.sets.filter(\.isCompleted).count },

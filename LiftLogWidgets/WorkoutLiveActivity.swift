@@ -15,7 +15,8 @@ struct WorkoutLiveActivity: Widget {
                 // 展開的高度有限（約 160 pt）：和鎖定畫面一樣的資訊層級。第 1 列放在左右區域（名稱、經過時間），
                 // 下面是第 2～4 列，倒數小一點；字級最大到 large，文字一律一行
                 DynamicIslandExpandedRegion(.leading) {
-                    Text(context.state.title)
+                    // 日型簡稱（「DE 上肢」）；完整的訓練名稱只在鎖定畫面（CHANGE_11 §6）
+                    Text(context.state.islandTitle)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)

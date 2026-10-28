@@ -189,14 +189,21 @@ struct RootView: View {
             let index = UserDefaults.standard.integer(forKey: "startTab")
             if AppTab.allCases.indices.contains(index) { coordinator.tab = AppTab.allCases[index] }
             // 開發用：啟動參數 -demoWorkout YES 開一個示範訓練；-demoWorkoutElapsed 3930 把開始時間往前推（即時動態的經過時間）；
-            // -demoWorkoutRoles dynamicEffort,pull,cardio 指定三個動作的角色（臥推當 DE 主項，截建議重量用）
+            // -demoWorkoutRoles dynamicEffort,pull,cardio 指定三個動作的角色（臥推當 DE 主項，截建議重量用）；
+            // -demoWorkoutDayType deUpper 指定日型、-demoWorkoutTitle <名稱> 用自訂的名稱（動態島的日型簡稱，CHANGE_11 V3）
             if UserDefaults.standard.bool(forKey: "demoWorkout"), active.isEmpty {
                 let names = ["臥推", "輔助引體向上", "跑步機"]
                 let all = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
                 let roles = UserDefaults.standard.string(forKey: "demoWorkoutRoles")?
                     .split(separator: ",").compactMap { Role(rawValue: String($0)) }
+                let dayType = UserDefaults.standard.string(forKey: "demoWorkoutDayType").flatMap(DayType.init(rawValue:))
                 let session = launcher.start(.init(exercises: names.compactMap { n in all.first { $0.name == n } },
-                                                   roles: roles?.count == names.count ? roles : nil), context: context)
+                                                   roles: roles?.count == names.count ? roles : nil, dayType: dayType), context: context)
+                if let session, let title = UserDefaults.standard.string(forKey: "demoWorkoutTitle") {
+                    session.title = title
+                    session.isTitleCustom = true
+                    WorkoutActions.save(context)
+                }
                 let elapsed = UserDefaults.standard.double(forKey: "demoWorkoutElapsed")
                 if let session, elapsed > 0 {
                     session.startedAt = .now.addingTimeInterval(-elapsed)
