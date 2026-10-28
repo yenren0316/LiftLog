@@ -49,7 +49,6 @@ struct LibraryView: View {
             }
             .listSectionSpacing(12)
             .scrollContentBackground(.hidden)
-            .hidesTabBarOnScroll("library")
             #if DEBUG
             .debugScrollToBottom("動作庫", "library", last: "archived")
             #endif
@@ -137,7 +136,6 @@ struct CategoryExerciseList: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .hidesTabBarOnScroll("library.category")
         #if DEBUG
         // 開發用：-libraryCategory core -scrollToBottom 分類 捲到分類清單的最底部（CHANGE_08 V1）
         .debugScrollToBottom("分類", "category", last: sorted.last?.id)
@@ -226,7 +224,6 @@ struct ArchivedExerciseList: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .hidesTabBarOnScroll("library.archived")
         .screenBackground()
         .navigationTitle("已封存")
         .navigationBarTitleDisplayMode(.inline)

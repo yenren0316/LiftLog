@@ -21,8 +21,7 @@ final class StatsScrollUITests: XCTestCase {
         let title = app.staticTexts["訓練頻率"].firstMatch
         let before = title.frame.minY
         let y = anchor.frame.midY + dy
-        let tab = app.buttons["歷程"].firstMatch
-        let info = "start y=\(Int(y)) title y=\(Int(before)) tab=\(tab.exists ? "\(tab.isHittable) \(tab.frame)" : "none")"
+        let info = "start y=\(Int(y)) title y=\(Int(before))"
         let start = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: app.frame.midX, dy: y))
         start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: distance)),
                     withVelocity: .default, thenHoldForDuration: 0.2)
@@ -73,21 +72,5 @@ final class StatsScrollUITests: XCTestCase {
                                   withVelocity: .slow, thenHoldForDuration: 0.3)
         try await Task.sleep(for: .seconds(1))
         XCTAssertEqual(title.frame.minY, before, accuracy: 1, "按住拖曳時畫面不該捲動")
-    }
-
-    /// 隱藏的分頁列不攔截點擊：點原本「今天」分頁按鈕的位置，還是留在歷程
-    func testHiddenTabBarDoesNotInterceptTaps() async throws {
-        app.terminate()
-        app.launchArguments = ["-demoData", "YES", "-startTab", "1", "-historySegment", "stats"]
-        app.launch()
-        let today = app.buttons["今天"].firstMatch
-        XCTAssertTrue(today.waitForExistence(timeout: 15))
-        let spot = today.frame
-        app.swipeUp(velocity: .slow)
-        try await Task.sleep(for: .seconds(1.5))
-        XCTAssertFalse(today.isHittable, "往下捲之後分頁列應該收起")
-        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: spot.midX, dy: spot.midY)).tap()
-        try await Task.sleep(for: .seconds(1))
-        XCTAssertTrue(app.staticTexts["訓練頻率"].exists, "點到隱藏的分頁列，離開了歷程")
     }
 }

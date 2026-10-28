@@ -95,18 +95,18 @@ struct RootView: View {
         TabView(selection: $coordinator.tab) {
             ForEach(AppTab.allCases, id: \.self) { tab in
                 Tab(tab.title, systemImage: tab.systemImage, value: tab) {
-                    Group {
-                        switch tab {
-                        case .today: TodayView()
-                        case .history: HistoryView()
-                        case .library: LibraryView()
-                        case .settings: SettingsView()
-                        }
+                    switch tab {
+                    case .today: TodayView()
+                    case .history: HistoryView()
+                    case .library: LibraryView()
+                    case .settings: SettingsView()
                     }
-                    .workoutMiniBar()
                 }
             }
         }
+        // 分頁列交給系統（CHANGE_11 §1）：往下捲縮小、往上捲恢復；「訓練中」橫條放在系統的附屬列
+        .tabBarMinimizeBehavior(.onScrollDown)
+        .workoutMiniBar(active.first)
         .environment(coordinator)
         .environment(launcher)
         .environment(restTimer)

@@ -42,7 +42,6 @@ struct SettingsView: View {
                 }
             }
             .scrollContentBackground(.hidden)
-            .hidesTabBarOnScroll("settings")
             .screenBackground()
             .navigationTitle("設定")
             .navigationDestination(for: Page.self) { page in
@@ -77,7 +76,6 @@ private struct SettingsPage<Content: View>: View {
             VStack(alignment: .leading, spacing: 16) { content }
                 .padding(16)
         }
-        .hidesTabBarOnScroll("settings.page")
         .screenBackground()
     }
 }

@@ -23,7 +23,6 @@ struct HistoryStatsView: View {
                 .padding(.horizontal, 16)
                 .padding(.bottom, 16)
             }
-            .hidesTabBarOnScroll("history.stats")
             #if DEBUG
             .debugScrollToBottom("統計", "stats", last: "balance")
             // 開發用：-statsScrollTo cardio 捲到那張卡（截圖用）

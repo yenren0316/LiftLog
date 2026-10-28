@@ -61,61 +61,58 @@ final class WorkoutCoordinator {
     }
 }
 
-/// 分頁列上方的「訓練中 0:42」橫條，點一下展開
+/// 「訓練中 0:42」橫條，放在系統的分頁列附屬列（`tabViewBottomAccessory`，CHANGE_11 §1）裡，點一下展開。
+/// 外框、背景和位置都交給系統：分頁列展開時在分頁列上方（expanded），縮小時和分頁列同一列（inline）
 struct WorkoutMiniBar: View {
     let session: WorkoutSession
     @Environment(WorkoutCoordinator.self) private var coordinator
+    @Environment(\.tabViewBottomAccessoryPlacement) private var placement
 
     var body: some View {
         Button { coordinator.isExpanded = true } label: {
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
                 Image(systemName: "figure.strengthtraining.traditional")
-                    .font(.title3)
                     .foregroundStyle(Theme.accent)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(session.title.isEmpty ? "訓練中" : session.title)
+                if placement == .inline {
+                    // 和縮小的分頁列同一列，空間只夠一行
+                    ElapsedTimeText(since: session.startedAt, prefix: "訓練中 ")
                         .font(.subheadline.weight(.semibold))
                         .lineLimit(1)
-                    ElapsedTimeText(since: session.startedAt, prefix: "訓練中 ")
-                        .font(.caption)
-                        .foregroundStyle(Theme.textSecondary)
+                } else {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(session.title.isEmpty ? "訓練中" : session.title)
+                            .font(.subheadline.weight(.semibold))
+                            .lineLimit(1)
+                        ElapsedTimeText(since: session.startedAt, prefix: "訓練中 ")
+                            .font(.caption)
+                            .foregroundStyle(Theme.textSecondary)
+                    }
                 }
-                Spacer()
+                Spacer(minLength: 0)
                 Image(systemName: "chevron.up").foregroundStyle(Theme.textSecondary)
             }
-            .padding(.horizontal, 18)
-            .frame(height: Metrics.controlHeight)
-            .background(Theme.card, in: .capsule)
-            .overlay(Capsule().stroke(Theme.accent.opacity(0.5)))
             .padding(.horizontal, 16)
-            .padding(.bottom, 4)
+            .frame(maxHeight: .infinity)
+            .contentShape(.rect)
         }
         .buttonStyle(.pressable)
-    }
-}
-
-/// 有進行中的訓練、而且沒有展開成全螢幕時，在底部放縮小橫條；同時告訴裡面的捲動畫面橫條的上緣（底部留白用）
-private struct WorkoutMiniBarModifier: ViewModifier {
-    @Environment(WorkoutCoordinator.self) private var coordinator
-    @Query(filter: #Predicate<WorkoutSession> { $0.endedAt == nil }) private var active: [WorkoutSession]
-    @State private var barTop: CGFloat?
-
-    func body(content: Content) -> some View {
-        let session = coordinator.isExpanded ? nil : active.first
-        content
-            .environment(\.workoutMiniBarTop, session == nil ? nil : barTop)
-            .safeAreaInset(edge: .bottom) {
-                if let session {
-                    WorkoutMiniBar(session: session)
-                        .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { barTop = $0 }
-                }
-            }
+        .accessibilityIdentifier("workoutMiniBar")
     }
 }
 
 extension View {
-    /// 每個分頁底部都放縮小橫條（位在分頁列上方）
-    func workoutMiniBar() -> some View {
-        modifier(WorkoutMiniBarModifier())
+    /// 有進行中的訓練時，在分頁列的附屬列放「訓練中」橫條；沒有時用系統的 isEnabled 隱藏附屬列（iOS 26.1 起）
+    @ViewBuilder
+    func workoutMiniBar(_ session: WorkoutSession?) -> some View {
+        if #available(iOS 26.1, *) {
+            tabViewBottomAccessory(isEnabled: session != nil) {
+                if let session { WorkoutMiniBar(session: session) }
+            }
+        } else if let session {
+            // iOS 26.0 沒有 isEnabled：只在有訓練時加上附屬列
+            tabViewBottomAccessory { WorkoutMiniBar(session: session) }
+        } else {
+            self
+        }
     }
 }

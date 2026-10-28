@@ -5,3 +5,6 @@ build/
 *.xcuserstate
 
 __pycache__/
+
+# 真實資料（CHANGE_11），不能 commit
+tools/fixtures/

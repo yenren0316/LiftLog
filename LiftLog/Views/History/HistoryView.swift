@@ -115,7 +115,6 @@ private struct HistoryRecordsList: View {
         }
         .listSectionSpacing(12)
         .scrollContentBackground(.hidden)
-        .hidesTabBarOnScroll("history.records")
         #if DEBUG
         .debugScrollToBottom("紀錄", "records", last: months.last?.sessions.last?.id)
         #endif
@@ -240,8 +239,7 @@ struct DebugScrollToBottom: ViewModifier {
             content.task {
                 guard let raw = UserDefaults.standard.string(forKey: "scrollToBottom"), names.contains(raw), let last else { return }
                 try? await Task.sleep(for: .milliseconds(800))
-                TabBarAutoHideLog.note("scrollToBottom \(raw) -> \(last)")
-                // 先用動畫捲（捲動中才會觸發分頁列的切換）；List 的動畫捲動到很遠的列會沒有反應，之後再直接跳一次
+                // 先用動畫捲；List 的動畫捲動到很遠的列會沒有反應，之後再直接跳一次
                 withAnimation(.easeInOut(duration: 1.2)) { proxy.scrollTo(last, anchor: .bottom) }
                 try? await Task.sleep(for: .milliseconds(1400))
                 proxy.scrollTo(last, anchor: .bottom)
