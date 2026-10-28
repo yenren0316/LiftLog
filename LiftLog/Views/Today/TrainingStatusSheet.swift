@@ -3,7 +3,7 @@ import SwiftData
 import UIKit
 
 /// 「訓練狀態」浮窗（CHANGE_10 §3）：點今天的日曆卡打開。高度等於內容的高度（CHANGE_11 §7，拿掉半高）：
-/// 量捲動內容的高度加上標題列和底部的安全區域，打開就看得到全部；超過螢幕（例如系統字級很大）時用全高，內容可以捲動。
+/// 量捲動內容的高度加上標題列，打開就看得到全部；超過螢幕（例如系統字級很大）時用全高，內容可以捲動。
 /// 本週三行；輪替狀態四列（ME 下肢、ME 上肢、DE 下肢、DE 上肢）。數字都從 StatsCache 讀（TrainingStatus）
 struct TrainingStatusSheet: View {
     @Environment(\.modelContext) private var context
@@ -26,9 +26,9 @@ struct TrainingStatusSheet: View {
                 }
                 .padding(16)
             }
-            // 捲動內容＋上下的 inset（標題列、Home 指示條）就是浮窗需要的高度
+            // 捲動內容＋上面的 inset（標題列）就是浮窗需要的高度；底部的安全區域（Home 指示條）系統的高度另外加
             .onScrollGeometryChange(for: CGFloat.self) { geometry in
-                (geometry.contentSize.height + geometry.contentInsets.top + geometry.contentInsets.bottom).rounded(.up)
+                (geometry.contentSize.height + geometry.contentInsets.top).rounded(.up)
             } action: { _, height in
                 contentHeight = height
             }
