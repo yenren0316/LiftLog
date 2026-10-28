@@ -111,6 +111,8 @@ private struct RecentSetsCard: View {
             }
         }
         .card(padding: 16)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("recentSetsCard")
     }
 
     /// 0 組紅色、未滿 10 組黃色、10 組以上綠色
