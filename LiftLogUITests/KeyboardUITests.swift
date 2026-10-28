@@ -96,7 +96,8 @@ final class KeyboardUITests: XCTestCase {
     func testWorkoutBlankAreasDismiss() async throws {
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchWithoutActiveWorkout(["-demoData", "YES", "-demoWorkout", "YES"])
+        // 臥推當 DE 主項：kg 欄灰字預填建議重量
+        app.launchWithoutActiveWorkout(["-demoData", "YES", "-demoWorkout", "YES", "-demoWorkoutRoles", "dynamicEffort,pull,cardio"])
         XCTAssertTrue(app.buttons["縮小"].waitForExistence(timeout: 15))
         try await Task.sleep(for: .seconds(1.5))
         let first = app.textFields["臥推-1-weight"].firstMatch
@@ -117,6 +118,20 @@ final class KeyboardUITests: XCTestCase {
             let hidden = await waitForKeyboard(false, timeout: 4)
             if !hidden { attachScreenshot("blank_\(name)") }
             XCTAssertTrue(hidden, "點\(name)要收起鍵盤")
+        }
+        // V4：kg 欄、次數欄的鍵盤上方沒有鍵盤列（iOS 26 會畫成浮在鍵盤上方的膠囊），也沒有候選列（§4-2 拿掉）
+        for (id, name) in [("臥推-1-weight", "kg"), ("臥推-1-reps", "reps")] {
+            var shown = false
+            for _ in 0..<2 where !shown {
+                app.textFields[id].firstMatch.tap()
+                shown = await waitForKeyboard(true, timeout: 4)
+            }
+            XCTAssertTrue(shown, "\(name)：要打開鍵盤")
+            try await Task.sleep(for: .seconds(0.8))
+            attachScreenshot("V4_\(name)_keyboard")
+            XCTAssertFalse(app.buttons["下一格"].exists || app.buttons["+2.5"].exists, "\(name)：不該有鍵盤列")
+            XCTAssertFalse(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'candidate-'")).firstMatch.exists,
+                           "\(name)：不該有候選列")
         }
         // 組與組之間：第 1 組和第 2 組中間的空隙，靠左（組號的左邊）
         await tapAndExpectHidden("組與組之間") {

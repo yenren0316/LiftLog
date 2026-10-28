@@ -41,8 +41,7 @@ struct WorkoutEditor<Header: View, Footer: View>: View {
     @Environment(\.modelContext) private var context
     @AppStorage(WeightUnit.storageKey) private var unit: WeightUnit = .kg
     @State private var drafts = SetDrafts()
-    /// 正在輸入的欄位（SetNumberField 是 UIKit 的輸入框，焦點自己管，不用 FocusState）
-    @State private var focus: FieldID?
+    @FocusState private var focus: FieldID?
 
     @State private var addingExercise = false
     @State private var replacing: SessionExercise?
@@ -159,7 +158,6 @@ struct WorkoutEditor<Header: View, Footer: View>: View {
     private func exerciseSection(_ item: SessionExercise, exercise: Exercise) -> some View {
         let rows = rowInfos(item)
         let logType = exercise.logType
-        let advice = item.advice(unit: unit)
         Section {
             HStack {
                 Button { detailExercise = exercise } label: {
@@ -175,7 +173,7 @@ struct WorkoutEditor<Header: View, Footer: View>: View {
             }
             .id(item.id)
 
-            AdviceLine(advice: advice)
+            AdviceLine(advice: item.advice(unit: unit))
 
             if !item.note.isEmpty {
                 Text(item.note).font(.subheadline).foregroundStyle(Theme.textSecondary)
@@ -196,8 +194,6 @@ struct WorkoutEditor<Header: View, Footer: View>: View {
                     text: { binding(row.set, $0) },
                     focus: $focus,
                     allowsNegative: SetLogic.allowsNegativeLoad(logType: logType, equipment: exercise.equipment),
-                    candidates: { candidates(row, $0, item: item, exercise: exercise, advice: advice) },
-                    onPick: { field, value in pick(value, field: field, set: row.set) },
                     fieldIdentifier: "\(exercise.name)-\(row.number)",
                     onToggle: { toggle(row, item: item, exercise: exercise) },
                     onKind: { kind in
@@ -350,48 +346,6 @@ struct WorkoutEditor<Header: View, Footer: View>: View {
 
     private func clearDrafts(_ item: SessionExercise) {
         item.sets.forEach(clearDrafts)
-    }
-
-    // MARK: - 候選列與下一格
-
-    /// 鍵盤上緣的候選列（CHANGE_11 §4-2）：kg 欄以目前的值（沒有就用灰字預填）為中心、包含建議重量；
-    /// 次數欄以處方次數為中心；其他欄位沒有候選列
-    private func candidates(_ row: SetRowInfo, _ field: SetField, item: SessionExercise, exercise: Exercise,
-                            advice: SlotAdvice) -> [SetCandidates.Candidate] {
-        switch field {
-        case .weight:
-            func display(_ kg: Double?) -> Double? { kg.map { unit.displayRounded(unit.fromKg($0)) } }
-            return SetCandidates.weight(current: display(row.set.weightKg), placeholder: display(row.placeholder?.weightKg),
-                                        suggested: display(advice.speedWeightKg),
-                                        step: RoundingSteps.step(equipment: exercise.equipment, unit: unit),
-                                        allowsNegative: SetLogic.allowsNegativeLoad(logType: exercise.logType, equipment: exercise.equipment))
-        case .reps:
-            return SetCandidates.reps(prescribed: advice.prescription.reps)
-        case .seconds, .incline, .speed, .minutes:
-            return []
-        }
-    }
-
-    /// 點候選：填入這一格，跳到下一格（最後一格填完就收起鍵盤）
-    private func pick(_ value: Double, field: SetField, set: SetRecord) {
-        let id = FieldID(set: set.id, field: field)
-        let text = Units.number(value)
-        drafts.texts[id] = text
-        Self.write(text, to: set, field, unit: unit)
-        WorkoutActions.save(context)
-        focusNext()
-    }
-
-    private func focusNext() {
-        let order = session.orderedItems.flatMap { item -> [FieldID] in
-            let fields = SetField.fields(for: item.exercise?.logType ?? .weight)
-            return item.orderedSets.filter { !$0.isCompleted }.flatMap { set in fields.map { FieldID(set: set.id, field: $0) } }
-        }
-        guard let current = focus, let index = order.firstIndex(of: current), index + 1 < order.count else {
-            focus = nil
-            return
-        }
-        focus = order[index + 1]
     }
 
     private func isPresented<T>(_ binding: Binding<T?>) -> Binding<Bool> {
