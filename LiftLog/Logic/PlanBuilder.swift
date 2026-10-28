@@ -376,27 +376,7 @@ nonisolated struct Rotation {
     }
 }
 
-// MARK: - ME 紀錄與建議重量
-
-nonisolated enum MaxEffortRecords {
-    struct Record: Equatable, Sendable {
-        var date: Date
-        var weightKg: Double
-        var reps: Int
-        /// Epley 估算 1RM
-        var estimated1RM: Double { PersonalRecords.epley(weight: weightKg, reps: reps) }
-    }
-
-    /// 每次 ME 訓練一筆（角色為 ME 主項，重量最重的成功組），由新到舊
-    static func records(_ logs: [ExerciseLog]) -> [Record] {
-        logs.filter { $0.role == .maxEffort }.sorted { $0.date > $1.date }.compactMap { log in
-            let success = log.sets.filter { $0.isCompleted && $0.kind != .warmup && $0.weightKg != nil && ($0.reps ?? 0) >= 1 }
-            guard let best = success.max(by: { ($0.weightKg!, $0.reps!) < ($1.weightKg!, $1.reps!) }) else { return nil }
-            return Record(date: log.date, weightKg: best.weightKg!, reps: best.reps!)
-        }
-    }
-
-}
+// MARK: - 建議重量
 
 /// 某一格選定動作的建議：重量、參數、提示（建立菜單第三步和訓練中畫面共用）
 nonisolated struct SlotAdvice: Equatable, Sendable {

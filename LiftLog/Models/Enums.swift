@@ -84,15 +84,6 @@ nonisolated enum Equipment: String, Codable, CaseIterable, Identifiable {
         case .other: "其他"
         }
     }
-
-    /// 重量欄位旁的提示，提醒記錄時的慣例
-    var weightHint: String? {
-        switch self {
-        case .dumbbell, .kettlebell: "單手"
-        case .machine: "單邊"
-        default: nil
-        }
-    }
 }
 
 nonisolated enum LogType: String, Codable, CaseIterable, Identifiable {

@@ -40,9 +40,9 @@ nonisolated struct StatsSnapshot: Sendable {
 
     /// 主項的估算 1RM 趨勢
     struct MainLiftTrend: Sendable, Equatable {
-        /// 最近 90 天的估算 1RM（最大值）
+        /// 估算 1RM（近 90 天最好的一次）；90 天內沒有紀錄為 nil（卡片不列）
         var current: Double?
-        /// 4 週前那天往前 90 天的估算 1RM，用來比較
+        /// 4 週前那時候的估算 1RM（同一個函式，90 天內沒有就取全期），用來比較
         var fourWeeksAgo: Double?
         /// 近 12 週每週最好的估算 1RM，由舊到新；那週沒練為 nil
         var weekly: [Double?] = []
@@ -170,9 +170,15 @@ nonisolated struct StatsSnapshot: Sendable {
         snapshot.trainingStatus = TrainingStatus.make(history: history, exercises: planExercises, countedDays: snapshot.countedDays,
                                                       nextDayType: snapshot.nextPlan.dayType, now: now, calendar: calendar)
 
-        // 主項：最近 90 天的估算 1RM、4 週前的、近 12 週每週最好的
+        // 主項：估算 1RM（全 App 只有這一種，CHANGE_11 §3：PersonalRecords.estimated1RM，強度換算表和 DE 建議重量同一個）、
+        // 4 週前那時候的估算 1RM、近 12 週每週最好的
+        let fourWeeksAgo = calendar.date(byAdding: .day, value: -28, to: now) ?? now
         for exercise in exercises where exercise.has(.main) && !exercise.isArchived {
-            let points = history.logs(for: exercise.id).flatMap { log in
+            let logs = history.logs(for: exercise.id)
+            let sessions = logs.map { SessionSets(sessionID: UUID(), date: $0.date, sets: $0.sets) }
+            let current = PersonalRecords.estimated1RM(sessions.filter { $0.date <= now }, now: now, calendar: calendar)
+            let before = PersonalRecords.estimated1RM(sessions.filter { $0.date < fourWeeksAgo }, now: fourWeeksAgo, calendar: calendar)
+            let points = logs.flatMap { log in
                 log.sets.filter(PersonalRecords.countsForEstimate).map {
                     (date: log.date, value: PersonalRecords.epley(weight: $0.weightKg!, reps: $0.reps!))
                 }
@@ -180,12 +186,10 @@ nonisolated struct StatsSnapshot: Sendable {
             func best(from start: Date, to end: Date) -> Double? {
                 points.filter { $0.date >= start && $0.date < end }.map(\.value).filter { $0 > 0 }.max()
             }
-            let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) ?? now
-            let fourWeeks = calendar.date(byAdding: .day, value: -28, to: tomorrow) ?? now
-            func ninetyDaysBefore(_ end: Date) -> Date { calendar.date(byAdding: .day, value: -90, to: end) ?? end }
             snapshot.mainLifts[exercise.id] = MainLiftTrend(
-                current: best(from: ninetyDaysBefore(tomorrow), to: tomorrow),
-                fourWeeksAgo: best(from: ninetyDaysBefore(fourWeeks), to: fourWeeks),
+                // 卡片只列 90 天內有紀錄的主項：90 天內沒有時（估算 1RM 取全期）不列
+                current: current.flatMap { $0.isAllTime ? nil : $0.record.value },
+                fourWeeksAgo: before?.record.value,
                 weekly: weeks.map { best(from: $0.start, to: $0.end) }
             )
         }

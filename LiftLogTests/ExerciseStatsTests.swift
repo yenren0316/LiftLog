@@ -111,10 +111,6 @@ struct ExerciseStatsTests {
         #expect(IntensityTable.rounded(157, step: 5) == 155)
         #expect(IntensityTable.rounded(158, step: 5) == 160)
         #expect(IntensityTable.rounded(18.4, step: 1) == 18)
-        #expect(IntensityTable.defaultStep(equipment: .barbell, unit: .kg) == 2.5)
-        #expect(IntensityTable.defaultStep(equipment: .barbell, unit: .lbs) == 5)
-        #expect(IntensityTable.defaultStep(equipment: .dumbbell, unit: .kg) == 1)
-        #expect(IntensityTable.defaultStep(equipment: .dumbbell, unit: .lbs) == 2.5)
     }
 
     @Test func tableRowsInUnitWithPurposes() {

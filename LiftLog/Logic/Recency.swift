@@ -47,25 +47,6 @@ nonisolated enum Recency {
         }
     }
 
-    /// 最近 `days` 天內，每個 key（分類、tag）有訓練的天數；同一天同 key 只算一次
-    static func trainingDays<Key: Hashable>(
-        _ records: [(date: Date, key: Key)],
-        now: Date = .now,
-        days: Int = 30,
-        calendar: Calendar = .current
-    ) -> [Key: Int] {
-        let today = calendar.startOfDay(for: now)
-        guard let start = calendar.date(byAdding: .day, value: -(days - 1), to: today),
-              let end = calendar.date(byAdding: .day, value: 1, to: today)
-        else { return [:] }
-
-        var seen: [Key: Set<Date>] = [:]
-        for r in records where r.date >= start && r.date < end {
-            seen[r.key, default: []].insert(calendar.startOfDay(for: r.date))
-        }
-        return seen.mapValues(\.count)
-    }
-
     /// 依分類順序分區，沒有動作的分類不出現；每區內最久沒做的排前面
     static func sections<T>(
         _ items: [T],

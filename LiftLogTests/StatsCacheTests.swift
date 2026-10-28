@@ -77,4 +77,46 @@ struct StatsCacheTests {
         let weekly = trend?.weekly ?? []
         #expect(weekly.count == 12 && weekly.compactMap { $0 }.map { $0.rounded() } == [99, 110])
     }
+
+    /// CHANGE_11 §3：全 App 只有一種 1RM。主項進步卡、強度換算表的基準、DE 建議重量都是 PersonalRecords.estimated1RM
+    /// （1～10 下的正式組和 MAX 組、不分角色、近 90 天最好的一次，沒有就取全期）
+    @Test func oneEstimated1RMEverywhere() throws {
+        let now = date(10, 26, 9)
+        let deadlift = UUID()
+        func set(_ kg: Double, _ reps: Int, _ kind: SetKind = .normal) -> SetValues {
+            SetValues(kind: kind, weightKg: kg, reps: reps, isCompleted: true)
+        }
+        func item(_ id: UUID, _ role: Role, _ sets: [SetValues]) -> PlanHistory.Item {
+            PlanHistory.Item(exerciseID: id, category: id == bench ? .horizontalPush : .hipDominant, role: role, sets: sets)
+        }
+        let history = PlanHistory([
+            // 熱身和 12 下的組不算；MAX 組算；角色不影響
+            PlanHistory.Session(date: date(10, 20), items: [item(bench, .push, [set(120, 3, .warmup), set(95, 12), set(90, 2, .max)])]),
+            PlanHistory.Session(date: date(9, 1), items: [item(bench, .maxEffort, [set(85, 3)])]),
+            // 硬舉只有 90 天以前的紀錄
+            PlanHistory.Session(date: date(5, 1), items: [item(deadlift, .main, [set(140, 3)])]),
+        ])
+        let exercises = [PlanExercise(id: bench, name: "臥推", category: .horizontalPush, tags: [.main], meRotation: 1, equipment: .barbell),
+                         PlanExercise(id: deadlift, name: "傳統硬舉", category: .hipDominant, tags: [.main], meRotation: 2, equipment: .barbell)]
+        let snapshot = StatsSnapshot.make(history: history, exercises: exercises, now: now, calendar: calendar)
+        func sessions(_ id: UUID) -> [SessionSets] {
+            history.logs(for: id).map { SessionSets(sessionID: UUID(), date: $0.date, sets: $0.sets) }
+        }
+
+        // 臥推：90 × (1 + 2/30) = 96
+        let benchMax = try #require(PersonalRecords.estimated1RM(sessions(bench), now: now, calendar: calendar))
+        #expect(abs(benchMax.record.value - 96) < 0.001 && !benchMax.isAllTime)
+        #expect(snapshot.mainLifts[bench]?.current == benchMax.record.value)
+        #expect(IntensityTable.estimatedBase1RMKg(sessions(bench), now: now) == benchMax.record.value)
+        let advice = SlotAdvice.make(role: .dynamicEffort, exercise: exercises[0], logs: history.logs(for: bench),
+                                     unit: .kg, step: 2.5, now: now)
+        #expect(advice.speedWeightKg == IntensityTable.weightKg(percent: 60, base1RMKg: 96, unit: .kg, step: 2.5))
+        #expect(advice.speedWeightKg == 57.5)
+
+        // 硬舉：90 天內沒有 → 估算 1RM 取全期（換算表、DE 建議照樣有），主項進步卡不列
+        let deadliftMax = try #require(PersonalRecords.estimated1RM(sessions(deadlift), now: now, calendar: calendar))
+        #expect(deadliftMax.isAllTime && abs(deadliftMax.record.value - 154) < 0.001)
+        #expect(snapshot.mainLifts[deadlift]?.current == nil)
+        #expect(IntensityTable.estimatedBase1RMKg(sessions(deadlift), now: now) == deadliftMax.record.value)
+    }
 }

@@ -283,39 +283,4 @@ struct PlanTests {
         #expect(PlanRanking.lastPullDirection(history) == .horizontalPull)
         #expect(PlanRanking.lastPullDirection(PlanHistory([])) == nil)
     }
-
-    // MARK: ME 紀錄與首頁統計
-
-    @Test func maxEffortRecordsUseOnlyMERoleAndHeaviestSuccessfulSet() {
-        let logs = [
-            ExerciseLog(date: day(1), role: .dynamicEffort, sets: [SetValues(weightKg: 65, reps: 2, isCompleted: true)]),
-            ExerciseLog(date: day(8), role: .maxEffort, sets: [SetValues(weightKg: 100, reps: 3, isCompleted: true),
-                                                              SetValues(weightKg: 100, reps: 2, isCompleted: true)]),
-            ExerciseLog(date: day(20), role: .maxEffort, sets: [SetValues(weightKg: 95, reps: 3, isCompleted: true)]),
-            ExerciseLog(date: day(30), role: .main, sets: [SetValues(weightKg: 120, reps: 1, isCompleted: true)]),
-        ]
-        let records = MaxEffortRecords.records(logs)
-        #expect(records.map(\.weightKg) == [100, 95])
-        #expect(records[0].reps == 3 && abs(records[0].estimated1RM - 110) < 0.001)
-        let summary = MainLiftSummary(logs: logs)
-        #expect(summary.latest == records[0])
-        #expect(abs(summary.change! - (110 - 104.5)) < 0.001)
-        #expect(MainLiftSummary(logs: []).latest == nil)
-        #expect(MainLiftSummary(logs: Array(logs.prefix(2))).change == nil)
-    }
-
-    @Test func recentVolumeCountsSetsAndPushPull() {
-        let done = SetValues(weightKg: 40, reps: 10, isCompleted: true)
-        let warmup = SetValues(kind: .warmup, weightKg: 20, reps: 10, isCompleted: true)
-        let history = PlanHistory([
-            session(2, .meUpper, [item("臥推", .maxEffort, sets: [warmup, done, done, done]),
-                                  item("肩推", .push, sets: [done, done]),
-                                  item("滑輪下拉", .pull, sets: [done, done, done])]),
-            session(40, .meUpper, [item("坐姿 Cable 划船", .pull, sets: [done, done, done, done, done])]),
-        ])
-        let volume = RecentVolume(history: history, now: now)
-        #expect(volume[.horizontalPush] == 3 && volume[.verticalPush] == 2 && volume[.verticalPull] == 3)
-        #expect(volume[.horizontalPull] == 0)  // 超過 30 天不算
-        #expect(volume.push == 5 && volume.pull == 3 && volume.pullIsShort)
-    }
 }

@@ -249,16 +249,6 @@ nonisolated enum IntensityTable {
         return list
     }
 
-    /// 預設進位：槓鈴 2.5 kg／5 lb，其他 1 kg／2.5 lb
-    static func defaultStep(equipment: Equipment, unit: WeightUnit) -> Double {
-        switch (equipment == .barbell, unit) {
-        case (true, .kg): 2.5
-        case (true, .lbs): 5
-        case (false, .kg): 1
-        case (false, .lbs): 2.5
-        }
-    }
-
     /// 進位到最接近、實際掛得出來的重量
     static func rounded(_ value: Double, step: Double) -> Double {
         guard step > 0 else { return value }

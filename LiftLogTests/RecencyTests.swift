@@ -82,34 +82,6 @@ struct RecencyTests {
         #expect(sorted([]).isEmpty)
     }
 
-    // MARK: trainingDays
-
-    @Test func countsDistinctDaysWithinWindow() {
-        let now = date(2026, 10, 25, 20)
-        let records: [(date: Date, key: ExerciseCategory)] = [
-            (date(2026, 10, 25, 9), .horizontalPush),   // 今天
-            (date(2026, 10, 25, 9), .horizontalPush),   // 同一天第二個同分類的動作：不重複計算
-            (date(2026, 10, 20), .horizontalPush),
-            (date(2026, 9, 26), .verticalPull),         // 第 30 天（含今天），算
-            (date(2026, 9, 25), .verticalPull),         // 第 31 天，不算
-            (date(2026, 10, 26), .kneeDominant),        // 未來，不算
-        ]
-        let counts = Recency.trainingDays(records, now: now, days: 30, calendar: calendar)
-        #expect(counts[.horizontalPush] == 2)
-        #expect(counts[.verticalPull] == 1)
-        #expect(counts[.kneeDominant] == nil)
-    }
-
-    @Test func tagDaysCountEachTagSeparately() {
-        let now = date(2026, 10, 25)
-        let records: [(date: Date, key: ExerciseTag)] = [
-            (date(2026, 10, 25), .unilateral), (date(2026, 10, 25), .explosive),
-            (date(2026, 10, 25), .unilateral), (date(2026, 10, 1), .unilateral),
-        ]
-        let counts = Recency.trainingDays(records, now: now, calendar: calendar)
-        #expect(counts == [.unilateral: 2, .explosive: 1])
-    }
-
     // MARK: sections
 
     private struct Ex {

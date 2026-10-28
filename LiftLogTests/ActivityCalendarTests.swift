@@ -14,14 +14,6 @@ struct ActivityCalendarTests {
         calendar.date(from: DateComponents(year: y, month: m, day: d, hour: h))!
     }
 
-    @Test func dailyCountsGroupByDay() {
-        let counts = ActivityCalendar.dailyCounts(
-            [date(2026, 10, 24, 8), date(2026, 10, 24, 21), date(2026, 10, 25)], calendar: calendar
-        )
-        #expect(counts[calendar.startOfDay(for: date(2026, 10, 24))] == 2)
-        #expect(counts[calendar.startOfDay(for: date(2026, 10, 25))] == 1)
-    }
-
     @Test func weeksEndWithTodayAndBlankFuture() {
         // 2026/10/22 是週四
         let weeks = ActivityCalendar.weeks(endingAt: date(2026, 10, 22, 18), count: 3, calendar: calendar)
@@ -38,9 +30,5 @@ struct ActivityCalendarTests {
     @Test func weekCountFitsTheWidth() {
         #expect(CalendarGrid.weekCount(width: 340) == 22)
         #expect(CalendarGrid.weekCount(width: 5) == 1)
-    }
-
-    @Test func levelsCapAtThree() {
-        #expect([0, 1, 2, 3, 7].map(ActivityCalendar.level) == [0, 1, 2, 3, 3])
     }
 }

@@ -157,12 +157,3 @@ extension SessionExercise {
         return SlotAdvice.make(role: role, exercise: PlanExercise(exercise), logs: exercise.logs(excluding: session), unit: unit)
     }
 }
-
-extension Exercise {
-    /// 首頁動作清單：上次日期，加上「主」動作的最近一次 ME 紀錄（還沒有 ME 紀錄時和其他動作一樣顯示上次紀錄）
-    func homeSummary(unit: WeightUnit) -> (date: Date, text: String)? {
-        guard let last = lastSummary(unit: unit) else { return nil }
-        guard tags.contains(.main), let record = MaxEffortRecords.records(logs()).first else { return last }
-        return (last.date, "ME \(unit.formatWithUnit(kg: record.weightKg)) × \(record.reps)・估 1RM \(unit.formatWithUnit(kg: record.estimated1RM))")
-    }
-}
