@@ -11,7 +11,7 @@ struct ExerciseDataTab: View {
         let sessions = exercise.sessionSets
         VStack(alignment: .leading, spacing: 20) {
             RecordsCard(exercise: exercise, sessions: sessions, onOpenSession: onOpenSession)
-            TrendChartCard(exercise: exercise, sessions: sessions, onOpenSession: onOpenSession)
+            TrendChartCard(exercise: exercise, sessions: sessions)
             if exercise.logType == .weight {
                 IntensityCard(exercise: exercise, sessions: sessions)
             }
@@ -74,15 +74,16 @@ private struct RecordsCard: View {
 
 // MARK: - (b) 折線圖
 
+/// 趨勢折線圖：選取和其他圖表一樣（CHANGE_11 §5），點一下浮出那一點的數字，2 秒後消失；
+/// 不再有「打開這次訓練」，要看某一次訓練從「歷史」分頁打開
 private struct TrendChartCard: View {
     let exercise: Exercise
     let sessions: [SessionSets]
-    var onOpenSession: (UUID) -> Void
 
     @AppStorage(WeightUnit.storageKey) private var unit: WeightUnit = .kg
     @State private var range: ChartRange = .oneYear
     @State private var chosenMetric: ChartMetric?
-    /// 點一下或按住拖曳選取的日期；選到最接近的那一點（點一下會一直留著，可以打開那次訓練）
+    /// 點一下或按住拖曳選取的日期；選到最接近的那一點
     @State private var selectedDate: Date?
 
     private var metric: ChartMetric {
@@ -123,22 +124,10 @@ private struct TrendChartCard: View {
                     .frame(maxWidth: .infinity, minHeight: 160)
             } else {
                 let selected = selectedDate.flatMap { nearest(points, to: $0) }
-                HStack(spacing: 12) {
-                    Text(selected.map { "\($0.date.shortDate) · \(valueText($0.value, metric: metric))" }
-                         ?? "點一下或按住拖曳看數值")
-                        .font(.footnote.monospacedDigit())
-                        .foregroundStyle(selected == nil ? Theme.textSecondary : Theme.textPrimary)
-                    Spacer(minLength: 0)
-                    if let selected {
-                        Button("打開這次訓練") { onOpenSession(selected.sessionID) }
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(Theme.accent)
-                    }
-                }
-                .frame(minHeight: 22)
-
                 chart(points, selected: selected, metric: metric, reversed: reversed)
                     .frame(height: 220)
+                    .accessibilityIdentifier("trendChart")
+                    .accessibilityValue(selected.map { label($0, metric: metric) } ?? "")
             }
         }
         .card()
@@ -159,14 +148,23 @@ private struct TrendChartCard: View {
             if let selected {
                 RuleMark(x: .value("日期", selected.date))
                     .foregroundStyle(Theme.textSecondary.opacity(0.6))
+                    .annotation(position: .overlay, alignment: .top, spacing: 0,
+                                overflowResolution: .init(x: .fit(to: .chart), y: .fit(to: .chart))) {
+                        PeekLabel(text: label(selected, metric: metric))
+                    }
             }
         }
         .chartForegroundStyleScale(["一般": Theme.accent, "MAX": Theme.warning])
         .chartSymbolScale(["一般": .circle, "MAX": .diamond])
         .chartYScale(domain: .automatic(includesZero: false, reversed: reversed))
         .chartLegend(points.contains(where: \.isMax) ? .visible : .hidden)
-        // 點一下選取（一直留著）；按住 0.2 秒後拖曳跟著手指；上下滑交給捲動
-        .chartDateSelection($selectedDate, hideAfter: nil)
+        // 點一下浮出數字 2 秒；按住 0.2 秒後拖曳跟著手指，放開後 2 秒消失；上下滑交給捲動
+        .chartDateSelection($selectedDate)
+    }
+
+    /// 浮出的數字：「10/20・93.5 kg」
+    private func label(_ point: ChartPoints.Point, metric: ChartMetric) -> String {
+        "\(point.date.formatted(.dateTime.month(.defaultDigits).day()))・\(valueText(point.value, metric: metric))"
     }
 
     private func nearest(_ points: [ChartPoints.Point], to date: Date) -> ChartPoints.Point? {

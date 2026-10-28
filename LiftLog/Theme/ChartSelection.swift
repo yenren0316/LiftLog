@@ -2,16 +2,16 @@ import SwiftUI
 import UIKit
 import Charts
 
-// 圖表的選取手勢（CHANGE_10 §0-1）：全 App 的圖表（有氧、訓練頻率、體重、動作詳情的折線圖）都用這一個。
-// 點一下選取；按住約 0.2 秒後才能拖曳選取。手指一開始就移動時按住的手勢失敗，上下滑一律交給捲動。
+// 圖表的選取手勢（CHANGE_10 §0-1）：全 App 的圖表（有氧、訓練頻率、體重、動作詳情的折線圖）都用這一個，行為也都一樣
+// （CHANGE_11 §5）：點一下浮出那一點的數字，2 秒後消失；按住約 0.2 秒再拖曳，數字跟著手指，放開後 2 秒消失。
+// 手指一開始就移動時按住的手勢失敗，上下滑一律交給捲動。
 // 以前用 SwiftUI 的 LongPressGesture.sequenced(before: DragGesture(minimumDistance: 0))：
 // 手指從圖表上開始時，整頁捲不動（歷程統計頁捲到底部後，從訓練頻率卡開始往上滑沒有反應）
 
 extension View {
-    /// 圖表的 x 軸是日期時用這個：手指的位置換成日期寫進 selected。
-    /// 點一下選取，hideAfter 之後消失（nil 時一直留著）；按住拖曳跟著手指，放開後同樣依 hideAfter（nil 時留著，否則馬上消失）
-    func chartDateSelection(_ selected: Binding<Date?>, hideAfter: Duration? = .seconds(2)) -> some View {
-        modifier(ChartDateSelection(selected: selected, hideAfter: hideAfter))
+    /// 圖表的 x 軸是日期時用這個：手指的位置換成日期寫進 selected，2 秒後清掉
+    func chartDateSelection(_ selected: Binding<Date?>) -> some View {
+        modifier(ChartDateSelection(selected: selected))
     }
 
     /// 放在圖表的 chartOverlay 裡、蓋滿圖表的透明圖層上；位置是這個圖層的座標
@@ -47,8 +47,9 @@ struct PressThenDragGesture: UIGestureRecognizerRepresentable {
 
 private struct ChartDateSelection: ViewModifier {
     @Binding var selected: Date?
-    var hideAfter: Duration?
     @State private var hideTask: Task<Void, Never>?
+    /// 點一下之後、放開手指之後，數字留多久
+    private static let hideAfter: Duration = .seconds(2)
 
     func body(content: Content) -> some View {
         content.chartOverlay { proxy in
@@ -56,12 +57,12 @@ private struct ChartDateSelection: ViewModifier {
                 Rectangle().fill(.clear).contentShape(.rect)
                     .chartSelectionGestures { location in
                         select(location, proxy: proxy, geometry: geometry)
-                        if let hideAfter { hide(after: hideAfter) }
+                        hide(after: Self.hideAfter)
                     } onDrag: { location in
                         hideTask?.cancel()
                         select(location, proxy: proxy, geometry: geometry)
                     } onDragEnd: {
-                        if hideAfter != nil { hide(after: .zero) }
+                        hide(after: Self.hideAfter)
                     }
             }
         }

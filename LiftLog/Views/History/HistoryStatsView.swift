@@ -342,7 +342,7 @@ private struct FrequencyCard: View {
                     .foregroundStyle(Theme.textSecondary)
             }
         }
-        // 點一下顯示 2 秒；按住 0.2 秒後拖曳跟著手指，放開就消失；上下滑交給捲動
+        // 點一下顯示 2 秒；按住 0.2 秒後拖曳跟著手指，放開後 2 秒消失；上下滑交給捲動
         .chartDateSelection($selected)
         .frame(height: 150)
         // 選取的那一段也給 VoiceOver（UI 測試用它確認點一下有選到）

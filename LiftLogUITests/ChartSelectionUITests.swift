@@ -42,3 +42,33 @@ final class ChartSelectionUITests: XCTestCase {
         XCTAssertTrue(value.contains("・") && value.contains("kg"), "點體重的折線沒有選到：「\(value)」")
     }
 }
+
+/// CHANGE_11 §5：動作詳情的折線圖和其他圖表同一套行為：點一下浮出數字、2 秒後消失；沒有「打開這次訓練」
+@MainActor
+final class DetailChartUITests: XCTestCase {
+    func testTapShowsTheValueForTwoSeconds() async throws {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchWithoutActiveWorkout(["-demoData", "YES", "-startTab", "2", "-openExercise", "臥推"])
+        let chart = app.descendants(matching: .any)["trendChart"].firstMatch
+        XCTAssertTrue(chart.waitForExistence(timeout: 15), "動作詳情要有折線圖")
+        try await Task.sleep(for: .seconds(1.5))
+        // 折線圖在個人紀錄下面：捲到它整個在分頁列上方
+        for _ in 0..<4 where chart.frame.maxY > app.frame.maxY - 140 {
+            app.swipeUp(velocity: .slow)
+            try await Task.sleep(for: .seconds(0.8))
+        }
+        var value = ""
+        for _ in 0..<2 where value.isEmpty {
+            chart.coordinate(withNormalizedOffset: CGVector(dx: 0.7, dy: 0.5)).tap()
+            try await Task.sleep(for: .milliseconds(400))
+            value = chart.value as? String ?? ""
+        }
+        attachScreenshot("V5_detail_chart_peek")
+        XCTAssertTrue(value.contains("・") && value.contains("kg"), "點一下要浮出那一點的數字：「\(value)」")
+        XCTAssertFalse(app.buttons["打開這次訓練"].exists, "不該再有「打開這次訓練」")
+        // 2 秒後消失，選取不再一直留著
+        try await Task.sleep(for: .seconds(2.5))
+        XCTAssertEqual(chart.value as? String ?? "", "", "2 秒後數字要消失")
+    }
+}
