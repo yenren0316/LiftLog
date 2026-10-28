@@ -19,6 +19,7 @@
 - 依每一輪的「收斂標準」自行驗證。
 - 完成後產出報告，更新 `SPEC.md` 和 `tools/STATUS.md`。
 - 推上 GitHub，告訴使用者報告的位置。
+- 最後更新簽署並安裝到 iPhone（見「每一份 CHANGE 的最後一步」，CHANGE_12 起）。
 
 ## 設計原則（CHANGE_07）
 
@@ -102,6 +103,20 @@
 - repo 是公開的（`yenren0316/LiftLog`）。推上去之前檢查沒有個人資訊，例如 email、名字、Team ID、本機路徑。訓練紀錄可以公開。
 - tag：`before-change07`（`6f72de3`）、`v1.0-ia`（`f4ba90c`，CHANGE_07～09 收斂）。
 
+## 每一份 CHANGE 的最後一步：更新簽署並安裝到 iPhone
+
+（CHANGE_12 §0 加入，照錄）
+
+我用的是免費的開發者帳號，簽署檔只有 7 天效期，所以每次優化完順便延長。
+1. 在報告寫完、推上 GitHub 之後才做。
+2. 在 ~/Library/Developer/Xcode/UserData/Provisioning Profiles（舊版 Xcode 也檢查 ~/Library/MobileDevice/Provisioning Profiles）裡，用 security cms -D -i 讀出每個簽署檔的 App ID，只刪除屬於這個 App 和它的擴充（小工具、即時動態）的簽署檔。不刪其他 App 的簽署檔，也不刪憑證。
+3. 用 xcodebuild 加 -allowProvisioningUpdates 重新建置 Debug 給實機，讓 Xcode 產生新的簽署檔。
+4. 用 xcrun devicectl 把 App 覆蓋安裝到已連接的 iPhone（接線或同一個網路都可以）。
+5. 絕對不能從手機刪除 App，也不能用任何會刪除 App 資料的安裝方式：訓練紀錄只存在手機本機。
+6. 在最後回覆我的訊息裡，告訴我新簽署檔的到期日（不用寫進報告）。
+7. 手機沒有連接、沒有解鎖，或安裝失敗時，跳過這一步，在最後的訊息裡提醒我自己用 Xcode 按 Run。
+8. DEVELOPMENT_TEAM 等簽署設定照舊不 commit。
+
 ## DEBUG 參數
 
 - 開發用的啟動參數（`UserDefaults.standard` 讀字面 key）一律包在 `#if DEBUG` 裡。
@@ -120,7 +135,7 @@
   - 小按鈕：`.pressable`。
   - 確認：一律置中的 `.alert`，要有明確的「取消」。不用 confirmationDialog。
   - 圖表的選取：`chartDateSelection`。
-  - 分頁裡的捲動畫面：`.hidesTabBarOnScroll()`。
+  - 分頁列：交給系統的 `.tabBarMinimizeBehavior(.onScrollDown)`，不另外處理（CHANGE_11 §1 刪掉 `.hidesTabBarOnScroll()`）。
   - 收起鍵盤：`dismissKeyboard()`、`KeyboardDismissOnTap`。不要在鍵盤上方加「完成」。
   - 訓練次數：`TrainingCount.days`；開始訓練：`WorkoutLauncher`。
   - 統計：存檔時在 `StatsCache` 算好，畫面只讀。
