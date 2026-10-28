@@ -11,6 +11,7 @@
 > - CHANGE_09：每週目標與連續達標、全 App 唯一的訓練次數規則（週一開始、以天為單位），以及 CHANGE_08 的小修正（「繼續編輯」、平均只算過完的時段、「有氧與其他」、底部留白跟著訓練中橫條）。
 > - CHANGE_10：實機回饋修正（圖表不再擋住捲動、所有分頁畫面一致地收起分頁列、捨棄訓練移到最底部、確認一律用置中的 alert、動態島的經過時間、DE 建議重量用強度換算表、「上一次」同角色優先、訓練中只顯示角色）、鍵盤改成點空白處和捲動收起、首頁日曆改成打開「訓練狀態」浮窗（拿掉達標小點和連續週數）、點擊提示統一（拿掉「›」，整塊可點、按壓色）。
 > - CHANGE_11：改用 iOS 26 內建行為（分頁列縮小、訓練中橫條放在系統的附屬列）、日期改變時重算統計、全 App 只有一種估算 1RM 並刪掉沒有用到的程式、拿掉訓練中的鍵盤列（候選列試過但融不進 iOS 26 的鍵盤，照規格拿掉）、圖表選取同一套行為、動態島顯示日型簡稱、訓練狀態浮窗高度等於內容、備份加入設定、用真實備份在模擬器驗證統計。
+> - CHANGE_12：經過時間和休息倒數改用系統的計時文字（`Text(timerInterval:)`、`ProgressView(timerInterval:)`）；訓練中畫面的放大轉場（附屬列不能當來源）和「今天」的系統大標題（首頁超出一個畫面 32.5 pt）都照規格停下來、維持原樣；CLAUDE.md 加上每一輪最後更新簽署並安裝到 iPhone。
 >
 > 以本文件為準。
 
@@ -32,9 +33,10 @@ App 只給自己用、不上架，用免費 Apple ID（Personal Team）安裝。
 - 介面全部繁體中文。重量單位由設定頁的全域 kg／lbs 決定，資料一律存 kg（1 lb = 0.45359237 kg）。版面簡潔、字大，適合在健身房單手操作。
 - UI 風格參考 Habits First：大圓角卡片、細進度條、懸浮膠囊分頁列。顏色由主題決定（見「主題配色」），預設石墨橙。
 - 資訊架構（CHANGE_07）：四個分頁各回答一個問題——今天「下一次該練什麼？」、歷程「我練了什麼、進步了多少？」、動作庫「我有哪些動作？」、設定。每個分頁最多三層：第 1 層分頁、第 2 層 push 的清單或詳情、第 3 層一律是唯讀的 sheet（例如訓練摘要浮窗），不再 push。
-- 共用元件（`Theme/Components.swift`）：`Metrics`（按鈕高度 50、膠囊高度 38，不再各自寫死 52／54／56／60）、`PrimaryButton`、`FilterCapsule`、`ElapsedTimeText`；「今天／昨天／N 天前」只由 `Shared/RelativeDay.swift` 產生。
+- 共用元件（`Theme/Components.swift`）：`Metrics`（按鈕高度 50、膠囊高度 38，不再各自寫死 52／54／56／60）、`PrimaryButton`、`FilterCapsule`、`ElapsedTimeText`（CHANGE_12 §1：系統的計時文字 `Text(timerInterval: startedAt...distantFuture, countsDown: false)`，系統自己跳秒，不用 TimelineView 每秒重畫；格式「0:43」「24:30」「1:05:30」和以前一樣）；「今天／昨天／N 天前」只由 `Shared/RelativeDay.swift` 產生。
 - 分頁列（CHANGE_11 §1）：全部交給 iOS 26 的系統 TabView，沒有自己的條件或例外。`.tabBarMinimizeBehavior(.onScrollDown)`：往下捲時分頁列縮小（只剩目前的分頁），往上滑時恢復（模擬器上實測：手指往上「滑出去」時恢復，慢慢拖、停住再放開不會恢復，這是系統的行為）。動作詳情不再整頁隱藏分頁列。CHANGE_08～10 自己寫的收起邏輯（`TabBarAutoHide`、`.hidesTabBarOnScroll()`、固定的底部留白 `BottomInset`、`-tabBarLog` 的捲動紀錄）都刪掉了。
   - 「訓練中」橫條放在系統的附屬列（`.tabViewBottomAccessory`）：分頁列展開時在分頁列上方，兩行（訓練名稱、「訓練中 0:42」）；縮小時和分頁列同一列，只有一行「訓練中 0:42」（`tabViewBottomAccessoryPlacement`）。外框、背景、位置和底部留白都由系統決定。只在有進行中的訓練時顯示：iOS 26.1 起用 `tabViewBottomAccessory(isEnabled:)`；iOS 26.0 沒有這個參數，沒有訓練時不加附屬列。
+  - 點橫條打開訓練中畫面用原本的 `fullScreenCover`（CHANGE_12 §2）：試過把橫條當 `matchedTransitionSource`、全螢幕畫面用 `.navigationTransition(.zoom)`，但轉場找不到附屬列裡的來源，只會從畫面中間放大、縮回畫面中間（同一段程式換成「今天」的卡片當來源就正常），照規格停下來。
   - 開發用：`-scrollToBottom 紀錄｜統計｜動作庫｜分類` 捲到最底部（分類要搭配 `-libraryCategory`），歷程穩定性的連拍用。
 - 收起鍵盤（CHANGE_10 §1，取代 CHANGE_08 加在鍵盤上方的「完成」）：
   - 可以捲動的畫面：往下拖時收起（`.scrollDismissesKeyboard(.interactively)`，從 RootView 往下傳，各 sheet 也有）。
@@ -247,7 +249,7 @@ CHANGE_04 刪除了 15 個從沒練過的動作（前抱式深蹲、分腿蹲、
 ## 功能
 
 ### 1. 今天（第 1 層）
-- 只回答「下一次該練什麼？」，一個畫面放得下（iPhone 17 Pro 不用捲動）。統計都從 `StatsCache` 讀，body 裡不掃描訓練紀錄。
+- 只回答「下一次該練什麼？」，一個畫面放得下（iPhone 17 Pro 不用捲動；近 30 天的卡片底部離分頁列 20.8 pt，`TodayLayoutUITests` 量）。標題是自己畫的 `ScreenHeader`、隱藏導覽列：CHANGE_12 §3 試過系統的大標題（`navigationTitle`＋`.large`），整頁往下推 53.3 pt，最後一列「有氧」跑到分頁列後面（差 32.5 pt），照規格停下來、維持原樣。統計都從 `StatsCache` 讀，body 裡不掃描訓練紀錄。
 - 「下一次」卡片：「下一次 ME 上肢　建議主項：臥推」與「2 個動作・不加跑步機」，內容就是建立菜單三個問題的預設答案和主項格的第一個建議；點一下帶著這些答案進入建立菜單。這是開始訓練唯一的入口（見「2. 開始訓練」）。
 - 訓練日曆點陣圖（`TrainingCalendar`，類似 GitHub contribution graph，CHANGE_08 §4 改版）：
   - 每天一格，顏色依那天的部位（`DayRegion`，依那天有完成組的動作分類推算，同一天多次訓練依合併後的部位：下肢＋上肢＝全身，有氧不影響有重訓的日子）：下肢 accent、上肢 upperBody、全身沿對角線一半 accent 一半 upperBody、有氧與其他（只有有氧，或只有核心、補強）textSecondary 40%；沒練的日子 field。格子的顏色顯示所有有完成組的日子（「只有有氧的訓練也算」關閉時，只有有氧的日子照樣上色，只是不算進次數）。
@@ -316,7 +318,7 @@ CHANGE_04 刪除了 15 個從沒練過的動作（前抱式深蹲、分腿蹲、
   - CHANGE_07 之前的自動名稱（動作名稱用「＋」連接、「A＋B 等 N 項」）由遷移改成訓練目的；其他名稱視為自訂，不動（見「10-1. 資料遷移」）。
 
 ### 3. 訓練中畫面
-- 全螢幕呈現，可縮小成分頁列附屬列裡的橫條（「訓練中 0:42」，CHANGE_11 §1），點一下展開；重開 App 時有進行中的訓練會顯示橫條。
+- 全螢幕呈現（`fullScreenCover`），可縮小成分頁列附屬列裡的橫條（「訓練中 0:42」，CHANGE_11 §1），點一下展開；重開 App 時有進行中的訓練會顯示橫條。放大轉場見「分頁列」（CHANGE_12 §2：附屬列不能當來源，維持原樣）。
 - 頂部：標題（`SessionTitleField`，規則見「2. 開始訓練」）、日期、經過時間（一律用 startedAt 推算）、休息計時器、「完成」。CHANGE_10 §0-3 拿掉右上角的 ⋯ 選單（裡面只有「捨棄訓練」）：最後一個動作和「新增動作」下面是紅字的「捨棄訓練」，按下用置中的 alert 確認「捨棄這次訓練？／這次訓練的所有組都會刪除，無法復原。」「取消」「捨棄訓練」（`WorkoutActions.resolveDiscard`：取消不改任何資料）。
 - 每個動作一張卡片：標題旁只顯示這次的角色標記（例如「DE 主項」），不顯示動作庫的主、單、爆標籤（CHANGE_10 §0-7），下一行是預設參數（「8 組 × 2 下・休息 45–60 秒」），DE 速度主項加上建議重量，ME 主項和 DE（爆）加上提示；標題點一下開唯讀的動作說明 sheet（`ExerciseInfoSheet`，不離開訓練畫面）；「⋯」選單：換動作、加備註、上移、下移、移除（跑步機另有「從 Apple Watch 帶入」）。
 - 欄位（kg 依全域設定顯示為 kg 或 lbs；啞鈴、壺鈴顯示「kg（單顆）」）：
@@ -338,7 +340,7 @@ CHANGE_04 刪除了 15 個從沒練過的動作（前抱式深蹲、分腿蹲、
 
 ### 4. 休息計時器
 - 打勾後自動開始倒數（設定頁可關閉）。預設時間依這張卡片的角色（見「角色系統」的預設參數）：ME 主項 180 秒；DE 速度主項 60 秒；DE（爆）、下肢輔助、推、拉 90 秒；核心、補強 60 秒。動作在「編輯」裡有個別設定時以個別設定為準。
-- 頂部顯示倒數，提供 -15 秒、+15 秒、跳過；也可從計時器按鈕手動開始。
+- 頂部顯示倒數，提供 -15 秒、+15 秒、跳過；也可從計時器按鈕手動開始。倒數的數字和進度條是系統的計時文字和計時進度條（CHANGE_12 §1：`Text(timerInterval: 開始...結束, countsDown: true)`、`ProgressView(timerInterval:countsDown:)`，進度條 accent 色、底色是系統的），系統自己跳秒；調整或跳過時換掉時間區間，畫面立刻更新。
 - 倒數結束時震動；App 在背景時發本機通知。結束時間以時間戳記保存，切到背景或重開 App 仍準確。
 
 ### 5. 完成訓練
@@ -539,6 +541,7 @@ CHANGE_04 刪除了 15 個從沒練過的動作（前抱式深蹲、分腿蹲、
 - 體重也出現在訓練摘要浮窗（當天）和完成訓練的摘要（今天體重）。
 
 ### 13. 開發用啟動參數（只在 DEBUG）
+- CHANGE_12 沒有新增參數（§2 實驗用的參數隨實驗拿掉，沒有 commit）。
 - 資料：`-demoData YES`（seed 之外加 5 次示範訓練與近期體重，只加一次）、`-emptyData YES`（清空所有資料、不匯入 seed，檢查空狀態）。
 - CHANGE_11：`-importBackup <路徑>`（啟動時匯入備份，和「從 JSON 匯入」同一條路）、`-fakeNow <ISO 時間>`（固定 App 的「現在」，例如 `2026-01-05T00:05:00+08:00`）、`-dumpStats <路徑>`（統計快照算好後輸出要比對的數值；三個都只用在第 9 節的真實資料驗證，路徑一律在 `tools/fixtures/`）、`-demoWorkoutDayType deUpper`、`-demoWorkoutTitle <名稱>`（示範訓練的日型和自訂名稱，截動態島用）。`-tabBarLog` 隨自己寫的分頁列收起邏輯刪掉。
 - CHANGE_10：`-trainingStatus YES`（打開訓練狀態）、`-demoWorkoutElapsed <秒>`（示範訓練的開始時間往前推）、`-demoWorkoutRoles dynamicEffort,pull,cardio`（示範訓練三個動作的角色）。`-calendarPeek` 隨日曆的標籤拿掉。
@@ -576,4 +579,5 @@ CHANGE_04 刪除了 15 個從沒練過的動作（前抱式深蹲、分腿蹲、
 
 ## 已移除
 - CHANGE_02 移除了舊的單筆記錄頁，連帶移除 lbs 輸入切換與 +1.25 快速鍵（新的鍵盤快捷鍵為 -2.5／+2.5／+5）。CHANGE_03 以全域 kg／lbs 設定取代 lbs 輸入切換。
+- CHANGE_12 移除：`RestTimer.remaining(at:)`（只有休息倒數的 TimelineView 在用，改成系統的計時文字後只剩測試在用）。
 - CHANGE_11 移除：自己寫的分頁列收起邏輯（`TabBarAutoHide`、`.hidesTabBarOnScroll()`、`BottomInset`、`-tabBarLog`）；訓練中的鍵盤列（-2.5／+2.5／+5、±、下一格、完成）；ME 紀錄（`MaxEffortRecords`）、`MainLiftSummary`、`Exercise.homeSummary`、`ActivityCalendar.dailyCounts`／`level`；掃描出來沒有引用的 `WorkoutSession.inferredRegion`、`Equipment.weightHint`、`IntensityTable.defaultStep`、`Recency.trainingDays`、`SetLogic.finish`（只有測試在用，完成訓練走 `WorkoutActions.finish`）和 `RecentVolume` 的計數（只留顏色門檻）；動作詳情折線圖的「打開這次訓練」。

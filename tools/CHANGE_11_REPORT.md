@@ -93,9 +93,9 @@ G2 要求的新測試：
 ### 「自己寫、但 iOS 26 已經內建」的清單（這次沒有改）
 | 現在的做法 | iOS 內建的做法 | 建議 |
 |---|---|---|
-| 經過時間 `ElapsedTimeText`、休息倒數 `RestTimerBar` 用 `TimelineView` 每秒（0.5 秒）重畫 | `Text(timerInterval:countsDown:)`、`ProgressView(timerInterval:)`：系統自己跳秒，不用整塊重畫（即時動態已經在用） | 建議改：省電、程式更少；要確認格式「1:05:30」一樣 |
-| 訓練中全螢幕和附屬列的橫條之間是一般的 `fullScreenCover` | `matchedTransitionSource` ＋ `.navigationTransition(.zoom)`（iOS 18 起）：從附屬列放大成全螢幕，像「音樂」的迷你播放器 | 建議改：和這次的附屬列搭配，展開和縮小的動畫由系統做 |
-| 「今天」用自己的 `ScreenHeader` 畫大標題，並隱藏導覽列 | `navigationTitle` ＋ `.navigationBarTitleDisplayMode(.large)`，iOS 26 的捲動邊緣效果也會跟著 | 建議改：和其他三個分頁一致 |
+| 經過時間 `ElapsedTimeText`、休息倒數 `RestTimerBar` 用 `TimelineView` 每秒（0.5 秒）重畫 | `Text(timerInterval:countsDown:)`、`ProgressView(timerInterval:)`：系統自己跳秒，不用整塊重畫（即時動態已經在用） | 建議改：省電、程式更少；要確認格式「1:05:30」一樣 **（CHANGE_12 §1 已改，格式一樣）** |
+| 訓練中全螢幕和附屬列的橫條之間是一般的 `fullScreenCover` | `matchedTransitionSource` ＋ `.navigationTransition(.zoom)`（iOS 18 起）：從附屬列放大成全螢幕，像「音樂」的迷你播放器 | 建議改：和這次的附屬列搭配，展開和縮小的動畫由系統做 **（CHANGE_12 §2 推翻：附屬列裡的橫條不能當放大轉場的來源，系統只會從畫面中間放大；維持 fullScreenCover）** |
+| 「今天」用自己的 `ScreenHeader` 畫大標題，並隱藏導覽列 | `navigationTitle` ＋ `.navigationBarTitleDisplayMode(.large)`，iOS 26 的捲動邊緣效果也會跟著 | 建議改：和其他三個分頁一致 **（CHANGE_12 §3 推翻：系統的大標題讓首頁超出一個畫面 32.5 pt；維持 ScreenHeader）** |
 | 休息計時結束用本機通知 | AlarmKit（iOS 26）：倒數計時有系統的鎖定畫面和動態島介面，靜音時也會響 | 可以評估：要確認免費帳號能不能用、需不需要額外權限 |
 | 點空白處收起鍵盤 `KeyboardDismissOnTap`（window 上的點擊手勢） | SwiftUI 只有 `.scrollDismissesKeyboard`，沒有內建的「點空白處」 | 保留 |
 | 圖表的選取手勢 `PressThenDragGesture`（UIKit 長按） | Swift Charts 的 `chartXSelection`／`chartGesture` | 保留：CHANGE_10 §0-1 查到 SwiftUI 的手勢會擋住捲動；之後的 iOS 可以再試一次 |
