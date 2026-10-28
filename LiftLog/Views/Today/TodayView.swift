@@ -18,7 +18,7 @@ struct TodayView: View {
                     NextPlanCard(answers: stats.snapshot.nextPlan, suggestedMain: stats.snapshot.suggestedMain) {
                         launcher.requestPlan($0, context: context)
                     }
-                    TrainingCalendar(days: stats.snapshot.days,
+                    TrainingCalendar(days: stats.snapshot.days, now: stats.snapshot.now,
                                      emptyText: "還沒有訓練紀錄。點上面的「下一次」建立第一份菜單。") {
                         coordinator.showingTrainingStatus = true
                     }
@@ -138,7 +138,7 @@ struct CategoryTodoList: View {
             }
             ForEach(sorted) { exercise in
                 TapListRow { coordinator.todayPath.append(exercise) } label: {
-                    TodoRow(exercise: exercise, stat: stats.snapshot.exercises[exercise.id], unit: unit)
+                    TodoRow(exercise: exercise, stat: stats.snapshot.exercises[exercise.id], now: stats.snapshot.now, unit: unit)
                 }
             }
         }
@@ -153,6 +153,8 @@ struct CategoryTodoList: View {
 private struct TodoRow: View {
     var exercise: Exercise
     var stat: StatsSnapshot.ExerciseStat?
+    /// 統計快照的「現在」（CHANGE_11 §2）
+    var now: Date
     var unit: WeightUnit
 
     var body: some View {
@@ -163,8 +165,8 @@ private struct TodoRow: View {
                 if stat?.lastDate == nil { AccentChip(text: "新") }
             }
             if let date = stat?.lastDate {
-                let days = Recency.daysSince(date)
-                Text("上次 \(date.shortDate)・\(RelativeDay.text(since: date) ?? "")")
+                let days = Recency.daysSince(date, now: now)
+                Text("上次 \(date.shortDate)・\(RelativeDay.text(since: date, now: now) ?? "")")
                     .font(.subheadline.monospacedDigit())
                     .foregroundStyle(Recency.staleness(days: days).color)
                 Text(SetFormat.compact(stat?.lastSets ?? [], logType: exercise.logType, unit: unit))

@@ -12,6 +12,7 @@ struct LibraryExerciseRow: View {
     @Environment(\.modelContext) private var context
     @Environment(LibraryRowActions.self) private var actions
     @Environment(LibraryNavigation.self) private var navigation
+    @Environment(StatsCache.self) private var stats
 
     var body: some View {
         TapListRow { navigation.path.append(exercise) } label: {
@@ -22,11 +23,11 @@ struct LibraryExerciseRow: View {
                         ForEach(exercise.tags) { Chip(text: $0.title) }
                         if exercise.isArchived { Chip(text: "封存") }
                     }
-                    let last = RelativeDay.text(since: stat?.lastDate) ?? "未練過"
+                    let last = RelativeDay.text(since: stat?.lastDate, now: stats.snapshot.now) ?? "未練過"
                     Text(showsCategory ? "\(exercise.category.title)・\(last)" : last)
                         .font(.footnote)
                         .foregroundStyle(stat?.lastDate == nil ? Theme.textSecondary
-                                                               : Recency.staleness(days: Recency.daysSince(stat?.lastDate)).color)
+                                                               : Recency.staleness(days: Recency.daysSince(stat?.lastDate, now: stats.snapshot.now)).color)
                         .lineLimit(1)
                 }
                 Spacer()

@@ -14,7 +14,7 @@ struct HistoryStatsView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     MainLiftProgressCard(trends: stats.snapshot.mainLifts).id("mainLifts")
                     BodyWeightCard().id("weight")
-                    CardioCard(minutes: stats.snapshot.weeklyCardioMinutes).id("cardio")
+                    CardioCard(minutes: stats.snapshot.weeklyCardioMinutes, now: stats.snapshot.now).id("cardio")
                     FrequencyCard(weeks: stats.snapshot.frequencyWeeks, months: stats.snapshot.frequencyMonths,
                                   goal: WeeklyGoal.goal(stored: storedGoal, automatic: stats.snapshot.automaticWeeklyGoal))
                         .id("frequency")
@@ -126,11 +126,13 @@ private struct Sparkline: View {
 /// 有氧：近 12 週，每週跑步機的分鐘數。點一下長條（或按住拖曳）浮出「10/19–10/25・120 分鐘」
 private struct CardioCard: View {
     var minutes: [Double]
+    /// 統計快照的「現在」：最後一根是這一週
+    var now: Date
 
     @State private var selected: Date?
 
     var body: some View {
-        let weeks = Self.weekStarts(count: minutes.count)
+        let weeks = Self.weekStarts(count: minutes.count, now: now)
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline) {
                 Text("有氧").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.textSecondary)
@@ -182,9 +184,9 @@ private struct CardioCard: View {
         return "\(week.formatted(format))–\(last.formatted(format))・\(Units.number(minutes)) 分鐘"
     }
 
-    private static func weekStarts(count: Int) -> [Date] {
+    private static func weekStarts(count: Int, now: Date) -> [Date] {
         (0..<count).reversed().compactMap { back in
-            calendar.date(byAdding: .weekOfYear, value: -back, to: .now)
+            calendar.date(byAdding: .weekOfYear, value: -back, to: now)
                 .flatMap { calendar.dateInterval(of: .weekOfYear, for: $0)?.start }
         }
     }

@@ -78,9 +78,10 @@ struct ExerciseDetailView: View {
 /// 頁首：名稱、分類、tags、器材、上次、近 90 天
 private struct DetailHeader: View {
     let exercise: Exercise
+    @Environment(StatsCache.self) private var stats
 
     var body: some View {
-        let days = Recency.daysSince(exercise.lastCompletedDate)
+        let days = Recency.daysSince(exercise.lastCompletedDate, now: stats.snapshot.now)
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 6) {
                 Text(exercise.name).font(.title.bold())

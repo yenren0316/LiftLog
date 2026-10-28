@@ -51,7 +51,10 @@ struct RootView: View {
             .onOpenURL { router.open($0) }
             // 小工具的＋如果在小工具的程序執行，連結留在 App Group，回到前景時接手
             .onChange(of: scenePhase, initial: true) { _, phase in
-                if phase == .active { router.consumePendingLink() }
+                guard phase == .active else { return }
+                router.consumePendingLink()
+                // 回到前景：日期和上次計算時不同就重算統計（CHANGE_11 §2）
+                stats.refresh(.foreground)
             }
             .onChange(of: router.pending, initial: true) { _, link in
                 if let link { handle(link) }

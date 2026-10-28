@@ -85,7 +85,7 @@ struct TrainingStatusSheet: View {
     @ViewBuilder
     private func lastText(_ row: TrainingStatus.Rotation) -> some View {
         if let date = row.lastDate {
-            let days = TrainingStatus.daysAgo(date, now: .now, calendar: .current)
+            let days = TrainingStatus.daysAgo(date, now: stats.snapshot.now, calendar: .current)
             Text("\(days) 天前（\(date.formatted(.dateTime.month(.defaultDigits).day()))）")
                 .font(.subheadline.monospacedDigit())
                 .foregroundStyle(TrainingStatus.isStale(daysAgo: days) ? Theme.warning : Theme.textSecondary)

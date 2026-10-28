@@ -1,5 +1,6 @@
 import Foundation
 import SwiftData
+import UIKit
 
 /// 「近 30 天」的口徑（CHANGE_07 B-1）：今天往前推 30 個日曆日（含今天），只算已結束的訓練。全 App 共用
 nonisolated enum RecentWindow {
@@ -59,7 +60,11 @@ nonisolated struct StatsSnapshot: Sendable {
         var explosiveSessions = 0
     }
 
+    /// 計算時的「現在」：畫面的「N 天前」「今天」都用它，和快照裡的本週、近 30 天同一個時間點（CHANGE_11 §2）
+    var now = Date.now
     var exercises: [UUID: ExerciseStat] = [:]
+    /// 動作庫各分類「最久沒練」的天數：未封存、練過的動作裡最久沒練的那個距今幾天；都沒練過的分類沒有值
+    var neglectedDays: [ExerciseCategory: Int] = [:]
     /// 近 30 天各分類完成的組數（不含熱身）
     var recentSets: [ExerciseCategory: Int] = [:]
     var days: [Date: DayStat] = [:]
@@ -89,6 +94,7 @@ nonisolated struct StatsSnapshot: Sendable {
     static func make(history: PlanHistory, exercises: [PlanExercise], now: Date = .now,
                      calendar: Calendar = .current, cardioOnlyCounts: Bool = false) -> StatsSnapshot {
         var snapshot = StatsSnapshot()
+        snapshot.now = now
         let today = calendar.startOfDay(for: now)
         // 週一開始的週（和今天的日曆、每週目標一致）
         let weekCalendar = TrainingCount.weekCalendar(calendar)
@@ -113,6 +119,12 @@ nonisolated struct StatsSnapshot: Sendable {
                 dayStat.exerciseCount += 1
             }
             snapshot.days[day] = dayStat
+        }
+
+        // 動作庫的分類列：最久沒練
+        for category in ExerciseCategory.allCases {
+            let dates = exercises.filter { $0.category == category && !$0.isArchived }.compactMap { snapshot.exercises[$0.id]?.lastDate }
+            if let oldest = dates.min() { snapshot.neglectedDays[category] = Recency.daysSince(oldest, now: now, calendar: calendar) }
         }
 
         // 近 30 天
@@ -181,23 +193,49 @@ nonisolated struct StatsSnapshot: Sendable {
     }
 }
 
-/// 統計快取：App 啟動時和每次存檔後（合併成一次）重新計算，畫面只讀 snapshot
+/// 統計快取：App 啟動時和每次存檔後（合併成一次）重新計算，畫面只讀 snapshot。
+/// 日期改變時也重算（CHANGE_11 §2）：回到前景而且日期不同、App 開著時跨過午夜、時區或系統時間改變
 @Observable
 final class StatsCache {
     static let shared = StatsCache()
 
     private(set) var snapshot = StatsSnapshot.empty
+    /// 上次計算的時間；nil 表示還沒算過
+    @ObservationIgnored private(set) var computedAt: Date?
+    /// 測試用：固定日曆（時區）；平常每次取 Calendar.current，時區改變後馬上用新的
+    @ObservationIgnored var fixedCalendar: Calendar?
     @ObservationIgnored private var context: ModelContext?
-    @ObservationIgnored private var observer: NSObjectProtocol?
+    @ObservationIgnored private var observers: [NSObjectProtocol] = []
     @ObservationIgnored private var pending: Task<Void, Never>?
 
-    func start(context: ModelContext) {
+    private var calendar: Calendar { fixedCalendar ?? .current }
+
+    func start(context: ModelContext, now: Date = AppClock.now) {
         self.context = context
-        recompute()
-        guard observer == nil else { return }
-        observer = NotificationCenter.default.addObserver(forName: ModelContext.didSave, object: nil, queue: .main) { _ in
-            MainActor.assumeIsolated { StatsCache.shared.scheduleRecompute() }
+        recompute(now: now)
+        guard observers.isEmpty else { return }
+        let center = NotificationCenter.default
+        observers.append(center.addObserver(forName: ModelContext.didSave, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.scheduleRecompute() }
+        })
+        let timeChanges: [(Notification.Name, StatsRefresh.Trigger)] = [
+            (.NSCalendarDayChanged, .dayChanged),
+            (UIApplication.significantTimeChangeNotification, .timeChanged),
+            (.NSSystemTimeZoneDidChange, .timeChanged),
+            (.NSSystemClockDidChange, .timeChanged),
+        ]
+        for (name, trigger) in timeChanges {
+            observers.append(center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.refresh(trigger) }
+            })
         }
+    }
+
+    /// 日期可能改變時呼叫：依 StatsRefresh 的規則決定要不要重算
+    func refresh(_ trigger: StatsRefresh.Trigger, now: Date = AppClock.now) {
+        guard context != nil,
+              StatsRefresh.needsRecompute(trigger, computedAt: computedAt, now: now, calendar: calendar) else { return }
+        recompute(now: now)
     }
 
     func scheduleRecompute() {
@@ -209,12 +247,14 @@ final class StatsCache {
         }
     }
 
-    func recompute() {
+    func recompute(now: Date = AppClock.now) {
         guard let context else { return }
         let sessions = (try? context.fetch(FetchDescriptor<WorkoutSession>())) ?? []
         let exercises = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
+        computedAt = now
         snapshot = StatsSnapshot.make(history: PlanHistory(sessions: sessions),
                                       exercises: exercises.map { PlanExercise(snapshotOf: $0) },
+                                      now: now, calendar: calendar,
                                       cardioOnlyCounts: UserDefaults.standard.bool(forKey: WeeklyGoal.cardioOnlyCountsKey))
     }
 }

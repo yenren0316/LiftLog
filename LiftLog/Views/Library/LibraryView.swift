@@ -90,11 +90,10 @@ struct LibraryView: View {
     /// 分類名稱、「N 個動作・最久沒練：N 天」；有沒練過的動作時另外寫「M 個未練過」
     private func categoryRow(_ category: ExerciseCategory) -> some View {
         let members = exercises.filter { $0.category == category && !$0.isArchived }
-        let dates = members.map { stats.snapshot.exercises[$0.id]?.lastDate }
-        let untrained = dates.filter { $0 == nil }.count
+        let untrained = members.filter { stats.snapshot.exercises[$0.id]?.lastDate == nil }.count
         var parts = ["\(members.count) 個動作"]
-        if let oldest = dates.compactMap({ $0 }).min() {
-            parts.append("最久沒練：\(Recency.daysSince(oldest) ?? 0) 天")
+        if let days = stats.snapshot.neglectedDays[category] {
+            parts.append("最久沒練：\(days) 天")
         }
         if untrained > 0 { parts.append("\(untrained) 個未練過") }
         return VStack(alignment: .leading, spacing: 2) {

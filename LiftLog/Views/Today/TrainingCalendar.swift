@@ -7,6 +7,8 @@ import SwiftUI
 /// 「本週 N/目標・連續 N 週達標」和 CHANGE_08 的浮出標籤、拖曳震動都拿掉了）
 struct TrainingCalendar: View {
     var days: [Date: StatsSnapshot.DayStat]
+    /// 統計快照的「現在」：最後一欄是這一週（CHANGE_11 §2，跨過午夜重算後跟著移動）
+    var now: Date
     /// 一次訓練都沒有時，格子下面的說明（取代圖例）
     var emptyText: String?
     var onOpen: () -> Void
@@ -18,7 +20,7 @@ struct TrainingCalendar: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("訓練日曆").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.textSecondary)
                 GeometryReader { geo in
-                    grid(ActivityCalendar.weeks(endingAt: .now, count: CalendarGrid.weekCount(width: geo.size.width),
+                    grid(ActivityCalendar.weeks(endingAt: now, count: CalendarGrid.weekCount(width: geo.size.width),
                                                 calendar: calendar))
                 }
                 .frame(height: CalendarGrid.height)
