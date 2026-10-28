@@ -44,22 +44,6 @@ struct SetLogicTests {
         #expect(SetLogic.canComplete(SetValues(minutes: 30), logType: .cardio, equipment: .other))
     }
 
-    // MARK: 完成訓練時未打勾的組
-
-    @Test func finishDeletingIncompleteDropsEmptyExercises() {
-        let items = [[s(60, 5), s(60, 5, done: false)], [s(20, 10, done: false)]]
-        let result = SetLogic.finish(items, choice: .deleteIncomplete, now: .now)
-        #expect(result[0].count == 1)
-        #expect(result[1].isEmpty)   // 沒有完成的組 → 之後從這次訓練移除
-    }
-
-    @Test func finishCompletingAllMarksEverything() {
-        let now = Date(timeIntervalSince1970: 1_800_000_000)
-        let result = SetLogic.finish([[s(60, 5), s(60, 5, done: false)]], choice: .completeAll, now: now)
-        #expect(result[0].allSatisfy { $0.isCompleted })
-        #expect(result[0][1].completedAt == now)
-    }
-
     // MARK: 幾天前只計算已完成的組
 
     @Test func lastCompletedDateIgnoresIncompleteSets() {

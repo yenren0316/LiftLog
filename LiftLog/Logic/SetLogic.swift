@@ -78,30 +78,11 @@ nonisolated enum SetLogic {
         }
     }
 
-    // MARK: 完成訓練
+    // MARK: 完成訓練（實際的處理在 WorkoutActions.finish）
 
     enum IncompleteChoice {
         case deleteIncomplete
         case completeAll
-    }
-
-    /// 完成訓練時處理未打勾的組。回傳每個動作保留下來的組；沒有任何已完成組的動作回傳空陣列（之後移除）
-    static func finish(_ items: [[SetValues]], choice: IncompleteChoice, now: Date) -> [[SetValues]] {
-        items.map { sets in
-            switch choice {
-            case .deleteIncomplete:
-                return sets.filter(\.isCompleted)
-            case .completeAll:
-                return sets.map { s in
-                    var s = s
-                    if !s.isCompleted {
-                        s.isCompleted = true
-                        s.completedAt = now
-                    }
-                    return s
-                }
-            }
-        }
     }
 
     // MARK: 新紀錄與趨勢
