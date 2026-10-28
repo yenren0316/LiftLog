@@ -180,8 +180,14 @@ struct RootView: View {
             #if DEBUG
             // 開發用：-demoData YES 在 seed 之外加幾筆示範訓練和近期體重（只加一次）
             DemoData.addIfRequested(in: context)
+            // 開發用：-importBackup <路徑> 匯入備份（CHANGE_11 §9，真實資料驗證）
+            RealDataDebug.importIfRequested(into: context)
             #endif
             stats.start(context: context)
+            #if DEBUG
+            // 開發用：-dumpStats <路徑> 輸出統計快照裡要比對的數值（搭配 -fakeNow 固定「現在」）
+            RealDataDebug.dumpIfRequested(stats.snapshot, context: context)
+            #endif
             SnapshotWriter.shared.start(context: context)
             LiveActivityController.shared.start()
             #if DEBUG
