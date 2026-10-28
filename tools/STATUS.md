@@ -20,7 +20,7 @@
 ## 1. 進度總覽
 
 ### 1-1. 文件來源
-- repo 裡沒有 CHANGE_01.md～CHANGE_07.md。各份 CHANGE 是在對話裡提供的，重點整併進 `SPEC.md`（開頭有每份 CHANGE 的一行摘要）。
+- CHANGE_06～10 的原文在 `tools/changes/`（從對話紀錄還原）；CHANGE_01～05 的原文不在 repo 裡，也還原不了，重點整併在 `SPEC.md`（開頭有每份 CHANGE 的一行摘要）。專案的固定規則在根目錄的 `CLAUDE.md`。
 - 本節依 commit 訊息的節號加上目前的 `SPEC.md` 對照判斷。
 
 ### 1-2. 各份 CHANGE 狀態
