@@ -41,7 +41,8 @@ struct WorkoutEditor<Header: View, Footer: View>: View {
     @Environment(\.modelContext) private var context
     @AppStorage(WeightUnit.storageKey) private var unit: WeightUnit = .kg
     @State private var drafts = SetDrafts()
-    @FocusState private var focus: FieldID?
+    /// 正在輸入的欄位（SetNumberField 是 UIKit 的輸入框，焦點自己管，不用 FocusState）
+    @State private var focus: FieldID?
 
     @State private var addingExercise = false
     @State private var replacing: SessionExercise?
@@ -91,7 +92,6 @@ struct WorkoutEditor<Header: View, Footer: View>: View {
             }
         }
         .screenBackground()
-        .toolbar { keyboardToolbar }
         .task(id: openAddOnAppear) {
             guard openAddOnAppear else { return }
             // 等全螢幕畫面出現後再開 sheet
@@ -159,6 +159,7 @@ struct WorkoutEditor<Header: View, Footer: View>: View {
     private func exerciseSection(_ item: SessionExercise, exercise: Exercise) -> some View {
         let rows = rowInfos(item)
         let logType = exercise.logType
+        let advice = item.advice(unit: unit)
         Section {
             HStack {
                 Button { detailExercise = exercise } label: {
@@ -174,7 +175,7 @@ struct WorkoutEditor<Header: View, Footer: View>: View {
             }
             .id(item.id)
 
-            AdviceLine(advice: item.advice(unit: unit))
+            AdviceLine(advice: advice)
 
             if !item.note.isEmpty {
                 Text(item.note).font(.subheadline).foregroundStyle(Theme.textSecondary)
@@ -194,6 +195,10 @@ struct WorkoutEditor<Header: View, Footer: View>: View {
                     unit: unit,
                     text: { binding(row.set, $0) },
                     focus: $focus,
+                    allowsNegative: SetLogic.allowsNegativeLoad(logType: logType, equipment: exercise.equipment),
+                    candidates: { candidates(row, $0, item: item, exercise: exercise, advice: advice) },
+                    onPick: { field, value in pick(value, field: field, set: row.set) },
+                    fieldIdentifier: "\(exercise.name)-\(row.number)",
                     onToggle: { toggle(row, item: item, exercise: exercise) },
                     onKind: { kind in
                         row.set.kind = kind
@@ -347,56 +352,34 @@ struct WorkoutEditor<Header: View, Footer: View>: View {
         item.sets.forEach(clearDrafts)
     }
 
-    // MARK: - 鍵盤快捷列
+    // MARK: - 候選列與下一格
 
-    @ToolbarContentBuilder
-    private var keyboardToolbar: some ToolbarContent {
-        ToolbarItemGroup(placement: .keyboard) {
-            if focus?.field.acceptsWeightSteps == true {
-                if focusedAllowsNegative {
-                    Button("±", action: flipWeightSign)
-                }
-                Button("-2.5") { stepWeight(-2.5) }
-                Button("+2.5") { stepWeight(2.5) }
-                Button("+5") { stepWeight(5) }
-            }
-            Spacer()
-            // 名稱欄位也會出現這一列：那時沒有「下一格」，「完成」直接收起鍵盤
-            if focus != nil {
-                Button("下一格", action: focusNext)
-            }
-            Button("完成") {
-                focus = nil
-                dismissKeyboard()
-            }
-            .fontWeight(.semibold)
+    /// 鍵盤上緣的候選列（CHANGE_11 §4-2）：kg 欄以目前的值（沒有就用灰字預填）為中心、包含建議重量；
+    /// 次數欄以處方次數為中心；其他欄位沒有候選列
+    private func candidates(_ row: SetRowInfo, _ field: SetField, item: SessionExercise, exercise: Exercise,
+                            advice: SlotAdvice) -> [SetCandidates.Candidate] {
+        switch field {
+        case .weight:
+            func display(_ kg: Double?) -> Double? { kg.map { unit.displayRounded(unit.fromKg($0)) } }
+            return SetCandidates.weight(current: display(row.set.weightKg), placeholder: display(row.placeholder?.weightKg),
+                                        suggested: display(advice.speedWeightKg),
+                                        step: RoundingSteps.step(equipment: exercise.equipment, unit: unit),
+                                        allowsNegative: SetLogic.allowsNegativeLoad(logType: exercise.logType, equipment: exercise.equipment))
+        case .reps:
+            return SetCandidates.reps(prescribed: advice.prescription.reps)
+        case .seconds, .incline, .speed, .minutes:
+            return []
         }
     }
 
-    /// 以目前輸入（沒輸入就用預填）為基準加減，單位跟著全域設定（lbs 模式就是 ±2.5 lb）；
-    /// 只有可以記負重的動作會減到 0 以下
-    private func stepWeight(_ delta: Double) {
-        guard let id = focus, let (set, placeholder) = locate(id.set) else { return }
-        let base = unit.displayRounded(unit.fromKg(set.weightKg ?? placeholder?.weightKg ?? 0))
-        let value = focusedAllowsNegative ? base + delta : max(0, base + delta)
-        drafts.texts[id] = Units.number(value)
-        set.weightKg = unit.toKg(value)
+    /// 點候選：填入這一格，跳到下一格（最後一格填完就收起鍵盤）
+    private func pick(_ value: Double, field: SetField, set: SetRecord) {
+        let id = FieldID(set: set.id, field: field)
+        let text = Units.number(value)
+        drafts.texts[id] = text
+        Self.write(text, to: set, field, unit: unit)
         WorkoutActions.save(context)
-    }
-
-    /// 正負切換（數字鍵盤沒有負號）：以目前輸入（沒輸入就用預填）為基準
-    private func flipWeightSign() {
-        guard let id = focus, let (set, placeholder) = locate(id.set),
-              let kg = set.weightKg ?? placeholder?.weightKg, kg != 0 else { return }
-        let value = -unit.displayRounded(unit.fromKg(kg))
-        drafts.texts[id] = Units.number(value)
-        set.weightKg = unit.toKg(value)
-        WorkoutActions.save(context)
-    }
-
-    private var focusedAllowsNegative: Bool {
-        guard let id = focus, let exercise = locate(id.set)?.0.sessionExercise?.exercise else { return false }
-        return SetLogic.allowsNegativeLoad(logType: exercise.logType, equipment: exercise.equipment)
+        focusNext()
     }
 
     private func focusNext() {
@@ -409,15 +392,6 @@ struct WorkoutEditor<Header: View, Footer: View>: View {
             return
         }
         focus = order[index + 1]
-    }
-
-    private func locate(_ setID: UUID) -> (SetRecord, SetValues?)? {
-        for item in session.orderedItems {
-            if let row = rowInfos(item).first(where: { $0.set.id == setID }) {
-                return (row.set, row.placeholder)
-            }
-        }
-        return nil
     }
 
     private func isPresented<T>(_ binding: Binding<T?>) -> Binding<Bool> {

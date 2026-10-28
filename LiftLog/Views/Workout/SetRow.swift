@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 enum SetField: Int, CaseIterable {
     case weight, reps, seconds, incline, speed, minutes
@@ -13,9 +14,6 @@ enum SetField: Int, CaseIterable {
     }
 
     var isDecimal: Bool { self != .reps && self != .seconds }
-
-    /// 鍵盤快捷鍵 -2.5／+2.5／+5 只作用在重量欄
-    var acceptsWeightSteps: Bool { self == .weight }
 }
 
 struct FieldID: Hashable {
@@ -41,7 +39,14 @@ struct SetRow: View {
     let logType: LogType
     let unit: WeightUnit
     let text: (SetField) -> Binding<String>
-    let focus: FocusState<FieldID?>.Binding
+    let focus: Binding<FieldID?>
+    /// 可以記負數的動作（輔助引體向上）：重量欄用有負號的鍵盤（CHANGE_11 §4-2 拿掉了鍵盤列的 ±）
+    var allowsNegative = false
+    /// 鍵盤上緣的候選列（CHANGE_11 §4-2）；點一個候選填入這一格並跳到下一格
+    let candidates: (SetField) -> [SetCandidates.Candidate]
+    let onPick: (SetField, Double) -> Void
+    /// UI 測試找欄位用：「臥推-1」，欄位的 identifier 是「臥推-1-weight」
+    var fieldIdentifier = ""
     /// 回傳 false 代表欄位不齊全
     let onToggle: () -> Bool
     let onKind: (SetKind) -> Void
@@ -81,13 +86,11 @@ struct SetRow: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             ForEach(SetField.fields(for: logType), id: \.self) { field in
-                TextField("", text: text(field), prompt: Text(placeholderText(field)).foregroundStyle(Theme.textSecondary.opacity(0.55)))
-                    .keyboardType(field.isDecimal ? .decimalPad : .numberPad)
-                    .multilineTextAlignment(.center)
-                    .font(.title3.weight(.semibold).monospacedDigit())
+                SetNumberField(id: FieldID(set: set.id, field: field), text: text(field), placeholder: placeholderText(field),
+                               keyboard: keyboard(field), focus: focus, candidates: candidates(field),
+                               onPick: { onPick(field, $0) }, accessibilityID: "\(fieldIdentifier)-\(field)")
                     .frame(width: SetColumns.field, height: 40)
                     .background(Theme.field, in: .rect(cornerRadius: 8))
-                    .focused(focus, equals: FieldID(set: set.id, field: field))
             }
 
             Button {
@@ -103,6 +106,7 @@ struct SetRow: View {
                     .background(set.isCompleted ? Theme.done.opacity(0.18) : Theme.field, in: .rect(cornerRadius: 8))
             }
             .buttonStyle(.pressable(scale: 0.88))
+            .accessibilityIdentifier("\(fieldIdentifier)-check")
         }
         .modifier(Shake(animatableData: CGFloat(shakes)))
         .sensoryFeedback(.success, trigger: set.isCompleted) { _, done in done }
@@ -115,6 +119,11 @@ struct SetRow: View {
         case .warmup: Theme.accent
         case .max: Theme.warning
         }
+    }
+
+    private func keyboard(_ field: SetField) -> UIKeyboardType {
+        if field == .weight, allowsNegative { return .numbersAndPunctuation }
+        return field.isDecimal ? .decimalPad : .numberPad
     }
 
     private func placeholderText(_ field: SetField) -> String {

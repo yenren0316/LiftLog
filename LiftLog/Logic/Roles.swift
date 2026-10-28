@@ -98,6 +98,8 @@ nonisolated struct Prescription: Equatable, Sendable {
     var restSeconds: Int
     /// DE 速度主項固定的組數和次數：上一次紀錄的組數不適用，預填的次數用這個
     var fixedReps: Int?
+    /// 每組的處方次數（範圍）：次數欄的候選列以它為中心（CHANGE_11 §4-2）；有氧和沒寫次數的舊角色為 nil
+    var reps: ClosedRange<Int>?
 
     /// DE 主項沒有「爆」標籤的就是速度主項（同一個槓鈴動作用速度做）
     static func isSpeed(role: Role, tags: [ExerciseTag]) -> Bool {
@@ -108,24 +110,27 @@ nonisolated struct Prescription: Equatable, Sendable {
         switch role {
         case .maxEffort:
             let rm = name.contains("早安") ? 5 : 3
-            return Prescription(volume: "逐步加重到當天 \(rm)RM", rest: "充分休息", tip: "設好安全槓", setCount: 5, restSeconds: 180)
+            return Prescription(volume: "逐步加重到當天 \(rm)RM", rest: "充分休息", tip: "設好安全槓", setCount: 5, restSeconds: 180,
+                                reps: rm...rm)
         case .dynamicEffort where isSpeed(role: role, tags: tags):
             let (sets, reps) = speedVolume(name)
             return Prescription(volume: "\(sets) 組 × \(reps) 下", rest: "休息 45–60 秒", setCount: sets, restSeconds: 60,
-                                fixedReps: reps)
+                                fixedReps: reps, reps: reps...reps)
         case .dynamicEffort:
-            let reps = name.contains("壺鈴擺盪") ? "8–10" : "3–5"
-            return Prescription(volume: "6–8 組 × \(reps) 下", rest: "休息 60–90 秒", tip: "速度掉了就停", setCount: 6, restSeconds: 90)
+            let reps = name.contains("壺鈴擺盪") ? 8...10 : 3...5
+            return Prescription(volume: "6–8 組 × \(reps.lowerBound)–\(reps.upperBound) 下", rest: "休息 60–90 秒", tip: "速度掉了就停",
+                                setCount: 6, restSeconds: 90, reps: reps)
         case .lowerAssist, .push, .pull:
-            return Prescription(volume: "3–4 組 × 8–12 下", rest: "休息 60–90 秒", setCount: 3, restSeconds: 90)
+            return Prescription(volume: "3–4 組 × 8–12 下", rest: "休息 60–90 秒", setCount: 3, restSeconds: 90, reps: 8...12)
         case .core, .accessory:
-            return Prescription(volume: "2–3 組 × 10–15 下，或 30–45 秒", rest: "休息 45–60 秒", setCount: 3, restSeconds: 60)
+            return Prescription(volume: "2–3 組 × 10–15 下，或 30–45 秒", rest: "休息 45–60 秒", setCount: 3, restSeconds: 60,
+                                reps: 10...15)
         case .cardio:
             return Prescription(volume: "30 分鐘，坡度和速度沿用上次", setCount: 1, restSeconds: 60)
         case .main, .explosive:
             return Prescription(volume: "5 組", rest: "休息 180 秒", setCount: 5, restSeconds: 180)
         case .unilateral:
-            return Prescription(volume: "3 組 × 每邊 7–10 下", rest: "休息 90 秒", setCount: 3, restSeconds: 90)
+            return Prescription(volume: "3 組 × 每邊 7–10 下", rest: "休息 90 秒", setCount: 3, restSeconds: 90, reps: 7...10)
         }
     }
 

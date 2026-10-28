@@ -42,7 +42,7 @@ final class KeyboardUITests: XCTestCase {
         XCTAssertTrue(again)
     }
 
-    /// 訓練中填重量：點空白處、往下拖都能收起；訓練自己的鍵盤列（下一格）還在
+    /// 訓練中填重量：點空白處、往下拖都能收起；沒有鍵盤列（CHANGE_11 §4-2 換成候選列）
     func testWorkoutFieldsDismiss() async throws {
         continueAfterFailure = false
         let app = XCUIApplication()
@@ -62,8 +62,9 @@ final class KeyboardUITests: XCTestCase {
         XCTAssertTrue(shown, "點重量欄要打開鍵盤：\(fields)")
         try await Task.sleep(for: .seconds(0.8))
         attachScreenshot("workout_keyboard")
-        let toolbarButtons = app.toolbars.buttons.allElementsBoundByIndex.map(\.label) + app.keyboards.buttons.allElementsBoundByIndex.map(\.label)
-        XCTAssertTrue(app.buttons["下一格"].exists || toolbarButtons.contains("下一格"), "訓練中的鍵盤列要保留：\(toolbarButtons)")
+        // CHANGE_11 §4-2：鍵盤列（-2.5／+2.5／+5、下一格、完成）換成候選列
+        XCTAssertFalse(app.buttons["下一格"].exists, "不該再有鍵盤列的「下一格」")
+        XCTAssertFalse(app.buttons["+2.5"].exists, "不該再有鍵盤列的 +2.5")
         // 點標題下面的日期（不是輸入框）
         var hiddenByTap = false
         for _ in 0..<2 where !hiddenByTap {
@@ -83,6 +84,54 @@ final class KeyboardUITests: XCTestCase {
                     withVelocity: .default, thenHoldForDuration: 0.1)
         let hiddenByScroll = await waitForKeyboard(false)
         XCTAssertTrue(hiddenByScroll, "往下捲要收起鍵盤")
+        // 收掉示範訓練
+        app.terminate()
+        app.launchArguments = ["-discardActive", "YES"]
+        app.launch()
+        try await Task.sleep(for: .seconds(3))
+    }
+
+    /// CHANGE_11 §4-1：訓練畫面右上角的「完成」是結束訓練，所以點空白處都要能收起鍵盤：
+    /// 組與組之間、說明列、動作標題
+    func testWorkoutBlankAreasDismiss() async throws {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchWithoutActiveWorkout(["-demoData", "YES", "-demoWorkout", "YES"])
+        XCTAssertTrue(app.buttons["縮小"].waitForExistence(timeout: 15))
+        try await Task.sleep(for: .seconds(1.5))
+        let first = app.textFields["臥推-1-weight"].firstMatch
+        let second = app.textFields["臥推-2-weight"].firstMatch
+        XCTAssertTrue(first.waitForExistence(timeout: 5) && second.exists)
+        func openKeyboard() async -> Bool {
+            for _ in 0..<2 {
+                first.tap()
+                if await waitForKeyboard(true, timeout: 4) { return true }
+            }
+            return false
+        }
+        func tapAndExpectHidden(_ name: String, _ tap: () -> Void) async {
+            let opened = await openKeyboard()
+            XCTAssertTrue(opened, "\(name)：要先打開鍵盤")
+            try? await Task.sleep(for: .seconds(0.6))
+            tap()
+            let hidden = await waitForKeyboard(false, timeout: 4)
+            if !hidden { attachScreenshot("blank_\(name)") }
+            XCTAssertTrue(hidden, "點\(name)要收起鍵盤")
+        }
+        // 組與組之間：第 1 組和第 2 組中間的空隙，靠左（組號的左邊）
+        await tapAndExpectHidden("組與組之間") {
+            app.point(x: 8, y: (first.frame.maxY + second.frame.minY) / 2).tap()
+        }
+        // 說明列（預設參數「3–4 組 × 8–12 下・休息 60–90 秒」）
+        await tapAndExpectHidden("說明列") {
+            app.staticTexts.matching(NSPredicate(format: "label CONTAINS '休息'")).firstMatch.tap()
+        }
+        // 動作標題（點了也會打開動作說明，關掉它）
+        await tapAndExpectHidden("動作標題") {
+            app.buttons.matching(NSPredicate(format: "label BEGINSWITH '臥推'")).firstMatch.tap()
+        }
+        try await Task.sleep(for: .seconds(1))
+        if !app.buttons["縮小"].isHittable { app.swipeDown(velocity: .fast) }
         // 收掉示範訓練
         app.terminate()
         app.launchArguments = ["-discardActive", "YES"]
