@@ -1,0 +1,25 @@
+# CHANGE_11 歷程穩定性（CHANGE_08 的 V1，每輪重跑）：捲到底部後每 0.5 秒連拍 5 張，遮掉最上面 200 px（狀態列）比對
+## 紀錄
+stability_records_2.png：相同
+stability_records_3.png：相同
+stability_records_4.png：相同
+stability_records_5.png：相同
+結果：全部相同
+## 統計
+stability_stats_2.png：相同
+stability_stats_3.png：相同
+stability_stats_4.png：相同
+stability_stats_5.png：相同
+結果：全部相同
+## 動作庫
+stability_library_2.png：相同
+stability_library_3.png：相同
+stability_library_4.png：相同
+stability_library_5.png：相同
+結果：全部相同
+## 分類（核心）
+stability_category_2.png：相同
+stability_category_3.png：相同
+stability_category_4.png：相同
+stability_category_5.png：相同
+結果：全部相同
