@@ -82,6 +82,9 @@ nonisolated struct StatsSnapshot: Sendable {
 
     static let empty = StatsSnapshot()
 
+    /// 有沒有任何完成組的紀錄（已結束的訓練，不限 30 天）：沒有時平衡卡只寫「還沒有紀錄」（CHANGE_14 §5）
+    var hasCompletedSets: Bool { !exercises.isEmpty }
+
     static let trendWeeks = 12
 
     /// exercises：全部動作（含封存）；lastDate 不需要先算好。cardioOnlyCounts：「只有有氧的訓練也算」（每週目標的設定）

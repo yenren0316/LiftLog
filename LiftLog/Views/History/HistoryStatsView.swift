@@ -18,7 +18,7 @@ struct HistoryStatsView: View {
                     FrequencyCard(weeks: stats.snapshot.frequencyWeeks, months: stats.snapshot.frequencyMonths,
                                   goal: WeeklyGoal.goal(stored: storedGoal, automatic: stats.snapshot.automaticWeeklyGoal))
                         .id("frequency")
-                    BalanceCard(balance: stats.snapshot.balance, sets: stats.snapshot.recentSets).id("balance")
+                    BalanceCard(balance: stats.snapshot.balance, content: BalanceCardContent.make(stats.snapshot)).id("balance")
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 16)
@@ -372,55 +372,71 @@ private struct FrequencyCard: View {
 }
 
 /// 平衡：近 30 天的推：拉組數比、單邊次數、爆發次數，和 9 個分類的組數長條（CHANGE_13 §2-4，從首頁搬過來；不能點，沒有下一層）。
-/// 不用紅綠燈（§3）：長條一律中性色；拉比推少時推拉比用 warning 色加「拉偏少」，0 組的分類用 warning 色加「沒練」
+/// 不用紅綠燈（§3）：長條一律中性色；拉比推少時推拉比用 warning 色加「拉偏少」，0 組的分類用 warning 色加「沒練」。
+/// 完全沒有紀錄時只寫一行「還沒有紀錄」（CHANGE_14 §5）
 private struct BalanceCard: View {
     var balance: StatsSnapshot.Balance
-    /// 近 30 天各分類的組數（StatsSnapshot.recentSets）
-    var sets: [ExerciseCategory: Int]
+    /// 9 個分類的組數（StatsSnapshot.recentSets），或完全沒有紀錄
+    var content: BalanceCardContent
 
     var body: some View {
-        let maxCount = max(sets.values.max() ?? 0, 1)
         VStack(alignment: .leading, spacing: 8) {
             Text("平衡・近 30 天").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.textSecondary)
-            HStack(spacing: 6) {
-                Text("推：拉")
-                Text("\(balance.push)：\(balance.pull)")
-                    .font(.body.weight(.bold).monospacedDigit())
-                    .foregroundStyle(pullIsLow ? Theme.warning : Theme.textPrimary)
-                if pullIsLow {
-                    Text("拉偏少").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.warning)
-                }
-                Text("・單邊 \(balance.unilateralSessions) 次・爆發 \(balance.explosiveSessions) 次")
-                    .monospacedDigit()
-            }
-            .font(.body)
-            .lineLimit(1)
-            .minimumScaleFactor(0.8)
-            Divider().overlay(Theme.separator).padding(.vertical, 4)
-            HStack(alignment: .firstTextBaseline) {
-                Text("各分類").font(.caption).foregroundStyle(Theme.textSecondary)
-                Spacer()
-                Text("組數").font(.caption).foregroundStyle(Theme.textSecondary)
-            }
-            ForEach(ExerciseCategory.allCases) { category in
-                let count = sets[category] ?? 0
-                HStack(spacing: 10) {
-                    Text(category.title)
-                        .font(.subheadline.weight(.semibold))
-                        .frame(width: 84, alignment: .leading)
-                    ThinBar(fraction: Double(count) / Double(maxCount), color: Theme.textSecondary)
-                    Text(count == 0 ? "0 沒練" : "\(count)")
-                        .font(.subheadline.weight(.bold).monospacedDigit())
-                        .foregroundStyle(count == 0 ? Theme.warning : Theme.textPrimary)
-                        .lineLimit(1)
-                        .frame(width: 64, alignment: .trailing)
-                }
-                .frame(minHeight: 24)
+            switch content {
+            case .noRecords:
+                Text("還沒有紀錄").font(.subheadline).foregroundStyle(Theme.textSecondary)
+            case .rows(let rows):
+                summary
+                categories(rows)
             }
         }
         .card(padding: 16)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("balanceCard")
+    }
+
+    /// 「推：拉 4：6 拉偏少・單邊 2 次・爆發 1 次」
+    private var summary: some View {
+        HStack(spacing: 6) {
+            Text("推：拉")
+            Text("\(balance.push)：\(balance.pull)")
+                .font(.body.weight(.bold).monospacedDigit())
+                .foregroundStyle(pullIsLow ? Theme.warning : Theme.textPrimary)
+            if pullIsLow {
+                Text("拉偏少").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.warning)
+            }
+            Text("・單邊 \(balance.unilateralSessions) 次・爆發 \(balance.explosiveSessions) 次")
+                .monospacedDigit()
+        }
+        .font(.body)
+        .lineLimit(1)
+        .minimumScaleFactor(0.8)
+    }
+
+    /// 9 個分類的組數長條；0 組寫「0 沒練」
+    @ViewBuilder
+    private func categories(_ rows: [BalanceCardContent.Row]) -> some View {
+        let maxCount = max(rows.map(\.count).max() ?? 0, 1)
+        Divider().overlay(Theme.separator).padding(.vertical, 4)
+        HStack(alignment: .firstTextBaseline) {
+            Text("各分類").font(.caption).foregroundStyle(Theme.textSecondary)
+            Spacer()
+            Text("組數").font(.caption).foregroundStyle(Theme.textSecondary)
+        }
+        ForEach(rows) { row in
+            HStack(spacing: 10) {
+                Text(row.category.title)
+                    .font(.subheadline.weight(.semibold))
+                    .frame(width: 84, alignment: .leading)
+                ThinBar(fraction: Double(row.count) / Double(maxCount), color: Theme.textSecondary)
+                Text(row.text)
+                    .font(.subheadline.weight(.bold).monospacedDigit())
+                    .foregroundStyle(row.isNeglected ? Theme.warning : Theme.textPrimary)
+                    .lineLimit(1)
+                    .frame(width: 64, alignment: .trailing)
+            }
+            .frame(minHeight: 24)
+        }
     }
 
     private var pullIsLow: Bool { balance.pull < balance.push }
