@@ -52,9 +52,9 @@ struct StatsCacheTests {
         // 每個動作的最後日期和次數（含 30 天以外）
         #expect(snapshot.exercises[row]?.lastDate == date(10, 25) && snapshot.exercises[row]?.sessionCount == 2)
         #expect(snapshot.exercises[bench]?.lastSets.count == 3)
-        // 日曆：那天的訓練和動作數
-        let day = calendar.startOfDay(for: date(10, 25))
-        #expect(snapshot.days[day]?.exerciseCount == 2 && snapshot.days[day]?.sessionIDs.count == 1)
+        // 「本週」卡的圓點：那天的部位（上肢推＋上肢拉 = 上肢）；只有有氧的日子是有氧與其他
+        #expect(snapshot.dayRegions[calendar.startOfDay(for: date(10, 25))] == .upper)
+        #expect(snapshot.dayRegions[calendar.startOfDay(for: date(10, 20))] == .cardio)
         // 有氧每週分鐘數：最後一週（本週）有 30 分鐘以前的那週
         #expect(snapshot.weeklyCardioMinutes.reduce(0, +) == 30)
         #expect(snapshot.weeklyCardioMinutes.count == StatsSnapshot.trendWeeks)

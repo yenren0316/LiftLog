@@ -130,10 +130,9 @@ struct TrainingRegionTests {
         #expect(snapshot.frequencyMonths.buckets.last?.total == 1)
         #expect(snapshot.countedDays == [calendar.startOfDay(for: now): .full])
         #expect(snapshot.weekCounts == [calendar.startOfDay(for: now): 1])   // 10/26 是週一
-        // 同一天下肢＋上肢：日曆是全身
-        let today = try #require(snapshot.days[calendar.startOfDay(for: now)])
-        #expect(today.region == .full)
+        // 同一天下肢＋上肢：「本週」卡的圓點是全身
+        #expect(snapshot.dayRegions[calendar.startOfDay(for: now)] == .full)
         // 只有沒打勾的組的那天：沒有顏色
-        #expect(snapshot.days[calendar.startOfDay(for: date(10, 24))]?.region == nil)
+        #expect(snapshot.dayRegions[calendar.startOfDay(for: date(10, 24))] == nil)
     }
 }

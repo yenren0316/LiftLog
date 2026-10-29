@@ -18,7 +18,7 @@ struct HistoryStatsView: View {
                     FrequencyCard(weeks: stats.snapshot.frequencyWeeks, months: stats.snapshot.frequencyMonths,
                                   goal: WeeklyGoal.goal(stored: storedGoal, automatic: stats.snapshot.automaticWeeklyGoal))
                         .id("frequency")
-                    BalanceCard(balance: stats.snapshot.balance).id("balance")
+                    BalanceCard(balance: stats.snapshot.balance, sets: stats.snapshot.recentSets).id("balance")
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 16)
@@ -230,12 +230,12 @@ private struct FrequencyCard: View {
                 // 放得下就一列，放不下時線的圖例換到第二列
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 12) {
-                        RegionLegend(forBars: true)
+                        RegionLegend()
                         Spacer(minLength: 0)
                         lineLegend(average: average)
                     }
                     VStack(alignment: .leading, spacing: 6) {
-                        RegionLegend(forBars: true)
+                        RegionLegend()
                         lineLegend(average: average)
                     }
                 }
@@ -368,11 +368,15 @@ private struct FrequencyCard: View {
     }
 }
 
-/// 平衡：近 30 天的推：拉組數比、單邊次數、爆發次數（拉比推少時推拉比用警示色）
+/// 平衡：近 30 天的推：拉組數比、單邊次數、爆發次數（拉比推少時推拉比用警示色），
+/// 和 9 個分類的組數長條（CHANGE_13 §2-4，從首頁搬過來；不能點，沒有下一層）
 private struct BalanceCard: View {
     var balance: StatsSnapshot.Balance
+    /// 近 30 天各分類的組數（StatsSnapshot.recentSets）
+    var sets: [ExerciseCategory: Int]
 
     var body: some View {
+        let maxCount = max(sets.values.max() ?? 0, 1)
         VStack(alignment: .leading, spacing: 8) {
             Text("平衡・近 30 天").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.textSecondary)
             HStack(spacing: 6) {
@@ -386,7 +390,28 @@ private struct BalanceCard: View {
             .font(.body)
             .lineLimit(1)
             .minimumScaleFactor(0.8)
+            Divider().overlay(Theme.separator).padding(.vertical, 4)
+            HStack(alignment: .firstTextBaseline) {
+                Text("各分類").font(.caption).foregroundStyle(Theme.textSecondary)
+                Spacer()
+                Text("組數").font(.caption).foregroundStyle(Theme.textSecondary)
+            }
+            ForEach(ExerciseCategory.allCases) { category in
+                let count = sets[category] ?? 0
+                HStack(spacing: 10) {
+                    Text(category.title)
+                        .font(.subheadline.weight(.semibold))
+                        .frame(width: 84, alignment: .leading)
+                    ThinBar(fraction: Double(count) / Double(maxCount), color: Theme.textSecondary)
+                    Text("\(count)")
+                        .font(.subheadline.weight(.bold).monospacedDigit())
+                        .frame(width: 32, alignment: .trailing)
+                }
+                .frame(minHeight: 24)
+            }
         }
         .card(padding: 16)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("balanceCard")
     }
 }

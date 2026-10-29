@@ -132,28 +132,6 @@ struct ElapsedTimeText: View {
     }
 }
 
-/// 頁面大標題列：左邊標題、右邊可選的按鈕
-struct ScreenHeader<Trailing: View>: View {
-    var title: String
-    @ViewBuilder var trailing: Trailing
-
-    var body: some View {
-        HStack {
-            Text(title)
-                .font(.largeTitle.bold())
-            Spacer()
-            trailing
-        }
-        .padding(.horizontal, 4)
-    }
-}
-
-extension ScreenHeader where Trailing == EmptyView {
-    init(title: String) {
-        self.init(title: title) { EmptyView() }
-    }
-}
-
 extension Staleness {
     var color: Color {
         switch self {

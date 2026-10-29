@@ -17,6 +17,22 @@ nonisolated enum DayRegion: String, CaseIterable, Sendable {
         }
     }
 
+    /// 部位的顏色（主題的 token）：下肢 accent、上肢 upperBody、全身兩色各一半、有氧與其他中性灰
+    enum Swatch: Equatable, Sendable {
+        case solid(UInt32)
+        case split(UInt32, UInt32)
+        case neutral
+    }
+
+    func swatch(_ palette: Palette) -> Swatch {
+        switch self {
+        case .lower: .solid(palette.accent)
+        case .upper: .solid(palette.upperBody)
+        case .full: .split(palette.accent, palette.upperBody)
+        case .cardio: .neutral
+        }
+    }
+
     /// 一次訓練：有完成組的動作的分類；一個都沒有時為 nil（不算一次訓練）
     static func of(categories: [ExerciseCategory]) -> DayRegion? {
         guard !categories.isEmpty else { return nil }

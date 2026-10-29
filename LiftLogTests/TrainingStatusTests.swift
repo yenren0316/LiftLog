@@ -91,7 +91,7 @@ struct TrainingStatusTests {
         #expect(week.days == 2)
         #expect(week.days == TrainingCount.count(in: TrainingStatus.thisWeekRange(now: now, calendar: weekCalendar),
                                                  days: snapshot.countedDays))
-        // 組數和首頁近 30 天是同一個函式
+        // 組數和歷程平衡卡的近 30 天是同一個函式
         let range = TrainingStatus.thisWeekRange(now: now, calendar: weekCalendar)
         #expect(week.sets == history.setCount(in: range) { $0.category != .cardio })
         let last = snapshot.trainingStatus.lastWeek
@@ -143,7 +143,7 @@ struct TrainingStatusTests {
         }
         // 「下一次」：和「下一次」卡（建立菜單的預設答案）同一個日型，只有一列
         #expect(rotation.filter(\.isNext).map(\.dayType) == [PlanDefaults.answers(history).dayType])
-        #expect(rotation.first(where: \.isNext)?.nextMain == snapshot.suggestedMain)
+        #expect(rotation.first(where: \.isNext)?.nextMain == snapshot.suggestedMain?.name)
     }
 
     @Test func overFourteenDaysIsStale() {

@@ -53,7 +53,7 @@ nonisolated struct PlanHistory: Sendable {
     }
 
     /// 這段期間符合條件的動作完成了幾組：打勾的正式組和 MAX 組，不含熱身（sessions 只有已結束的訓練）。
-    /// 首頁的近 30 天和「訓練狀態」的本週、上週同期共用這一個
+    /// 歷程平衡卡的近 30 天和「訓練狀態」的本週、上週同期（也是「今天」本週卡的組數）共用這一個
     func setCount(in range: Range<Date>, where match: (Item) -> Bool) -> Int {
         let items: [Item] = sessions.filter { range.contains($0.date) }.flatMap(\.items).filter(match)
         let sets: [SetValues] = items.flatMap(\.sets)

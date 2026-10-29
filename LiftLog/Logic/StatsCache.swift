@@ -27,17 +27,6 @@ nonisolated struct StatsSnapshot: Sendable {
         var lastSets: [SetValues] = []
     }
 
-    struct DayStat: Sendable, Equatable {
-        /// 那天做了幾個動作（日曆亮度）
-        var exerciseCount = 0
-        /// 那天的訓練，依開始時間
-        var sessionIDs: [UUID] = []
-        /// 合併後的部位（日曆格子的顏色）；那天沒有完成任何組時為 nil
-        var region: DayRegion?
-        /// 各次訓練的部位，算 region 用
-        var regions: [DayRegion] = []
-    }
-
     /// 主項的估算 1RM 趨勢
     struct MainLiftTrend: Sendable, Equatable {
         /// 估算 1RM（近 90 天最好的一次）；90 天內沒有紀錄為 nil（卡片不列）
@@ -65,11 +54,18 @@ nonisolated struct StatsSnapshot: Sendable {
     var exercises: [UUID: ExerciseStat] = [:]
     /// 動作庫各分類「最久沒練」的天數：未封存、練過的動作裡最久沒練的那個距今幾天；都沒練過的分類沒有值
     var neglectedDays: [ExerciseCategory: Int] = [:]
-    /// 近 30 天各分類完成的組數（不含熱身）
+    /// 近 30 天各分類完成的組數（不含熱身）：歷程統計的平衡卡（CHANGE_13 §2-4）
     var recentSets: [ExerciseCategory: Int] = [:]
-    var days: [Date: DayStat] = [:]
+    /// 每天（0 點）有完成組的已結束訓練的部位，同一天多次訓練合併：「本週」卡的圓點（CHANGE_13 §2-2）
+    var dayRegions: [Date: DayRegion] = [:]
+    /// 每個分類最近一次完成組的日期（任何動作，含封存）；沒練過的分類沒有值
+    var categoryLastDates: [ExerciseCategory: Date] = [:]
+    /// 「本週」卡最下面的提醒：很久沒練的分類（WeekCard.reminder）
+    var weekReminder: WeekCard.Reminder?
     var nextPlan = PlanAnswers(dayType: .meLower, count: PlanDefaults.countWithoutHistory, cardio: false)
-    var suggestedMain: String?
+    /// 主項格的第一個建議和它的歷次紀錄：「下一次」卡的主項和建議重量（和建立菜單同一個 SlotAdvice）
+    var suggestedMain: PlanExercise?
+    var suggestedMainLogs: [ExerciseLog] = []
     var mainLifts: [UUID: MainLiftTrend] = [:]
     var balance = Balance()
     /// 近 12 週每週跑步機的分鐘數，由舊到新
@@ -99,14 +95,11 @@ nonisolated struct StatsSnapshot: Sendable {
         // 週一開始的週（和今天的日曆、每週目標一致）
         let weekCalendar = TrainingCount.weekCalendar(calendar)
 
-        // 每個動作：最後日期、次數、上一次的組（history 由新到舊）
+        // 每個動作：最後日期、次數、上一次的組；每個分類最近一次完成組的日期（history 由新到舊）
+        var regionsByDay: [Date: [DayRegion]] = [:]
         for session in history.sessions {
-            let day = calendar.startOfDay(for: session.date)
-            var dayStat = snapshot.days[day] ?? DayStat()
-            dayStat.sessionIDs.insert(session.id, at: 0)
             if let region = DayRegion.of(session) {
-                dayStat.regions.insert(region, at: 0)
-                dayStat.region = DayRegion.merged(dayStat.regions)
+                regionsByDay[calendar.startOfDay(for: session.date), default: []].append(region)
             }
             for item in session.items where item.sets.contains(where: \.isCompleted) {
                 var stat = snapshot.exercises[item.exerciseID] ?? ExerciseStat()
@@ -116,10 +109,11 @@ nonisolated struct StatsSnapshot: Sendable {
                 }
                 stat.sessionCount += 1
                 snapshot.exercises[item.exerciseID] = stat
-                dayStat.exerciseCount += 1
+                if snapshot.categoryLastDates[item.category] == nil { snapshot.categoryLastDates[item.category] = session.date }
             }
-            snapshot.days[day] = dayStat
         }
+        snapshot.dayRegions = regionsByDay.compactMapValues(DayRegion.merged)
+        snapshot.weekReminder = WeekCard.reminder(lastDates: snapshot.categoryLastDates, now: now, calendar: calendar)
 
         // 動作庫的分類列：最久沒練
         for category in ExerciseCategory.allCases {
@@ -149,7 +143,8 @@ nonisolated struct StatsSnapshot: Sendable {
         }
         snapshot.nextPlan = PlanDefaults.answers(history)
         snapshot.suggestedMain = PlanRanking.suggestedMain(for: snapshot.nextPlan.dayType, exercises: planExercises,
-                                                           history: history, now: now)?.name
+                                                           history: history, now: now)
+        snapshot.suggestedMainLogs = snapshot.suggestedMain.map { history.logs(for: $0.id) } ?? []
 
         // 訓練次數：全 App 同一套規則（以天為單位、只有有氧的處理），頻率卡的長條、每週目標都從這裡算
         snapshot.countedDays = TrainingCount.days(history.sessions, cardioOnlyCounts: cardioOnlyCounts, calendar: calendar)

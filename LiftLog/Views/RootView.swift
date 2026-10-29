@@ -85,7 +85,6 @@ struct RootView: View {
             closeWorkoutCover()
             coordinator.summarySession = nil
             coordinator.tab = .today
-            coordinator.todayPath = NavigationPath()
         }
     }
 

@@ -31,13 +31,11 @@ enum AppTab: Hashable, CaseIterable {
     }
 }
 
-/// 管理畫面的呈現：目前的分頁、「今天」的導覽路徑、訓練中全螢幕／縮小橫條、完成摘要、訓練摘要浮窗。
+/// 管理畫面的呈現：目前的分頁、訓練中全螢幕／縮小橫條、完成摘要、訓練摘要浮窗、訓練狀態浮窗。
 /// 開始訓練（包括衝突處理）在 WorkoutLauncher
 @Observable
 final class WorkoutCoordinator {
     var tab: AppTab = .today
-    /// 「今天」分頁的導覽路徑（liftlog://today 會清空，回到第 1 層）
-    var todayPath = NavigationPath()
     /// 全螢幕顯示訓練中畫面
     var isExpanded = false
     /// 剛完成的訓練摘要；有值時全螢幕畫面顯示摘要
@@ -48,7 +46,7 @@ final class WorkoutCoordinator {
     var openAddOnExpand = false
     /// 訓練摘要浮窗（RootView 呈現，任何畫面都可以打開）
     var summarySession: WorkoutSession?
-    /// 「訓練狀態」浮窗（今天的日曆卡打開，RootView 呈現；CHANGE_10 §3）
+    /// 「訓練狀態」浮窗（今天的「本週」卡打開，RootView 呈現；CHANGE_10 §3、CHANGE_13 §2-2）
     var showingTrainingStatus = false
     /// 浮窗打開後直接進入編輯（補登）；編輯畫面打開後直接打開「新增動作」
     var editOnSummaryOpen = false

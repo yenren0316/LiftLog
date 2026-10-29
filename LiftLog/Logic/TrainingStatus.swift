@@ -1,7 +1,7 @@
 import Foundation
 
 /// 「訓練狀態」浮窗（CHANGE_10 §3）的內容：本週、上週同期、輪替狀態。存檔時和其他統計一起算（StatsSnapshot），
-/// 每個數字都來自共用的函式：天數是 TrainingCount.days（每週目標同一套）、組數是 PlanHistory.setCount（首頁近 30 天同一套）、
+/// 每個數字都來自共用的函式：天數是 TrainingCount.days（每週目標同一套）、組數是 PlanHistory.setCount（歷程平衡卡的近 30 天同一套）、
 /// 有氧分鐘是 PlanHistory.cardioMinutes（歷程的有氧卡同一套）、下次主項和「下一次」是建立菜單和「下一次」卡的同一個函式
 nonisolated struct TrainingStatus: Sendable, Equatable {
     /// 一段期間的訓練量

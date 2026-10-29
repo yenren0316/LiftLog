@@ -107,8 +107,8 @@ nonisolated struct Prescription: Equatable, Sendable {
     static func of(role: Role, name: String, tags: [ExerciseTag]) -> Prescription {
         switch role {
         case .maxEffort:
-            let rm = name.contains("早安") ? 5 : 3
-            return Prescription(volume: "逐步加重到當天 \(rm)RM", rest: "充分休息", tip: "設好安全槓", setCount: 5, restSeconds: 180)
+            return Prescription(volume: "逐步加重到當天 \(maxEffortRM(name))RM", rest: "充分休息", tip: "設好安全槓", setCount: 5,
+                                restSeconds: 180)
         case .dynamicEffort where isSpeed(role: role, tags: tags):
             let (sets, reps) = speedVolume(name)
             return Prescription(volume: "\(sets) 組 × \(reps) 下", rest: "休息 45–60 秒", setCount: sets, restSeconds: 60,
@@ -121,13 +121,21 @@ nonisolated struct Prescription: Equatable, Sendable {
         case .core, .accessory:
             return Prescription(volume: "2–3 組 × 10–15 下，或 30–45 秒", rest: "休息 45–60 秒", setCount: 3, restSeconds: 60)
         case .cardio:
-            return Prescription(volume: "30 分鐘，坡度和速度沿用上次", setCount: 1, restSeconds: 60)
+            return Prescription(volume: "\(cardioMinutes) 分鐘，坡度和速度沿用上次", setCount: 1, restSeconds: 60)
         case .main, .explosive:
             return Prescription(volume: "5 組", rest: "休息 180 秒", setCount: 5, restSeconds: 180)
         case .unilateral:
             return Prescription(volume: "3 組 × 每邊 7–10 下", rest: "休息 90 秒", setCount: 3, restSeconds: 90)
         }
     }
+
+    /// ME 主項做到當天幾 RM：早安式 5RM，其他 3RM（「下一次」卡的「做到 3RM」也用它）
+    static func maxEffortRM(_ name: String) -> Int {
+        name.contains("早安") ? 5 : 3
+    }
+
+    /// 有氧（跑步機）的預設分鐘數
+    static let cardioMinutes = 30
 
     /// DE 速度主項：深蹲 8 × 2、硬舉 6 × 1、臥推 8 × 3；其他槓鈴動作 6 × 2
     private static func speedVolume(_ name: String) -> (sets: Int, reps: Int) {

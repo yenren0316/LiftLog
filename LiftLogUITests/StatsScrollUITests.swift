@@ -30,7 +30,15 @@ final class StatsScrollUITests: XCTestCase {
     }
 
     func testDragFromCardioCardScrolls() async throws {
-        let (moved, info) = try await dragDown(from: app.staticTexts["近 12 週・每週跑步機分鐘"].firstMatch, dy: 60)
+        // CHANGE_13 §2-4 平衡卡變長：捲到底部時有氧卡在畫面上方之外，先慢慢往回拖（不帶慣性）到看得到有氧卡
+        let caption = app.staticTexts["近 12 週・每週跑步機分鐘"].firstMatch
+        for _ in 0..<4 where caption.frame.minY < 150 {
+            let start = app.point(x: app.frame.midX, y: app.frame.midY - 100)
+            start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: 300)),
+                        withVelocity: .slow, thenHoldForDuration: 0.5)
+            try await Task.sleep(for: .seconds(1))
+        }
+        let (moved, info) = try await dragDown(from: caption, dy: 60)
         XCTAssertGreaterThan(moved, 80, "從有氧卡往上捲，移動了 \(moved) pt；\(info)")
     }
 
