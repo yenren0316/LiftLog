@@ -89,7 +89,7 @@ G2 要求的新測試：
 ---
 
 ## 2. 2-5 有沒有遇到「先停下來」的情況：沒有
-做法：拿掉 `ScreenHeader(title: "今天")` 和 `.toolbar(.hidden, for: .navigationBar)`，改成 `.navigationTitle("今天")`＋`.navigationBarTitleDisplayMode(.large)`，齒輪是導覽列右上角的 `ToolbarItem(placement: .topBarTrailing)`（`Button("設定", systemImage: "gearshape")`，外觀交給系統）。
+做法：拿掉 `ScreenHeader(title: "今天")` 和 `.toolbar(.hidden, for: .navigationBar)`，改成 `.navigationTitle("今天")`＋`.navigationBarTitleDisplayMode(.large)` **（CHANGE_15 §1 推翻：改成 `.toolbarTitleDisplayMode(.inlineLarge)`，大字的標題和齒輪同一列，首頁多出 52 pt。）**，齒輪是導覽列右上角的 `ToolbarItem(placement: .topBarTrailing)`（`Button("設定", systemImage: "gearshape")`，外觀交給系統）。
 
 量法：`TodayLayoutUITests`（iPhone 17 Pro 模擬器、示範資料）量導覽列底部、兩張卡的上下緣、分頁列和附屬列的上緣。
 

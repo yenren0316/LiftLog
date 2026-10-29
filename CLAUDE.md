@@ -30,7 +30,9 @@
   - 設定（「今天」右上角齒輪打開的 sheet）：App 怎麼運作？
 - 最多三層：第 1 層是分頁，第 2 層是清單或摘要，第 3 層是詳情或編輯。第 3 層不再 push，連到其他內容一律用唯讀浮窗。
   - 例外（CHANGE_14 §4）：訓練摘要是推入的頁面（`WorkoutSummaryPage`），從歷程的紀錄、動作詳情的歷史和個人紀錄在各自的 NavigationStack 推入；摘要頁本身不再往下推。
-- 開始新訓練只走 `WorkoutLauncher`（主要入口是「今天」的「下一次」卡）。
+- 開始新訓練只走 `WorkoutLauncher`（主要入口是「今天」的「下一次」卡）。建立菜單是一個畫面（`PlanSheet`，CHANGE_15 §2），補登也用它。
+- 第 1 層（今天、歷程、動作庫、設定的 sheet）的標題用 `.toolbarTitleDisplayMode(.inlineLarge)`，大字的標題和右上角的按鈕同一列；第 2 層以下用 `.inline`（CHANGE_15 §1）。
+- 訓練畫面是全高的 sheet：往下拖＝收合到「訓練中」橫條，完成畫面 `.interactiveDismissDisabled`（CHANGE_15 §3）。
 
 ## 建置與測試
 
@@ -145,4 +147,7 @@
   - 分頁列：交給系統的 `.tabBarMinimizeBehavior(.onScrollDown)`，不另外處理（CHANGE_11 §1 刪掉 `.hidesTabBarOnScroll()`）。
   - 收起鍵盤：`dismissKeyboard()`、`KeyboardDismissOnTap`。不要在鍵盤上方加「完成」。
   - 訓練次數：`TrainingCount.days`；開始訓練：`WorkoutLauncher`。
+  - 建立菜單：狀態在 `PlanMenu`，預設值、格子、建議、候選只用 `PlanDefaults`、`PlanRanking`、`SlotAdvice`，不另寫計算。
+  - 新紀錄：`NewRecords.find`（估算 1RM 高於這次訓練之前最好的，`PersonalRecords.best1RM`）；完成畫面和摘要頁都呼叫它。
+  - 觸覺：一律 `.sensoryFeedback`，強度交給系統，不直接呼叫 `UIFeedbackGenerator`（CHANGE_15 §4）。
   - 統計：存檔時在 `StatsCache` 算好，畫面只讀。

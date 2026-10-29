@@ -133,11 +133,11 @@ G2 要求的新測試：
 | 歷程「紀錄」的列 | 在歷程的 NavigationStack 推入摘要頁（`coordinator.historyPath.append`） |
 | 動作詳情「歷史」分頁的列 | `NavigationLink(value: session)`，推入動作詳情所在的 NavigationStack：從歷程統計的主項進步進去是歷程，從動作庫進去是動作庫（兩邊都註冊了 `navigationDestination(for: WorkoutSession.self)`） |
 | 動作詳情「數據」的個人紀錄（每一項的那次訓練） | 同上（規格的「所有入口都用這個推入的頁面」） |
-| 補登訓練（歷程 ⋯ → 補登 → 照建議建立菜單或自由選動作） | 建立已結束的訓練後 `WorkoutCoordinator.showSummary`：切到歷程、路徑換成只有這次的摘要頁、直接打開編輯（自由選動作時接著打開新增動作） |
+| 補登訓練（歷程 ⋯ → 補登 → 照建議建立菜單或自由選動作）**（CHANGE_15 §2 推翻：補登和建立菜單同一個畫面，沒有「照建議／自由選動作」這一步；之後的行為不變。）** | 建立已結束的訓練後 `WorkoutCoordinator.showSummary`：切到歷程、路徑換成只有這次的摘要頁、直接打開編輯（自由選動作時接著打開新增動作） |
 | 開發用 `-openSummary latest｜edit` | 同補登：切到歷程推入（`edit` 直接進入編輯） |
 | ~~訓練狀態浮窗的輪替列~~ | 拿掉：只顯示資訊，不能點 |
 
-不會打開某一次訓練摘要的：深層連結（`liftlog://new`、`workout`、`today`）、小工具、控制項、App Shortcut、即時動態。完成訓練後的完成畫面（`WorkoutSummaryView`）是訓練流程的一部分，照舊是全螢幕。
+不會打開某一次訓練摘要的：深層連結（`liftlog://new`、`workout`、`today`）、小工具、控制項、App Shortcut、即時動態。完成訓練後的完成畫面（`WorkoutSummaryView`）是訓練流程的一部分，照舊是全螢幕。 **（CHANGE_15 §3 推翻：完成畫面在訓練畫面的 sheet 裡，不能往下拖關閉。）**
 
 ---
 

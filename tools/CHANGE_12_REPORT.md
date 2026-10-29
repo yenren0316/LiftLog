@@ -68,7 +68,7 @@ G2 要求的新測試：
 | 附屬列橫條裡面的內容（HStack） | 同上 | 同上 | （和上面一樣，沒有另外存） |
 | 對照組：「今天」的「下一次」卡（同一段程式，只換來源） | 從卡片的位置放大，卡片在轉場中隱藏 | 縮回卡片 | `V2_control_card_zoom_expand_mid.png`、`V2_control_card_zoom_collapse_mid.png` |
 
-從畫面中間放大、來源不隱藏，是 zoom 轉場找不到來源時的預設行為。對照組證明轉場本身接得對，問題在附屬列：`tabViewBottomAccessory` 的內容由系統另外放在分頁列裡，轉場找不到放在裡面的來源。所以照 §2 的規定停下來，**維持原本的 fullScreenCover**（點橫條從下往上打開、按收合往下關，回到附屬列的橫條），程式恢復成修改前的狀態，只留下 UI 測試和截圖。fullScreenCover 沒有往下拖關閉的手勢；那是放大轉場附帶的行為，沒有自己另外加。
+從畫面中間放大、來源不隱藏，是 zoom 轉場找不到來源時的預設行為。對照組證明轉場本身接得對，問題在附屬列：`tabViewBottomAccessory` 的內容由系統另外放在分頁列裡，轉場找不到放在裡面的來源。所以照 §2 的規定停下來，**維持原本的 fullScreenCover** **（CHANGE_15 §3 推翻：訓練畫面改成全高的 sheet，往下拖縮小到附屬列；放大轉場照舊沒有。）**（點橫條從下往上打開、按收合往下關，回到附屬列的橫條），程式恢復成修改前的狀態，只留下 UI 測試和截圖。fullScreenCover 沒有往下拖關閉的手勢；那是放大轉場附帶的行為，沒有自己另外加。
 
 之後的 iOS 如果讓附屬列能當來源，改法就是上面三行（namespace、`matchedTransitionSource`、只在從橫條點開時加 `navigationTransition(.zoom)`，關掉後重設「從橫條點開」的旗標），測試 `WorkoutBarUITests` 可以直接沿用。
 
