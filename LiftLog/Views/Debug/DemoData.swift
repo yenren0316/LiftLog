@@ -5,6 +5,7 @@ import SwiftData
 /// 開發用的資料（CHANGE_07 截圖驗證）：
 /// - 啟動參數 -emptyData YES：清空所有資料，而且不匯入 seed，檢查空狀態
 /// - 啟動參數 -demoData YES：在 seed 之外加幾筆有時間、日型、角色和備註的示範訓練（其中一次是全身），以及近期的體重（只加一次）
+/// - 啟動參數 -demoDeletable YES：加一筆剛結束、名稱「刪除測試」的有氧訓練，給摘要頁刪除的 UI 測試用（CHANGE_14 §4；已經有就不加）
 enum DemoData {
     static let addedKey = "debug.demoData.v2"
 
@@ -125,6 +126,26 @@ enum DemoData {
         }
         try? context.save()
         defaults.set(true, forKey: addedKey)
+    }
+
+    static let deletableTitle = "刪除測試"
+
+    static func addDeletableIfRequested(in context: ModelContext, defaults: UserDefaults = .standard, now: Date = .now) {
+        guard defaults.bool(forKey: "demoDeletable") else { return }
+        let title = deletableTitle
+        let existing = (try? context.fetch(FetchDescriptor<WorkoutSession>(predicate: #Predicate { $0.title == title }))) ?? []
+        guard existing.isEmpty,
+              let treadmill = ((try? context.fetch(FetchDescriptor<Exercise>())) ?? []).first(where: { $0.name == "跑步機" })
+        else { return }
+        let session = WorkoutSession(startedAt: now.addingTimeInterval(-20 * 60), endedAt: now.addingTimeInterval(-60))
+        session.title = title
+        session.isTitleCustom = true
+        context.insert(session)
+        let entry = SessionExercise(session: session, exercise: treadmill, order: 0, role: .cardio)
+        context.insert(entry)
+        context.insert(SetRecord(sessionExercise: entry, order: 0, incline: 5, speed: 6, minutes: 15,
+                                 isCompleted: true, completedAt: now.addingTimeInterval(-60)))
+        try? context.save()
     }
 }
 #endif

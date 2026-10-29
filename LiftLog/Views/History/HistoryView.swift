@@ -12,14 +12,16 @@ struct HistoryView: View {
 
     @Environment(\.modelContext) private var context
     @Environment(WorkoutLauncher.self) private var launcher
+    @Environment(WorkoutCoordinator.self) private var coordinator
     @AppStorage("history.segment") private var segment: Segment = .records
-    @State private var path = NavigationPath()
     @State private var showingBackfill = false
     /// 補登第 1 步選好之後，等 sheet 關掉再進入下一步
     @State private var pendingBackfill: (interval: DateInterval, followsPlan: Bool)?
 
     var body: some View {
-        NavigationStack(path: $path) {
+        // 導覽路徑在 coordinator：補登時切到歷程、推入摘要頁（CHANGE_14 §4）
+        @Bindable var coordinator = coordinator
+        NavigationStack(path: $coordinator.historyPath) {
             VStack(spacing: 0) {
                 Picker("分段", selection: $segment.animation(.tap)) {
                     ForEach(Segment.allCases) { Text($0.title).tag($0) }
@@ -45,6 +47,7 @@ struct HistoryView: View {
                 }
             }
             .navigationDestination(for: Exercise.self) { ExerciseDetailView(exercise: $0) }
+            .navigationDestination(for: WorkoutSession.self) { WorkoutSummaryPage(session: $0) }
             .sheet(isPresented: $showingBackfill, onDismiss: continueBackfill) {
                 BackfillSheet { interval, followsPlan in
                     pendingBackfill = (interval, followsPlan)
@@ -80,7 +83,7 @@ struct HistoryView: View {
     }
 }
 
-/// 紀錄：依月份分組（「2026 年 10 月・12 次」），點一列打開訓練摘要浮窗
+/// 紀錄：依月份分組（「2026 年 10 月・12 次」），點一列推入訓練摘要頁（CHANGE_14 §4）
 private struct HistoryRecordsList: View {
     @Query(filter: #Predicate<WorkoutSession> { $0.endedAt != nil }, sort: \WorkoutSession.startedAt, order: .reverse)
     private var sessions: [WorkoutSession]
@@ -102,7 +105,7 @@ private struct HistoryRecordsList: View {
             ForEach(months, id: \.start) { month in
                 Section {
                     ForEach(month.sessions) { session in
-                        TapListRow { coordinator.showSummary(of: session) } label: {
+                        TapListRow { coordinator.historyPath.append(session) } label: {
                             HistoryRow(session: session)
                         }
                         .id(session.id)

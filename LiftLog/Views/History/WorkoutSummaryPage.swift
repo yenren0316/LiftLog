@@ -1,9 +1,11 @@
 import SwiftUI
 import SwiftData
 
-/// 訓練摘要浮窗（CHANGE_07 C-2，共用元件）：唯讀，內容不能點進下一層。
-/// 右上角 ⋯：編輯（全螢幕）、再做一次、刪除。由 RootView 呈現，任何畫面都用 coordinator.showSummary(of:) 打開
-struct WorkoutSummarySheet: View {
+/// 訓練摘要（CHANGE_07 C-2；CHANGE_14 §4 從浮窗改成推入的頁面）：唯讀，內容不能點進下一層。
+/// 歷程「紀錄」的列和動作詳情的「歷史」、個人紀錄都在各自的 NavigationStack 推入這一頁（全高、系統的返回、左邊緣往右滑返回）；
+/// 補登和深層連結這類從別的地方打開的，切到歷程再推入（WorkoutCoordinator.showSummary）。
+/// 右上角 ⋯：編輯（全螢幕）、再做一次、刪除（確認後返回上一頁，返回完才刪）
+struct WorkoutSummaryPage: View {
     let session: WorkoutSession
 
     @Environment(\.modelContext) private var context
@@ -14,58 +16,62 @@ struct WorkoutSummarySheet: View {
 
     @State private var editing = false
     @State private var confirmingDelete = false
+    /// 確認刪除後先返回上一頁，頁面消失時才刪，畫面不會再讀到已刪除的資料
+    @State private var deletesOnDisappear = false
     @State private var weightEntry: BodyWeightEntryRequest?
     @Query(sort: \BodyWeight.date) private var weights: [BodyWeight]
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    header
-                    ForEach(session.orderedItems.filter { !$0.completedSets.isEmpty }) { item in
-                        ExerciseLine(item: item, isNewRecord: isNewRecord(item), unit: unit)
-                    }
-                    if session.orderedItems.allSatisfy({ $0.completedSets.isEmpty }) {
-                        Text("這次沒有完成的組").foregroundStyle(Theme.textSecondary)
-                    }
-                    if !session.note.isEmpty {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("備註").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.textSecondary)
-                            Text(session.note)
-                        }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                header
+                ForEach(session.orderedItems.filter { !$0.completedSets.isEmpty }) { item in
+                    ExerciseLine(item: item, isNewRecord: isNewRecord(item), unit: unit)
+                }
+                if session.orderedItems.allSatisfy({ $0.completedSets.isEmpty }) {
+                    Text("這次沒有完成的組").foregroundStyle(Theme.textSecondary)
+                }
+                if !session.note.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("備註").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.textSecondary)
+                        Text(session.note)
                     }
                 }
-                .padding(20)
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .screenBackground()
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Button("編輯", systemImage: "pencil") { editing = true }
-                        Button("再做一次", systemImage: "arrow.clockwise") {
-                            launcher.repeatSession(session, origin: .summary, context: context)
-                        }
-                        Button("刪除", systemImage: "trash", role: .destructive) { confirmingDelete = true }
-                    } label: {
-                        Image(systemName: "ellipsis")
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .screenBackground()
+        .navigationTitle("訓練摘要")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button("編輯", systemImage: "pencil") { editing = true }
+                    // 頁面不是 sheet：開始衝突的確認由 RootView 呈現，開始後直接展開訓練畫面
+                    Button("再做一次", systemImage: "arrow.clockwise") {
+                        launcher.repeatSession(session, origin: .root, context: context)
                     }
-                    .accessibilityLabel("更多")
+                    Button("刪除", systemImage: "trash", role: .destructive) { confirmingDelete = true }
+                } label: {
+                    Image(systemName: "ellipsis")
                 }
+                .accessibilityLabel("更多")
             }
         }
-        .presentationDetents([.medium, .large])
-        .launchConfirmation(launcher, origin: .summary, context: context)
         .alert("刪除這次訓練？", isPresented: $confirmingDelete) {
             Button("刪除", role: .destructive) {
-                // 等浮窗關掉才刪，畫面不會再讀到已刪除的資料
-                launcher.afterSheetDismiss { [session, context] in WorkoutActions.discard(session, in: context) }
-                coordinator.summarySession = nil
+                deletesOnDisappear = true
+                dismiss()
             }
             Button("取消", role: .cancel) {}
         } message: {
             Text("這次訓練的所有組都會刪除，無法復原。")
+        }
+        .onDisappear {
+            guard deletesOnDisappear else { return }
+            deletesOnDisappear = false
+            WorkoutActions.discard(session, in: context)
         }
         .sheet(item: $weightEntry) { BodyWeightEntrySheet(date: $0.date) }
         .fullScreenCover(isPresented: $editing) {
@@ -74,12 +80,13 @@ struct WorkoutSummarySheet: View {
             }
         }
         .onAppear {
-            // 補登：浮窗一打開就進入編輯
+            // 補登：頁面一推入就進入編輯
             if coordinator.editOnSummaryOpen {
                 coordinator.editOnSummaryOpen = false
                 editing = true
             }
         }
+        .accessibilityIdentifier("workoutSummaryPage")
     }
 
     private var header: some View {

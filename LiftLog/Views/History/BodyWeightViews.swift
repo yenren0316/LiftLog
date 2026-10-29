@@ -118,7 +118,7 @@ extension BodyWeightCard {
     }
 }
 
-/// 打開記錄體重的 sheet（日期預設今天；摘要浮窗帶那次訓練的日期）
+/// 打開記錄體重的 sheet（日期預設今天；摘要頁帶那次訓練的日期）
 struct BodyWeightEntryRequest: Identifiable {
     let id = UUID()
     var date: Date

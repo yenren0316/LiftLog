@@ -28,7 +28,7 @@ enum AppTab: Hashable, CaseIterable {
     }
 }
 
-/// 管理畫面的呈現：目前的分頁、訓練中全螢幕／縮小橫條、完成摘要、訓練摘要浮窗、訓練狀態浮窗、設定。
+/// 管理畫面的呈現：目前的分頁、訓練中全螢幕／縮小橫條、完成摘要、歷程的導覽路徑（訓練摘要）、訓練狀態浮窗、設定。
 /// 開始訓練（包括衝突處理）在 WorkoutLauncher
 @Observable
 final class WorkoutCoordinator {
@@ -41,22 +41,25 @@ final class WorkoutCoordinator {
     var showEmptyFinishNotice = false
     /// 展開訓練中畫面時直接打開「新增動作」（自由選動作）
     var openAddOnExpand = false
-    /// 訓練摘要浮窗（RootView 呈現，任何畫面都可以打開）
-    var summarySession: WorkoutSession?
+    /// 歷程的導覽路徑（CHANGE_14 §4）：放在這裡，補登和開發用的參數才能切到歷程、推入那次訓練的摘要頁
+    var historyPath = NavigationPath()
     /// 「訓練狀態」浮窗（今天的「本週」卡打開，RootView 呈現；CHANGE_10 §3、CHANGE_13 §2-2）
     var showingTrainingStatus = false
     /// 設定的 sheet（「今天」右上角的齒輪打開，RootView 呈現；CHANGE_13 §1）
     var showingSettings = false
     /// 設定裡的導覽路徑：放在這裡，換主題重建 sheet 的內容時還停在原本那一頁；關掉時清空
     var settingsPath: [SettingsView.Page] = []
-    /// 浮窗打開後直接進入編輯（補登）；編輯畫面打開後直接打開「新增動作」
+    /// 摘要頁推入後直接進入編輯（補登）；編輯畫面打開後直接打開「新增動作」
     var editOnSummaryOpen = false
     var openAddInEditor = false
 
+    /// 從別的地方打開某一次訓練的摘要（補登、開發用的 -openSummary）：切到歷程，回到第 1 層再推入摘要頁。
+    /// 歷程的紀錄和動作詳情的列在自己的 NavigationStack 裡推入，不經過這裡
     func showSummary(of session: WorkoutSession, editing: Bool = false, openAdd: Bool = false) {
         editOnSummaryOpen = editing
         openAddInEditor = openAdd
-        summarySession = session
+        tab = .history
+        historyPath = NavigationPath([session])
     }
 }
 

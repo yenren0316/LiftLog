@@ -40,13 +40,13 @@ struct SessionTimeEditTests {
         #expect(SessionTimeEdit.combine(day: at(1, 0), time: at(20, 18, 35)) == at(1, 18, 35))
     }
 
-    /// 摘要浮窗的時間固定 24 小時制（地區是 12 小時制時也不能變成「06:30」）
+    /// 摘要頁的時間固定 24 小時制（地區是 12 小時制時也不能變成「06:30」）
     @Test @MainActor func summaryTimeTextUsesTwentyFourHours() {
         let evening = WorkoutSession(startedAt: at(25, 18, 30), endedAt: at(25, 19, 45))
-        #expect(WorkoutSummarySheet.timeText(evening, calendar: calendar) == "18:30–19:45・75 分")
+        #expect(WorkoutSummaryPage.timeText(evening, calendar: calendar) == "18:30–19:45・75 分")
         let morning = WorkoutSession(startedAt: at(25, 7, 5), endedAt: at(25, 8, 0))
-        #expect(WorkoutSummarySheet.timeText(morning, calendar: calendar) == "07:05–08:00・55 分")
+        #expect(WorkoutSummaryPage.timeText(morning, calendar: calendar) == "07:05–08:00・55 分")
         let untimed = WorkoutSession(startedAt: at(25, 12), endedAt: at(25, 12), hasTime: false)
-        #expect(WorkoutSummarySheet.timeText(untimed, calendar: calendar) == "未記錄時間")
+        #expect(WorkoutSummaryPage.timeText(untimed, calendar: calendar) == "未記錄時間")
     }
 }

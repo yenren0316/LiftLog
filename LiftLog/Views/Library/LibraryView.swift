@@ -67,6 +67,8 @@ struct LibraryView: View {
                 }
             }
             .navigationDestination(for: Exercise.self) { ExerciseDetailView(exercise: $0) }
+            // 動作詳情的「歷史」和個人紀錄推入訓練摘要頁（CHANGE_14 §4）
+            .navigationDestination(for: WorkoutSession.self) { WorkoutSummaryPage(session: $0) }
             .libraryRowActionSheets()
             .sheet(isPresented: $showingNew) { ExerciseEditView(exercise: nil) }
             #if DEBUG

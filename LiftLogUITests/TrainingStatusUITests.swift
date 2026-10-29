@@ -1,6 +1,6 @@
 import XCTest
 
-/// CHANGE_10 §3、CHANGE_13 §2-2：整張「本週」卡打開「訓練狀態」；有紀錄的輪替列打開那次訓練的摘要浮窗
+/// CHANGE_10 §3、CHANGE_13 §2-2：整張「本週」卡打開「訓練狀態」；CHANGE_14 §4 起輪替列只顯示資訊，點了沒有反應
 @MainActor
 final class TrainingStatusUITests: XCTestCase {
     func testWeekCardOpensTrainingStatus() async throws {
@@ -16,13 +16,17 @@ final class TrainingStatusUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH '本週・'")).firstMatch.exists)
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH '上週同期：'")).firstMatch.exists)
         attachScreenshot("training_status")
-        // 有紀錄的列（有「天前」）可以點：關掉這個浮窗，打開摘要
-        let row = app.buttons.matching(NSPredicate(format: "label CONTAINS '天前'")).firstMatch
+        // 輪替列（有紀錄的列有「天前」）不是按鈕，點了沒有反應：浮窗還開著，也沒有打開摘要
+        let days = NSPredicate(format: "label CONTAINS '天前'")
+        XCTAssertEqual(app.buttons.matching(days).count, 0, "輪替列不能是按鈕")
+        let row = app.staticTexts.matching(days).firstMatch
         XCTAssertTrue(row.waitForExistence(timeout: 3), "示範資料裡至少一個日型有紀錄")
         row.tap()
-        let summaryMenu = app.buttons["更多"].firstMatch
-        XCTAssertTrue(summaryMenu.waitForExistence(timeout: 5), "要打開那次訓練的摘要浮窗")
-        XCTAssertFalse(title.exists, "訓練狀態要先關掉")
+        try await Task.sleep(for: .seconds(1.5))
+        XCTAssertTrue(title.exists, "點輪替列不會關掉訓練狀態")
+        XCTAssertFalse(app.navigationBars["訓練摘要"].exists, "點輪替列不會打開摘要")
+        XCTAssertFalse(app.buttons["更多"].exists, "點輪替列不會打開摘要")
+        attachScreenshot("training_status_row_tapped")
     }
 
     /// CHANGE_11 §7：浮窗高度等於內容的高度，打開就看得到全部（最後一列 DE 上肢在畫面裡）；往下拖可以關閉

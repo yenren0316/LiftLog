@@ -5,12 +5,11 @@ import Charts
 /// 數據分頁：個人紀錄、折線圖、強度換算表
 struct ExerciseDataTab: View {
     let exercise: Exercise
-    var onOpenSession: (UUID) -> Void
 
     var body: some View {
         let sessions = exercise.sessionSets
         VStack(alignment: .leading, spacing: 20) {
-            RecordsCard(exercise: exercise, sessions: sessions, onOpenSession: onOpenSession)
+            RecordsCard(exercise: exercise, sessions: sessions)
             TrendChartCard(exercise: exercise, sessions: sessions)
             if exercise.logType == .weight {
                 IntensityCard(exercise: exercise, sessions: sessions)
@@ -21,14 +20,15 @@ struct ExerciseDataTab: View {
 
 // MARK: - (a) 個人紀錄
 
+/// 個人紀錄：點一項推入那次訓練的摘要頁（CHANGE_14 §4）
 private struct RecordsCard: View {
     let exercise: Exercise
     let sessions: [SessionSets]
-    var onOpenSession: (UUID) -> Void
     @AppStorage(WeightUnit.storageKey) private var unit: WeightUnit = .kg
 
     var body: some View {
         let records = PersonalRecords.records(sessions, logType: exercise.logType)
+        let byID = Dictionary(exercise.completedItems.compactMap(\.session).map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         VStack(alignment: .leading, spacing: 12) {
             Label("個人紀錄", systemImage: "trophy.fill")
                 .font(.headline)
@@ -38,7 +38,7 @@ private struct RecordsCard: View {
             }
             ForEach(Array(records.enumerated()), id: \.element.id) { index, record in
                 if index > 0 { Divider().overlay(Theme.separator) }
-                Button { onOpenSession(record.sessionID) } label: {
+                NavigationLink(value: byID[record.sessionID]) {
                     HStack(alignment: .firstTextBaseline) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(record.title).font(.body.weight(.semibold))

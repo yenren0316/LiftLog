@@ -1,5 +1,6 @@
 import Foundation
 import SwiftData
+import SwiftUI
 import Testing
 @testable import LiftLog
 
@@ -117,8 +118,9 @@ struct WorkoutLauncherTests {
         #expect(f.launcher.pendingStart == nil)                       // 沒有衝突確認
         #expect(f.current.isActive && WorkoutActions.activeSession(in: f.context) === f.current)
         #expect(!session.isActive && session.startedAt == interval.start && session.endedAt == interval.end && session.hasTime)
-        // 直接進入編輯（摘要浮窗＋編輯），不展開訓練中畫面
-        #expect(f.launcher.coordinator.summarySession === session && f.launcher.coordinator.editOnSummaryOpen)
+        // 切到歷程、推入這次訓練的摘要頁，直接進入編輯（CHANGE_14 §4），不展開訓練中畫面
+        #expect(f.launcher.coordinator.tab == .history && f.launcher.coordinator.historyPath == NavigationPath([session]))
+        #expect(f.launcher.coordinator.editOnSummaryOpen)
         #expect(!f.launcher.coordinator.isExpanded)
         // 打勾：完成時間記成這次訓練的結束時間，休息計時不會開始
         let set = session.orderedItems[0].orderedSets[0]

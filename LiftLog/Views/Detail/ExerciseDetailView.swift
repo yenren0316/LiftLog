@@ -20,7 +20,6 @@ struct ExerciseDetailView: View {
 
     @State private var tab: Tab = .data
     @State private var showingEdit = false
-    @Environment(WorkoutCoordinator.self) private var coordinator
 
     var body: some View {
         ScrollView {
@@ -33,11 +32,11 @@ struct ExerciseDetailView: View {
 
                 switch tab {
                 case .data:
-                    ExerciseDataTab(exercise: exercise, onOpenSession: open)
+                    ExerciseDataTab(exercise: exercise)
                 case .guide:
                     ExerciseGuideTab(exercise: exercise)
                 case .history:
-                    HistoryCard(items: exercise.completedItems) { coordinator.showSummary(of: $0) }
+                    HistoryCard(items: exercise.completedItems)
                 }
             }
             .padding(16)
@@ -67,12 +66,6 @@ struct ExerciseDetailView: View {
         #endif
     }
 
-    /// 點紀錄或圖表上的點：打開那次訓練的摘要浮窗（第 3 層不再 push 頁面）
-    private func open(_ sessionID: UUID) {
-        if let session = exercise.completedItems.lazy.compactMap(\.session).first(where: { $0.id == sessionID }) {
-            coordinator.showSummary(of: session)
-        }
-    }
 }
 
 /// 頁首：名稱、分類、tags、器材、上次、近 90 天
@@ -109,9 +102,9 @@ private struct DetailHeader: View {
     }
 }
 
+/// 全部紀錄：點一行在這個 NavigationStack 推入那次訓練的摘要頁（CHANGE_14 §4，歷程和動作庫都註冊了目的地）
 private struct HistoryCard: View {
     var items: [SessionExercise]
-    var onOpen: (WorkoutSession) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -122,7 +115,7 @@ private struct HistoryCard: View {
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                 if index > 0 { Divider().overlay(Theme.separator) }
                 if let session = item.session {
-                    Button { onOpen(session) } label: {
+                    NavigationLink(value: session) {
                         HistoryLine(item: item, date: session.startedAt).tapRowInset()
                     }
                     .buttonStyle(.tapRow)

@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 /// 編輯一次過去的訓練（第 3 層，全螢幕，CHANGE_07 C-3）：以訓練中的編輯器為基礎，最上方是名稱、日期、開始和結束時間。
-/// 「完成」回到摘要浮窗。補登的訓練也從這裡編輯（沒有休息計時、即時動態和訓練中橫條）
+/// 「完成」回到摘要頁。補登的訓練也從這裡編輯（沒有休息計時、即時動態和訓練中橫條）
 struct SessionEditorView: View {
     let session: WorkoutSession
     /// 補登「自由選動作」：一打開就打開新增動作

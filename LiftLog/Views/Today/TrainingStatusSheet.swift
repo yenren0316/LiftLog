@@ -6,11 +6,7 @@ import UIKit
 /// 量捲動內容的高度加上標題列，打開就看得到全部；超過螢幕（例如系統字級很大）時用全高，內容可以捲動。
 /// 本週三行；輪替狀態四列（ME 下肢、ME 上肢、DE 下肢、DE 上肢）。數字都從 StatsCache 讀（TrainingStatus）
 struct TrainingStatusSheet: View {
-    @Environment(\.modelContext) private var context
     @Environment(StatsCache.self) private var stats
-    @Environment(WorkoutCoordinator.self) private var coordinator
-    @Environment(WorkoutLauncher.self) private var launcher
-    @Environment(\.dismiss) private var dismiss
     /// 每週目標：設定過就用設定的，沒設定過用近 12 週的平均（CHANGE_09 §1）
     @AppStorage(WeeklyGoal.goalKey) private var storedGoal = 0
     /// 內容需要的高度（量到之前用半高）
@@ -75,16 +71,10 @@ struct TrainingStatusSheet: View {
         VStack(alignment: .leading, spacing: 4) {
             Text("輪替狀態").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.textSecondary)
                 .padding(.bottom, 4)
+            // 只顯示資訊，不能點、沒有按壓回饋（CHANGE_14 §4；以前打開那次訓練的摘要浮窗）
             ForEach(Array(status.rotation.enumerated()), id: \.element.id) { index, row in
                 if index > 0 { Divider().overlay(Theme.separator) }
-                if let id = row.lastSessionID {
-                    // 有紀錄的列：整列可以點，打開那次訓練的摘要浮窗（和歷程同一個元件）
-                    Button { openSummary(id) } label: { rotationRow(row).tapRowInset() }
-                        .buttonStyle(.tapRow)
-                        .tapRowOutset()
-                } else {
-                    rotationRow(row)
-                }
+                rotationRow(row)
             }
         }
         .card(padding: 16)
@@ -127,12 +117,4 @@ struct TrainingStatusSheet: View {
         return "主項：上次 \(last) → \(next)"
     }
 
-    /// 摘要浮窗和這個浮窗都由 RootView 呈現：先關掉這個，關完再打開摘要
-    private func openSummary(_ id: UUID) {
-        var descriptor = FetchDescriptor<WorkoutSession>(predicate: #Predicate { $0.id == id })
-        descriptor.fetchLimit = 1
-        guard let session = try? context.fetch(descriptor).first else { return }
-        launcher.afterSheetDismiss { [coordinator] in coordinator.showSummary(of: session) }
-        coordinator.showingTrainingStatus = false
-    }
 }

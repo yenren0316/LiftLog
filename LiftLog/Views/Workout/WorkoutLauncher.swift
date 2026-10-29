@@ -11,7 +11,7 @@ import SwiftData
 final class WorkoutLauncher {
     /// 確認對話框要從哪個畫面出現：sheet 開著時，對話框要掛在最上層的畫面
     enum Origin {
-        case root, plan, summary
+        case root, plan
     }
 
     struct Request {
@@ -97,7 +97,7 @@ final class WorkoutLauncher {
               context: context)
     }
 
-    /// RootView 的 sheet（建立菜單、摘要浮窗）關掉之後要做的事
+    /// RootView 的 sheet（建立菜單、訓練狀態）關掉之後要做的事
     func afterSheetDismiss(_ action: @escaping () -> Void) {
         afterDismiss = action
     }
@@ -122,7 +122,7 @@ final class WorkoutLauncher {
                                            backfill: request.backfill, in: context)
         let show: () -> Void
         if request.backfill != nil {
-            // 補登：直接進入這次訓練的編輯畫面（摘要浮窗上的全螢幕編輯）
+            // 補登：切到歷程、推入這次訓練的摘要頁，直接進入編輯畫面（摘要頁上的全螢幕編輯）
             show = { [coordinator] in coordinator.showSummary(of: session, editing: true, openAdd: request.openAdd) }
         } else {
             show = { [coordinator] in
@@ -136,9 +136,6 @@ final class WorkoutLauncher {
         case .plan:
             afterDismiss = show
             planRequest = nil
-        case .summary:
-            afterDismiss = show
-            coordinator.summarySession = nil
         }
         return session
     }

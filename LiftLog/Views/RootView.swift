@@ -100,7 +100,6 @@ struct RootView: View {
             }
         case .today:
             closeWorkoutCover()
-            coordinator.summarySession = nil
             coordinator.tab = .today
         }
     }
@@ -142,12 +141,6 @@ struct RootView: View {
         }
         .sheet(isPresented: $coordinator.showingTrainingStatus, onDismiss: launcher.sheetDismissed) {
             TrainingStatusSheet()
-                .environment(coordinator)
-                .environment(launcher)
-                .environment(stats)
-        }
-        .sheet(item: $coordinator.summarySession, onDismiss: launcher.sheetDismissed) { session in
-            WorkoutSummarySheet(session: session)
                 .environment(coordinator)
                 .environment(launcher)
                 .environment(stats)
@@ -198,8 +191,10 @@ struct RootView: View {
                 DataMigrations.runIfNeeded(context: context)
             }
             #if DEBUG
-            // 開發用：-demoData YES 在 seed 之外加幾筆示範訓練和近期體重（只加一次）
+            // 開發用：-demoData YES 在 seed 之外加幾筆示範訓練和近期體重（只加一次）；
+            // -demoDeletable YES 加一筆「刪除測試」（摘要頁刪除的 UI 測試，CHANGE_14 §4）
             DemoData.addIfRequested(in: context)
+            DemoData.addDeletableIfRequested(in: context)
             // 開發用：-importBackup <路徑> 匯入備份（CHANGE_11 §9，真實資料驗證）
             RealDataDebug.importIfRequested(into: context)
             #endif
@@ -251,7 +246,7 @@ struct RootView: View {
             if UserDefaults.standard.bool(forKey: "discardActive"), let session = active.first {
                 WorkoutActions.discard(session, in: context)
             }
-            // 開發用：-openSummary latest 打開最近一次訓練的摘要浮窗；-openSummary edit 直接進入編輯
+            // 開發用：-openSummary latest 切到歷程、推入最近一次訓練的摘要頁；-openSummary edit 直接進入編輯
             if let mode = UserDefaults.standard.string(forKey: "openSummary") {
                 var latest = FetchDescriptor<WorkoutSession>(predicate: #Predicate { $0.endedAt != nil },
                                                              sortBy: [SortDescriptor(\.startedAt, order: .reverse)])
