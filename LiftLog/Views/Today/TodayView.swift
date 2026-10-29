@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 /// 第 1 層「今天」：只回答「下一次該練什麼？」——「下一次」卡和「本週」卡（CHANGE_13 §2）。
-/// 標題是系統的大標題（§2-5），右上角的齒輪打開設定的 sheet（§1）。統計都從 StatsCache 讀，body 裡不掃描訓練紀錄
+/// 標題是系統的大標題（§2-5；CHANGE_15 §1 起和齒輪同一列），右上角的齒輪打開設定的 sheet（§1）。統計都從 StatsCache 讀，body 裡不掃描訓練紀錄
 struct TodayView: View {
     @Environment(\.modelContext) private var context
     @Environment(WorkoutCoordinator.self) private var coordinator
@@ -40,7 +40,8 @@ struct TodayView: View {
             }
             .screenBackground()
             .navigationTitle("今天")
-            .navigationBarTitleDisplayMode(.large)
+            // 大字的標題和右上角的齒輪在同一列（CHANGE_15 §1）
+            .toolbarTitleDisplayMode(.inlineLarge)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("設定", systemImage: "gearshape") { coordinator.showingSettings = true }

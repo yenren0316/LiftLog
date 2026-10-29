@@ -36,6 +36,8 @@ struct HistoryView: View {
             }
             .screenBackground()
             .navigationTitle("歷程")
+            // 大字的標題和右上角的 ⋯ 在同一列，「紀錄｜統計」在標題下方（CHANGE_15 §1）
+            .toolbarTitleDisplayMode(.inlineLarge)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {

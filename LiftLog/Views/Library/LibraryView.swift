@@ -54,6 +54,8 @@ struct LibraryView: View {
             #endif
             .screenBackground()
             .navigationTitle("動作庫")
+            // 大字的標題和右上角的＋在同一列，搜尋列在標題下方（CHANGE_15 §1）
+            .toolbarTitleDisplayMode(.inlineLarge)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("新增動作", systemImage: "plus") { showingNew = true }
