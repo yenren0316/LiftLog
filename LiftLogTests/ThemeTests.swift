@@ -9,8 +9,8 @@ struct ThemeTests {
         #expect(AppTheme.allCases.count == 6)
         for theme in AppTheme.allCases {
             let tokens = theme.palette.tokens
-            #expect(tokens.count == 13, "\(theme)")
-            #expect(Set(tokens.map(\.name)).count == 13, "\(theme)")
+            #expect(tokens.count == 14, "\(theme)")
+            #expect(Set(tokens.map(\.name)).count == 14, "\(theme)")
             #expect(tokens.allSatisfy { $0.hex <= 0xFFFFFF }, "\(theme)")
         }
     }
@@ -26,39 +26,73 @@ struct ThemeTests {
         let base = AppTheme.graphiteOrange.palette
         for theme in AppTheme.allCases {
             var palette = theme.palette
-            (palette.accent, palette.onAccent, palette.upperBody) = (base.accent, base.onAccent, base.upperBody)
+            (palette.accent, palette.onAccent, palette.lowerBody, palette.upperBody) = (base.accent, base.onAccent, base.lowerBody, base.upperBody)
             #expect(palette == base, "\(theme)")
         }
         #expect(Set(AppTheme.allCases.map(\.palette.accent)).count == AppTheme.allCases.count)
     }
 
-    /// CHANGE_08 §4：上肢的顏色和 accent（下肢）色相明顯不同、亮度相近，在深色底上清楚
-    @Test func upperBodyIsDistinctFromAccent() {
-        func hsv(_ hex: UInt32) -> (hue: Double, saturation: Double) {
-            let r = Double((hex >> 16) & 0xFF) / 255, g = Double((hex >> 8) & 0xFF) / 255, b = Double(hex & 0xFF) / 255
-            let maxV = max(r, g, b), minV = min(r, g, b), delta = maxV - minV
-            guard delta > 0 else { return (0, 0) }
-            var hue: Double
-            if maxV == r { hue = (g - b) / delta } else if maxV == g { hue = (b - r) / delta + 2 } else { hue = (r - g) / delta + 4 }
-            hue = (hue * 60).truncatingRemainder(dividingBy: 360)
-            return (hue < 0 ? hue + 360 : hue, delta / maxV)
+    /// 色相（0–360）和彩度（HSV）
+    static func hsv(_ hex: UInt32) -> (hue: Double, saturation: Double) {
+        let r = Double((hex >> 16) & 0xFF) / 255, g = Double((hex >> 8) & 0xFF) / 255, b = Double(hex & 0xFF) / 255
+        let maxV = max(r, g, b), minV = min(r, g, b), delta = maxV - minV
+        guard delta > 0 else { return (0, 0) }
+        var hue: Double
+        if maxV == r { hue = (g - b) / delta } else if maxV == g { hue = (b - r) / delta + 2 } else { hue = (r - g) / delta + 4 }
+        hue = (hue * 60).truncatingRemainder(dividingBy: 360)
+        return (hue < 0 ? hue + 360 : hue, delta / maxV)
+    }
+
+    /// 兩個顏色的色相差（0–180）
+    static func hueGap(_ a: UInt32, _ b: UInt32) -> Double {
+        let gap = abs(hsv(a).hue - hsv(b).hue)
+        return min(gap, 360 - gap)
+    }
+
+    static func brightness(_ hex: UInt32) -> Double {
+        let r = Double((hex >> 16) & 0xFF), g = Double((hex >> 8) & 0xFF), b = Double(hex & 0xFF)
+        return (0.299 * r + 0.587 * g + 0.114 * b) / 255
+    }
+
+    /// WCAG 2 的對比度
+    static func contrast(_ a: UInt32, _ b: UInt32) -> Double {
+        func luminance(_ hex: UInt32) -> Double {
+            func channel(_ v: UInt32) -> Double {
+                let c = Double(v) / 255
+                return c <= 0.04045 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4)
+            }
+            return 0.2126 * channel((hex >> 16) & 0xFF) + 0.7152 * channel((hex >> 8) & 0xFF) + 0.0722 * channel(hex & 0xFF)
         }
-        func brightness(_ hex: UInt32) -> Double {
-            let r = Double((hex >> 16) & 0xFF), g = Double((hex >> 8) & 0xFF), b = Double(hex & 0xFF)
-            return (0.299 * r + 0.587 * g + 0.114 * b) / 255
-        }
+        let (la, lb) = (luminance(a), luminance(b))
+        return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
+    }
+
+    /// CHANGE_13 §3：兩個部位色和該主題的強調色、warning 色都清楚可分（色相差至少 40 度；銀色沒有色相，部位色要有彩度），
+    /// 兩個部位色之間至少 60 度、亮度相近，在深色底上清楚
+    @Test func bodyColorsAreDistinctFromAccentAndWarning() {
         for theme in AppTheme.allCases {
             let p = theme.palette
-            let accent = hsv(p.accent), upper = hsv(p.upperBody)
-            if accent.saturation < 0.1 {
-                // 銀色沒有色相：上肢要有明顯的彩度
-                #expect(upper.saturation >= 0.35, "\(theme)")
-            } else {
-                let gap = abs(accent.hue - upper.hue)
-                #expect(min(gap, 360 - gap) >= 60, "\(theme)")
+            for (name, body) in [("lowerBody", p.lowerBody), ("upperBody", p.upperBody)] {
+                #expect(Self.hsv(body).saturation >= 0.35, "\(theme) \(name)")
+                if Self.hsv(p.accent).saturation >= 0.1 {
+                    #expect(Self.hueGap(body, p.accent) >= 40, "\(theme) \(name) 和 accent 差 \(Self.hueGap(body, p.accent)) 度")
+                }
+                #expect(Self.hueGap(body, p.warning) >= 40, "\(theme) \(name) 和 warning 差 \(Self.hueGap(body, p.warning)) 度")
+                #expect(Self.brightness(body) - Self.brightness(p.background) >= 0.45, "\(theme) \(name)")
             }
-            #expect(abs(brightness(p.accent) - brightness(p.upperBody)) <= 0.15, "\(theme)")
-            #expect(brightness(p.upperBody) - brightness(p.background) >= 0.45, "\(theme)")
+            #expect(Self.hueGap(p.lowerBody, p.upperBody) >= 60, "\(theme)")
+            #expect(abs(Self.brightness(p.lowerBody) - Self.brightness(p.upperBody)) <= 0.15, "\(theme)")
+        }
+    }
+
+    /// CHANGE_13 §3：次要文字和背景（頁面、卡片、輸入框）的對比度至少 4.5:1
+    @Test func secondaryTextHasEnoughContrast() {
+        for theme in AppTheme.allCases {
+            let p = theme.palette
+            for (name, background) in [("background", p.background), ("card", p.card), ("field", p.field)] {
+                let ratio = Self.contrast(p.textSecondary, background)
+                #expect(ratio >= 4.5, "\(theme) textSecondary 在 \(name) 上只有 \(ratio):1")
+            }
         }
     }
 
@@ -124,13 +158,9 @@ struct OffMainThreadRenderingTests {
 
     /// CHANGE_10 §4：按壓色比卡片亮、和輸入框分得開，每個主題都有
     @Test func pressedIsVisibleOnCards() {
-        func brightness(_ hex: UInt32) -> Double {
-            let r = Double((hex >> 16) & 0xFF), g = Double((hex >> 8) & 0xFF), b = Double(hex & 0xFF)
-            return (0.299 * r + 0.587 * g + 0.114 * b) / 255
-        }
         for theme in AppTheme.allCases {
             let p = theme.palette
-            #expect(brightness(p.pressed) - brightness(p.card) >= 0.06, "\(theme)")
+            #expect(ThemeTests.brightness(p.pressed) - ThemeTests.brightness(p.card) >= 0.06, "\(theme)")
             #expect(p.pressed != p.field && p.pressed != p.separator, "\(theme)")
         }
     }

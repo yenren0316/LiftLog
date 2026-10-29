@@ -56,7 +56,8 @@ struct TrainingStatusSheet: View {
         return VStack(alignment: .leading, spacing: 6) {
             Text("本週・\(week.days) 天（目標 \(goal)）・\(week.sets) 組")
                 .font(.headline.monospacedDigit())
-            Text("下肢 \(week.lower)・上肢 \(week.upper)・其他 \(week.other) 組・有氧 \(Units.number(week.cardioMinutes)) 分鐘")
+            // 下肢、上肢前面是部位色的圓點，和「本週」卡的圓點同一組顏色（CHANGE_13 §3）
+            Text("\(dot(Theme.lowerBody))下肢 \(week.lower)・\(dot(Theme.upperBody))上肢 \(week.upper)・其他 \(week.other) 組・有氧 \(Units.number(week.cardioMinutes)) 分鐘")
                 .font(.subheadline.monospacedDigit())
                 .foregroundStyle(Theme.textSecondary)
             Text("上週同期：\(last.days) 天・\(last.sets) 組")
@@ -64,6 +65,10 @@ struct TrainingStatusSheet: View {
                 .foregroundStyle(Theme.textSecondary)
         }
         .card(padding: 16)
+    }
+
+    private func dot(_ color: Color) -> Text {
+        Text("\(Image(systemName: "circle.fill")) ").font(.caption2).foregroundStyle(color)
     }
 
     private func rotationCard(_ status: TrainingStatus) -> some View {

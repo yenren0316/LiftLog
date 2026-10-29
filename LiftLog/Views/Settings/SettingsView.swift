@@ -257,7 +257,6 @@ private struct BackupSettings: View {
         VStack(spacing: 2) {
             Text(String(value))
                 .font(.title.bold().monospacedDigit())
-                .foregroundStyle(Theme.accent)
             Text(title).font(.footnote).foregroundStyle(Theme.textSecondary)
         }
         .frame(maxWidth: .infinity)

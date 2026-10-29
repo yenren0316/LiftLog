@@ -92,7 +92,6 @@ private struct WorkoutRow: View {
                 }
             }
             .font(.body.weight(.semibold).monospacedDigit())
-            .foregroundStyle(Theme.accent)
             Text(workout.source).font(.caption).foregroundStyle(Theme.textSecondary)
         }
         .padding(.vertical, 4)

@@ -6,6 +6,9 @@ nonisolated enum Staleness: Equatable {
     case fresh   // 60 天內
     case stale   // 超過 60 天
     case cold    // 超過 180 天
+
+    /// 很久沒練（超過 60 天）：畫面上用 warning 色提醒（CHANGE_13 §3）
+    var isNeglected: Bool { self == .stale || self == .cold }
 }
 
 nonisolated enum Recency {

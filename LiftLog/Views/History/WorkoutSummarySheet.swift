@@ -142,7 +142,6 @@ private struct ExerciseLine: View {
                 if isNewRecord {
                     Label("新紀錄", systemImage: "trophy.fill")
                         .font(.caption.weight(.bold))
-                        .foregroundStyle(Theme.warning)
                 }
             }
             Text(item.summary(unit: unit))

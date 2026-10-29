@@ -133,13 +133,9 @@ struct ElapsedTimeText: View {
 }
 
 extension Staleness {
+    /// 「N 天前」的顏色：不用紅綠燈（CHANGE_13 §3），很久沒練是提醒（warning），其他中性
     var color: Color {
-        switch self {
-        case .never: Theme.danger
-        case .fresh: Theme.done
-        case .stale: Theme.warning
-        case .cold: Theme.danger
-        }
+        isNeglected ? Theme.warning : Theme.textSecondary
     }
 }
 

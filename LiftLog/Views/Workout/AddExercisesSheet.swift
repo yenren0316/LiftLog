@@ -111,7 +111,7 @@ struct AddExercisesSheet: View {
                         .font(.subheadline.monospacedDigit())
                         .foregroundStyle(Recency.staleness(days: days).color)
                 } else {
-                    AccentChip(text: "新")
+                    Chip(text: "新")
                 }
             }
         }

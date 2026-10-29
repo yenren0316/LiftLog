@@ -17,7 +17,7 @@ nonisolated enum DayRegion: String, CaseIterable, Sendable {
         }
     }
 
-    /// 部位的顏色（主題的 token）：下肢 accent、上肢 upperBody、全身兩色各一半、有氧與其他中性灰
+    /// 部位的顏色（主題的部位色 token，CHANGE_13 §3）：下肢 lowerBody、上肢 upperBody、全身兩色各一半、有氧與其他中性灰
     enum Swatch: Equatable, Sendable {
         case solid(UInt32)
         case split(UInt32, UInt32)
@@ -26,10 +26,20 @@ nonisolated enum DayRegion: String, CaseIterable, Sendable {
 
     func swatch(_ palette: Palette) -> Swatch {
         switch self {
-        case .lower: .solid(palette.accent)
+        case .lower: .solid(palette.lowerBody)
         case .upper: .solid(palette.upperBody)
-        case .full: .split(palette.accent, palette.upperBody)
+        case .full: .split(palette.lowerBody, palette.upperBody)
         case .cardio: .neutral
+        }
+    }
+
+    /// 系統「不以顏色區分」開啟時，圓點和圖例裡的字（CHANGE_13 §3）；有氧與其他是中性灰，不加字
+    var letter: String? {
+        switch self {
+        case .lower: "下"
+        case .upper: "上"
+        case .full: "全"
+        case .cardio: nil
         }
     }
 

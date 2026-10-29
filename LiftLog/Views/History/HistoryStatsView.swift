@@ -87,9 +87,10 @@ private struct MainLiftProgressCard: View {
                 Text(trend?.current.map { unit.formatWithUnit(kg: $0) } ?? "—")
                     .font(.subheadline.weight(.bold).monospacedDigit())
                 if let change = trend?.change, unit.format(kg: abs(change)) != "0" {
+                    // 正負號就看得出進步或退步，不用紅綠色（CHANGE_13 §3）
                     Text("\(change > 0 ? "+" : "−")\(unit.format(kg: abs(change)))")
                         .font(.caption.monospacedDigit())
-                        .foregroundStyle(change > 0 ? Theme.done : Theme.danger)
+                        .foregroundStyle(Theme.textSecondary)
                 } else {
                     Text("和 4 週前一樣").font(.caption2).foregroundStyle(Theme.textSecondary)
                 }
@@ -110,7 +111,7 @@ private struct Sparkline: View {
         if points.count >= 2 {
             Chart(points, id: \.0) { point in
                 LineMark(x: .value("週", point.0), y: .value("1RM", point.1))
-                    .foregroundStyle(Theme.accent)
+                    .foregroundStyle(Theme.textPrimary)
                     .interpolationMethod(.monotone)
             }
             .chartXScale(domain: 0...max(values.count - 1, 1))
@@ -144,9 +145,10 @@ private struct CardioCard: View {
             } else {
                 let current = selected.flatMap { date in weeks.indices.last { weeks[$0] <= date } }
                 Chart {
-                    ForEach(Array(zip(weeks, minutes)), id: \.0) { week, value in
-                        BarMark(x: .value("週", week, unit: .weekOfYear, calendar: Self.calendar), y: .value("分鐘", value))
-                            .foregroundStyle(Theme.accent)
+                    ForEach(Array(zip(weeks, minutes).enumerated()), id: \.offset) { index, entry in
+                        // 長條中性色，選取的那一根用強調色（CHANGE_13 §3）
+                        BarMark(x: .value("週", entry.0, unit: .weekOfYear, calendar: Self.calendar), y: .value("分鐘", entry.1))
+                            .foregroundStyle(index == current ? Theme.accent : Theme.textSecondary)
                             .cornerRadius(3)
                     }
                     if let current {
@@ -368,8 +370,8 @@ private struct FrequencyCard: View {
     }
 }
 
-/// 平衡：近 30 天的推：拉組數比、單邊次數、爆發次數（拉比推少時推拉比用警示色），
-/// 和 9 個分類的組數長條（CHANGE_13 §2-4，從首頁搬過來；不能點，沒有下一層）
+/// 平衡：近 30 天的推：拉組數比、單邊次數、爆發次數，和 9 個分類的組數長條（CHANGE_13 §2-4，從首頁搬過來；不能點，沒有下一層）。
+/// 不用紅綠燈（§3）：長條一律中性色；拉比推少時推拉比用 warning 色加「拉偏少」，0 組的分類用 warning 色加「沒練」
 private struct BalanceCard: View {
     var balance: StatsSnapshot.Balance
     /// 近 30 天各分類的組數（StatsSnapshot.recentSets）
@@ -383,7 +385,10 @@ private struct BalanceCard: View {
                 Text("推：拉")
                 Text("\(balance.push)：\(balance.pull)")
                     .font(.body.weight(.bold).monospacedDigit())
-                    .foregroundStyle(balance.pull < balance.push ? Theme.warning : Theme.done)
+                    .foregroundStyle(pullIsLow ? Theme.warning : Theme.textPrimary)
+                if pullIsLow {
+                    Text("拉偏少").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.warning)
+                }
                 Text("・單邊 \(balance.unilateralSessions) 次・爆發 \(balance.explosiveSessions) 次")
                     .monospacedDigit()
             }
@@ -403,9 +408,11 @@ private struct BalanceCard: View {
                         .font(.subheadline.weight(.semibold))
                         .frame(width: 84, alignment: .leading)
                     ThinBar(fraction: Double(count) / Double(maxCount), color: Theme.textSecondary)
-                    Text("\(count)")
+                    Text(count == 0 ? "0 沒練" : "\(count)")
                         .font(.subheadline.weight(.bold).monospacedDigit())
-                        .frame(width: 32, alignment: .trailing)
+                        .foregroundStyle(count == 0 ? Theme.warning : Theme.textPrimary)
+                        .lineLimit(1)
+                        .frame(width: 64, alignment: .trailing)
                 }
                 .frame(minHeight: 24)
             }
@@ -414,4 +421,6 @@ private struct BalanceCard: View {
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("balanceCard")
     }
+
+    private var pullIsLow: Bool { balance.pull < balance.push }
 }

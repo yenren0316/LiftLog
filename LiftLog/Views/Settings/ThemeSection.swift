@@ -22,7 +22,7 @@ struct ThemeSection: View {
     }
 }
 
-/// 用該主題自己的顏色畫：一列已完成的組、一列未完成的組、選取中的 chip、主要按鈕、近 30 天長條
+/// 用該主題自己的顏色畫：一列已完成的組、一列未完成的組、選取中的 chip、主要按鈕、兩個部位色（CHANGE_13 §3）
 struct ThemePreviewCard: View {
     var theme: AppTheme
     var isSelected: Bool
@@ -50,13 +50,10 @@ struct ThemePreviewCard: View {
                     .foregroundStyle(Color(hex: p.onAccent))
                     .frame(maxWidth: .infinity, minHeight: 24)
                     .background(Color(hex: p.accent), in: .capsule)
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        Capsule().fill(Color(hex: p.field))
-                        Capsule().fill(Color(hex: p.accent)).frame(width: geo.size.width * 0.65)
-                    }
+                HStack(spacing: 8) {
+                    bodyColor("下肢", p.lowerBody, p)
+                    bodyColor("上肢", p.upperBody, p)
                 }
-                .frame(height: 5)
             }
             .padding(8)
             .background(Color(hex: p.card), in: .rect(cornerRadius: 12))
@@ -85,6 +82,13 @@ struct ThemePreviewCard: View {
         }
         .padding(3)
         .background(Color(hex: p.done).opacity(done ? 0.18 : 0), in: .rect(cornerRadius: 6))
+    }
+
+    private func bodyColor(_ title: String, _ hex: UInt32, _ p: Palette) -> some View {
+        HStack(spacing: 4) {
+            Circle().fill(Color(hex: hex)).frame(width: 10, height: 10)
+            Text(title).font(.caption2).foregroundStyle(Color(hex: p.textSecondary))
+        }
     }
 
     private func chip(_ text: String, fill: UInt32, text color: UInt32) -> some View {

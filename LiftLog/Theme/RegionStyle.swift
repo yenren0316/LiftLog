@@ -47,13 +47,33 @@ extension DayRegion {
     static let stackOrder: [DayRegion] = [.lower, .upper, .full, .cardio]
 }
 
-/// 訓練頻率的圖例：「■ 下肢　■ 上肢　▨ 全身　■ 有氧與其他」，用長條實際的顏色（全身是斜紋）
+/// 部位的字（下、上、全）：系統「不以顏色區分」開啟時，放在圓點和圖例的色塊裡（CHANGE_13 §3）
+struct RegionLetter: View {
+    var region: DayRegion
+    var size: CGFloat
+
+    var body: some View {
+        if let letter = region.letter {
+            Text(letter)
+                .font(.system(size: size, weight: .bold))
+                .foregroundStyle(Theme.background)
+        }
+    }
+}
+
+/// 訓練頻率的圖例：「■ 下肢　■ 上肢　▨ 全身　■ 有氧與其他」，用長條實際的顏色（全身是斜紋）；
+/// 「不以顏色區分」開啟時色塊放大、裡面加上部位的字
 struct RegionLegend: View {
+    @Environment(\.accessibilityDifferentiateWithoutColor) private var withoutColor
+
     var body: some View {
         HStack(spacing: 12) {
             ForEach(DayRegion.stackOrder, id: \.self) { region in
                 HStack(spacing: 4) {
-                    RoundedRectangle(cornerRadius: 2).fill(region.barFill).frame(width: 9, height: 9)
+                    RoundedRectangle(cornerRadius: withoutColor ? 3 : 2)
+                        .fill(region.barFill)
+                        .frame(width: withoutColor ? 14 : 9, height: withoutColor ? 14 : 9)
+                        .overlay { if withoutColor { RegionLetter(region: region, size: 9) } }
                     Text(region.title)
                 }
             }

@@ -215,7 +215,7 @@ private struct WrapLayout: Layout {
     }
 }
 
-/// 強調色的小膠囊（建議、新）
+/// 強調色的小膠囊：只用在建議和「下一次」（CHANGE_13 §3）
 struct AccentChip: View {
     var text: String
 
@@ -356,7 +356,7 @@ struct CandidateRow: View {
                         .font(.title3.weight(.semibold))
                         .lineLimit(1)
                     ForEach(candidate.exercise.tags) { Chip(text: $0.title) }
-                    if candidate.isNew { AccentChip(text: "新") }
+                    if candidate.isNew { Chip(text: "新") }
                 }
                 if let suggestion {
                     HStack(spacing: 6) {

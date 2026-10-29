@@ -10,7 +10,7 @@ struct RestTimerBar: View {
             let interval = start...end
             VStack(spacing: 8) {
                 HStack(spacing: 10) {
-                    Image(systemName: "timer").foregroundStyle(Theme.accent)
+                    Image(systemName: "timer").foregroundStyle(Theme.textSecondary)
                     Text("休息 \(Text(timerInterval: interval, countsDown: true))")
                         .font(.title3.bold().monospacedDigit())
                         .accessibilityIdentifier("restCountdown")
@@ -24,11 +24,11 @@ struct RestTimerBar: View {
                 } currentValueLabel: {
                     EmptyView()
                 }
-                .tint(Theme.accent)
+                .tint(Theme.textPrimary)
             }
             .padding(14)
             .background(Theme.card, in: .rect(cornerRadius: 20))
-            .overlay(RoundedRectangle(cornerRadius: 20).stroke(Theme.accent.opacity(0.4)))
+            .overlay(RoundedRectangle(cornerRadius: 20).stroke(Theme.separator))
             .padding(.horizontal, 16)
             .padding(.bottom, 6)
             .transition(.move(edge: .top).combined(with: .opacity))

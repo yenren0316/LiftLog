@@ -92,8 +92,9 @@ private struct DetailHeader: View {
                 .foregroundStyle(Theme.textSecondary)
 
             HStack(spacing: 0) {
-                stat(days.map(RelativeDay.text) ?? "未練過", "上次", color: Recency.staleness(days: days).color)
-                stat("\(exercise.trainingCount(withinDays: 90)) 次", "近 90 天", color: Theme.accent)
+                stat(days.map(RelativeDay.text) ?? "未練過", "上次",
+                     color: Recency.staleness(days: days).isNeglected ? Theme.warning : Theme.textPrimary)
+                stat("\(exercise.trainingCount(withinDays: 90)) 次", "近 90 天", color: Theme.textPrimary)
             }
         }
         .card()
@@ -140,7 +141,6 @@ private struct HistoryLine: View {
     @AppStorage(WeightUnit.storageKey) private var unit: WeightUnit = .kg
 
     var body: some View {
-        let hasMax = item.completedSets.contains { $0.kind == .max }
         VStack(alignment: .leading, spacing: 2) {
             HStack(alignment: .firstTextBaseline) {
                 Text(date.shortDate)
@@ -149,7 +149,7 @@ private struct HistoryLine: View {
                 Spacer(minLength: 12)
                 Text(item.summary(unit: unit))
                     .font(.body.weight(.semibold))
-                    .foregroundStyle(hasMax ? Theme.warning : Theme.textPrimary)
+                    .foregroundStyle(Theme.textPrimary)
                     .multilineTextAlignment(.trailing)
             }
             if !item.note.isEmpty {

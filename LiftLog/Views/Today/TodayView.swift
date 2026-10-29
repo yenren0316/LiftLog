@@ -156,9 +156,12 @@ private struct WeekCardView: View {
     }
 }
 
-/// 一天的圓點：有完成組的日子依部位上色（全身沿對角線兩色），今天強調色外框，今天之後是空的淡色圓點
+/// 一天的圓點：有完成組的日子依部位上色（全身沿對角線兩色），今天強調色外框，今天之後是空的淡色圓點。
+/// 系統「不以顏色區分」開啟時，圓點裡加上部位的字（下、上、全，CHANGE_13 §3）
 private struct WeekDot: View {
     var day: WeekCard.Day
+
+    @Environment(\.accessibilityDifferentiateWithoutColor) private var withoutColor
 
     static let size: CGFloat = 28
 
@@ -168,6 +171,7 @@ private struct WeekDot: View {
                 Circle().stroke(Theme.field, lineWidth: 1.5)
             } else if let region = day.region {
                 Circle().fill(region.fill)
+                    .overlay { if withoutColor { RegionLetter(region: region, size: 13) } }
             } else {
                 Circle().fill(Theme.field)
             }

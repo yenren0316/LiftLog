@@ -71,7 +71,7 @@ struct WorkoutMiniBar: View {
         Button { coordinator.isExpanded = true } label: {
             HStack(spacing: 10) {
                 Image(systemName: "figure.strengthtraining.traditional")
-                    .foregroundStyle(Theme.accent)
+                    .foregroundStyle(Theme.textPrimary)
                 if placement == .inline {
                     // 和縮小的分頁列同一列，空間只夠一行
                     ElapsedTimeText(since: session.startedAt, prefix: "訓練中 ")

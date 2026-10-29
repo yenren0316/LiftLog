@@ -55,7 +55,7 @@ struct ExerciseGuideTab: View {
             ForEach(Array(items.enumerated()), id: \.offset) { index, item in
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(numbered ? "\(index + 1)." : "•")
-                        .foregroundStyle(numbered ? Theme.accent : Theme.danger)
+                        .foregroundStyle(numbered ? Theme.textSecondary : Theme.danger)
                         .monospacedDigit()
                     Text(item)
                 }

@@ -379,8 +379,8 @@ struct RoleBadge: View {
     var body: some View {
         Text(role.title)
             .font(.caption.weight(.bold))
-            .foregroundStyle(Theme.accent)
+            .foregroundStyle(Theme.textSecondary)
             .padding(.horizontal, 8).padding(.vertical, 3)
-            .overlay(Capsule().stroke(Theme.accent, lineWidth: 1))
+            .overlay(Capsule().stroke(Theme.separator, lineWidth: 1))
     }
 }

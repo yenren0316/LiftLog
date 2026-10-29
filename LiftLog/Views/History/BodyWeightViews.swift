@@ -68,15 +68,16 @@ struct BodyWeightCard: View {
         let current = selected.flatMap { date in entries.min { abs($0.date.timeIntervalSince(date)) < abs($1.date.timeIntervalSince(date)) } }
         return Chart {
             ForEach(entries) { entry in
+                // 每天的體重淡一點，7 日平均是主要的線；都是中性色（CHANGE_13 §3）
                 LineMark(x: .value("日期", entry.date), y: .value("體重", unit.fromKg(entry.kg)), series: .value("線", "體重"))
-                    .foregroundStyle(Theme.accent.opacity(0.45))
+                    .foregroundStyle(Theme.textSecondary.opacity(0.45))
                 PointMark(x: .value("日期", entry.date), y: .value("體重", unit.fromKg(entry.kg)))
-                    .foregroundStyle(Theme.accent)
+                    .foregroundStyle(Theme.textSecondary)
                     .symbolSize(18)
             }
             ForEach(average) { entry in
                 LineMark(x: .value("日期", entry.date), y: .value("體重", unit.fromKg(entry.kg)), series: .value("線", "7 日平均"))
-                    .foregroundStyle(Theme.done)
+                    .foregroundStyle(Theme.textPrimary)
                     .lineStyle(StrokeStyle(lineWidth: 2))
             }
             if let current {
@@ -97,7 +98,7 @@ struct BodyWeightCard: View {
         .accessibilityIdentifier("weightChart")
         .accessibilityValue(current.map(label) ?? "")
         .overlay(alignment: .topTrailing) {
-            Label("7 日平均", systemImage: "line.diagonal").font(.caption2).foregroundStyle(Theme.done)
+            Label("7 日平均", systemImage: "line.diagonal").font(.caption2).foregroundStyle(Theme.textPrimary)
         }
     }
 }

@@ -55,7 +55,6 @@ struct WorkoutSummaryView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Image(systemName: "checkmark.seal.fill")
                         .font(.system(size: 48))
-                        .foregroundStyle(Theme.accent)
                     Text("訓練完成").font(.largeTitle.bold())
                     Text(summary.title).font(.title3).foregroundStyle(Theme.textSecondary)
                 }
@@ -72,12 +71,11 @@ struct WorkoutSummaryView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         Label("新紀錄", systemImage: "trophy.fill")
                             .font(.headline)
-                            .foregroundStyle(Theme.warning)
                         ForEach(records) { line in
                             HStack {
                                 Text(line.name).font(.body.weight(.semibold))
                                 Spacer()
-                                Text(line.summary).foregroundStyle(Theme.warning)
+                                Text(line.summary).foregroundStyle(Theme.textSecondary)
                             }
                         }
                     }
@@ -90,7 +88,7 @@ struct WorkoutSummaryView: View {
                             HStack {
                                 Text(line.name).font(.body.weight(.semibold))
                                 if line.isNewRecord {
-                                    Image(systemName: "trophy.fill").foregroundStyle(Theme.warning)
+                                    Image(systemName: "trophy.fill").accessibilityLabel("新紀錄")
                                 }
                                 Spacer()
                                 Text("\(line.completedSets) 組").foregroundStyle(Theme.textSecondary)
@@ -171,7 +169,6 @@ struct WorkoutSummaryView: View {
         VStack(spacing: 2) {
             Text(value)
                 .font(.system(size: 28, weight: .bold, design: .rounded).monospacedDigit())
-                .foregroundStyle(Theme.accent)
             Text(title).font(.footnote).foregroundStyle(Theme.textSecondary)
         }
         .frame(maxWidth: .infinity)

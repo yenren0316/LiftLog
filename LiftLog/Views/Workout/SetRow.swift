@@ -115,9 +115,9 @@ struct SetRow: View {
 
     private var numberColor: Color {
         switch set.kind {
-        case .normal: Theme.textPrimary
-        case .warmup: Theme.accent
-        case .max: Theme.warning
+        // 組號的字（W、M）就看得出種類，不靠顏色（CHANGE_13 §3）
+        case .normal, .max: Theme.textPrimary
+        case .warmup: Theme.textSecondary
         }
     }
 

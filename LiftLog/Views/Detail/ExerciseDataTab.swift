@@ -32,7 +32,6 @@ private struct RecordsCard: View {
         VStack(alignment: .leading, spacing: 12) {
             Label("個人紀錄", systemImage: "trophy.fill")
                 .font(.headline)
-                .foregroundStyle(Theme.warning)
             if records.isEmpty {
                 Text(exercise.logType == .cardio ? "有氧沒有個人紀錄，請看下方圖表。" : "還沒有紀錄")
                     .foregroundStyle(Theme.textSecondary)
@@ -50,7 +49,6 @@ private struct RecordsCard: View {
                         Spacer()
                         Text(valueText(record))
                             .font(.title3.bold().monospacedDigit())
-                            .foregroundStyle(Theme.accent)
                     }
                     .tapRowInset()
                 }
@@ -138,7 +136,7 @@ private struct TrendChartCard: View {
             ForEach(points) { p in
                 let y = display(p.value, metric: metric)
                 LineMark(x: .value("日期", p.date), y: .value("數值", y))
-                    .foregroundStyle(Theme.accent.opacity(0.6))
+                    .foregroundStyle(Theme.textSecondary.opacity(0.6))
                     .interpolationMethod(.monotone)
                 PointMark(x: .value("日期", p.date), y: .value("數值", y))
                     .foregroundStyle(by: .value("類型", p.isMax ? "MAX" : "一般"))
@@ -154,7 +152,8 @@ private struct TrendChartCard: View {
                     }
             }
         }
-        .chartForegroundStyleScale(["一般": Theme.accent, "MAX": Theme.warning])
+        // 一般和 MAX 用形狀區分（圓、菱形），顏色都是中性的（CHANGE_13 §3）
+        .chartForegroundStyleScale(["一般": Theme.textPrimary, "MAX": Theme.textPrimary])
         .chartSymbolScale(["一般": .circle, "MAX": .diamond])
         .chartYScale(domain: .automatic(includesZero: false, reversed: reversed))
         .chartLegend(points.contains(where: \.isMax) ? .visible : .hidden)
@@ -268,7 +267,7 @@ private struct IntensityCard: View {
                         Spacer()
                         Text(row.purposes.joined(separator: "、"))
                             .font(.footnote)
-                            .foregroundStyle(purposeColor(row.percent))
+                            .foregroundStyle(Theme.textSecondary)
                     }
                 }
             } else {
@@ -277,9 +276,5 @@ private struct IntensityCard: View {
             }
         }
         .card()
-    }
-
-    private func purposeColor(_ percent: Int) -> Color {
-        percent >= 85 ? Theme.danger : percent >= 75 ? Theme.warning : Theme.done
     }
 }
