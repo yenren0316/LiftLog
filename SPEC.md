@@ -12,6 +12,7 @@
 > - CHANGE_10：實機回饋修正（圖表不再擋住捲動、所有分頁畫面一致地收起分頁列、捨棄訓練移到最底部、確認一律用置中的 alert、動態島的經過時間、DE 建議重量用強度換算表、「上一次」同角色優先、訓練中只顯示角色）、鍵盤改成點空白處和捲動收起、首頁日曆改成打開「訓練狀態」浮窗（拿掉達標小點和連續週數）、點擊提示統一（拿掉「›」，整塊可點、按壓色）。
 > - CHANGE_11：改用 iOS 26 內建行為（分頁列縮小、訓練中橫條放在系統的附屬列）、日期改變時重算統計、全 App 只有一種估算 1RM 並刪掉沒有用到的程式、拿掉訓練中的鍵盤列（候選列試過但融不進 iOS 26 的鍵盤，照規格拿掉）、圖表選取同一套行為、動態島顯示日型簡稱、訓練狀態浮窗高度等於內容、備份加入設定、用真實備份在模擬器驗證統計。
 > - CHANGE_12：經過時間和休息倒數改用系統的計時文字（`Text(timerInterval:)`、`ProgressView(timerInterval:)`）；訓練中畫面的放大轉場（附屬列不能當來源）和「今天」的系統大標題（首頁超出一個畫面 32.5 pt）都照規格停下來、維持原樣；CLAUDE.md 加上每一輪最後更新簽署並安裝到 iPhone。
+> - CHANGE_13：首頁只剩「下一次」卡和「本週」卡、改用系統的大標題（日曆、近 30 天卡和分類待練清單刪掉，各分類組數搬到平衡卡）；設定改成「今天」右上角齒輪打開的 sheet，分頁剩三個；顏色的意思整理（每個主題新增下肢、上肢兩個部位色，強調色只用在按鈕、連結、選取、建議值、「下一次」和今天，狀態不再用紅綠燈）；動作庫的分類列只顯示動作數。
 >
 > 以本文件為準。
 
@@ -32,8 +33,8 @@ App 只給自己用、不上架，用免費 Apple ID（Personal Team）安裝。
 - App Groups（CHANGE_05）：先用 `xcodebuild -allowProvisioningUpdates` 對實機建置，確認免費帳號（Personal Team）也能簽署，才開始使用。群組 `group.com.aaronhou.LiftLog` 只用來讓 App 把小工具快照交給小工具；資料庫不放在群組裡。
 - 介面全部繁體中文。重量單位由設定頁的全域 kg／lbs 決定，資料一律存 kg（1 lb = 0.45359237 kg）。版面簡潔、字大，適合在健身房單手操作。
 - UI 風格參考 Habits First：大圓角卡片、細進度條、懸浮膠囊分頁列。顏色由主題決定（見「主題配色」），預設石墨橙。
-- 資訊架構（CHANGE_07）：四個分頁各回答一個問題——今天「下一次該練什麼？」、歷程「我練了什麼、進步了多少？」、動作庫「我有哪些動作？」、設定。每個分頁最多三層：第 1 層分頁、第 2 層 push 的清單或詳情、第 3 層一律是唯讀的 sheet（例如訓練摘要浮窗），不再 push。
-- 共用元件（`Theme/Components.swift`）：`Metrics`（按鈕高度 50、膠囊高度 38，不再各自寫死 52／54／56／60）、`PrimaryButton`、`FilterCapsule`、`ElapsedTimeText`（CHANGE_12 §1：系統的計時文字 `Text(timerInterval: startedAt...distantFuture, countsDown: false)`，系統自己跳秒，不用 TimelineView 每秒重畫；格式「0:43」「24:30」「1:05:30」和以前一樣）；「今天／昨天／N 天前」只由 `Shared/RelativeDay.swift` 產生。
+- 資訊架構（CHANGE_07）：每個分頁各回答一個問題——今天「下一次該練什麼？」、歷程「我練了什麼、進步了多少？」、動作庫「我有哪些動作？」。每個分頁最多三層：第 1 層分頁、第 2 層 push 的清單或詳情、第 3 層一律是唯讀的 sheet（例如訓練摘要浮窗），不再 push。設定（「App 怎麼運作？」）在 CHANGE_13 §1 從分頁改成「今天」右上角齒輪打開的 sheet，分頁剩三個（見「9. 設定」）。
+- 共用元件（`Theme/Components.swift`）：`Metrics`（按鈕高度 50、膠囊高度 38，不再各自寫死 52／54／56／60）、`PrimaryButton`（外觀是 `PrimaryButtonLabel`，「今天」的「下一次」卡的「開始」也用它，CHANGE_13 §2-1）、`FilterCapsule`、`ElapsedTimeText`（CHANGE_12 §1：系統的計時文字 `Text(timerInterval: startedAt...distantFuture, countsDown: false)`，系統自己跳秒，不用 TimelineView 每秒重畫；格式「0:43」「24:30」「1:05:30」和以前一樣）；「今天／昨天／N 天前」只由 `Shared/RelativeDay.swift` 產生。
 - 分頁列（CHANGE_11 §1）：全部交給 iOS 26 的系統 TabView，沒有自己的條件或例外。`.tabBarMinimizeBehavior(.onScrollDown)`：往下捲時分頁列縮小（只剩目前的分頁），往上滑時恢復（模擬器上實測：手指往上「滑出去」時恢復，慢慢拖、停住再放開不會恢復，這是系統的行為）。動作詳情不再整頁隱藏分頁列。CHANGE_08～10 自己寫的收起邏輯（`TabBarAutoHide`、`.hidesTabBarOnScroll()`、固定的底部留白 `BottomInset`、`-tabBarLog` 的捲動紀錄）都刪掉了。
   - 「訓練中」橫條放在系統的附屬列（`.tabViewBottomAccessory`）：分頁列展開時在分頁列上方，兩行（訓練名稱、「訓練中 0:42」）；縮小時和分頁列同一列，只有一行「訓練中 0:42」（`tabViewBottomAccessoryPlacement`）。外框、背景、位置和底部留白都由系統決定。只在有進行中的訓練時顯示：iOS 26.1 起用 `tabViewBottomAccessory(isEnabled:)`；iOS 26.0 沒有這個參數，沒有訓練時不加附屬列。
   - 點橫條打開訓練中畫面用原本的 `fullScreenCover`（CHANGE_12 §2）：試過把橫條當 `matchedTransitionSource`、全螢幕畫面用 `.navigationTransition(.zoom)`，但轉場找不到附屬列裡的來源，只會從畫面中間放大、縮回畫面中間（同一段程式換成「今天」的卡片當來源就正常），照規格停下來。
@@ -43,7 +44,7 @@ App 只給自己用、不上架，用免費 Apple ID（Personal Team）安裝。
   - 所有畫面：點輸入框以外的地方收起（`KeyboardDismissOnTap`：window 上的點擊手勢，不取消點擊、可以和其他手勢同時辨識，點在輸入框上不收），包括不能捲動的記錄體重。
   - 按下儲存、完成這類主要按鈕時先收起鍵盤再執行（`PrimaryButton`、各編輯 sheet 的儲存、編輯訓練和訓練中的「完成」）。
   - 訓練名稱按 return 收起鍵盤（名稱不換行）；編輯說明（多行）的 return 是換行。訓練中和編輯訓練的組沒有鍵盤列（CHANGE_11 §4-2）：全 App 不用 SwiftUI 的 `.keyboard` toolbar（iOS 26 會畫成浮在鍵盤上方的膠囊）；訓練畫面右上角的「完成」是結束訓練，所以點空白處（組與組之間、動作標題、說明列）收起鍵盤。完成訓練的今天體重輸入時捲到畫面中間。搜尋框用鍵盤的搜尋鍵。開發用：`-openWeightEntry YES`、`-previewFinishSummary YES`、`-focusWeight YES`。
-- 點擊提示（CHANGE_10 §4）：能點的卡片和列，整塊都能點，按下時背景換成主題的按壓色（`Theme.pressed`），放開恢復；全 App 不用列尾的「›」當提示。共用 `TapSurfaceStyle`（`.tapCard` 整張卡片、`.tapRow` 卡片裡的一列、`.tapListRow` 清單的一列，清單用 `TapListRow`）。用在：今天的「下一次」卡、訓練日曆卡、近 30 天的列、分類待練清單；動作庫的分類列、已封存、動作列、排序選項；設定第 1 層；歷程的紀錄、主項進步的列；動作詳情的個人紀錄和全部紀錄；建立菜單和換動作的候選、從健康 App 帶入的列、新增動作的列；訓練狀態的輪替列。不能點的卡片（有氧、平衡）沒有按壓回饋。小按鈕（膠囊、「新增一組」、「還原」、標題、訓練中橫條）和主題的預覽方塊用 `PressableButtonStyle`（縮小、變淡）。返回、訓練畫面的收合、訓練中橫條的展開箭頭、分區的收合箭頭是按鈕本身，不算提示。
+- 點擊提示（CHANGE_10 §4）：能點的卡片和列，整塊都能點，按下時背景換成主題的按壓色（`Theme.pressed`），放開恢復；全 App 不用列尾的「›」當提示。共用 `TapSurfaceStyle`（`.tapCard` 整張卡片、`.tapRow` 卡片裡的一列、`.tapListRow` 清單的一列，清單用 `TapListRow`）。用在：今天的「下一次」卡和「本週」卡（CHANGE_13 §2）；動作庫的分類列、已封存、動作列、排序選項；設定第 1 層；歷程的紀錄、主項進步的列；動作詳情的個人紀錄和全部紀錄；建立菜單和換動作的候選、從健康 App 帶入的列、新增動作的列；訓練狀態的輪替列。不能點的卡片（有氧、平衡；平衡卡的 9 個分類列也不能點，CHANGE_13 §2-4）沒有按壓回饋。小按鈕（膠囊、「新增一組」、「還原」、標題、訓練中橫條）和主題的預覽方塊用 `PressableButtonStyle`（縮小、變淡）。返回、訓練畫面的收合、訓練中橫條的展開箭頭、分區的收合箭頭是按鈕本身，不算提示。
 - 確認一律用置中的 alert（CHANGE_10 §0-3），不用會變成 popover 的 confirmationDialog：捨棄訓練、還有沒打勾的組、刪除訓練、刪除動作、合併動作、結束目前的訓練、有進行中的訓練時建立菜單；每個都有明確的「取消」。
 - 圖表的選取（CHANGE_10 §0-1，`Theme/ChartSelection.swift`）：有氧、訓練頻率、體重、動作詳情的折線圖都用同一套行為（CHANGE_11 §5）：點一下浮出那一點的數字，2 秒後消失；按住約 0.2 秒再拖曳，數字跟著手指，放開後 2 秒消失（`chartDateSelection`，沒有其他參數）。按住約 0.2 秒後才能拖曳選取（UIKit 的長按：手指一開始就移動時失敗），一般的上下滑一律交給捲動。以前的 SwiftUI `LongPressGesture.sequenced(before: DragGesture(minimumDistance: 0))` 會讓手指從圖表開始時整頁捲不動。主項進步的迷你折線是整列的一部分（點一下到動作詳情），沒有自己的選取。
 - 點擊回饋與動畫：自訂按鈕一律用 `PressableButtonStyle`（`.pressable`，按下時微縮、變淡，放開時彈回），不用 `.plain`。點選造成的狀態改變（選項、組合、候選動作、篩選 chips、打勾、新增或刪除一組、上下移、收合）都包在 `withAnimation(.tap)` 裡；勾選圖示用 symbol 的 replace／bounce 效果；分頁和圖表的切換用 `.animation(.tap)` 的 binding；換主題時整個畫面淡入淡出。
@@ -142,7 +143,7 @@ App 只給自己用、不上架，用免費 Apple ID（Personal Team）安裝。
 ## 動作分類（依此順序顯示）
 下肢推（膝主導）、下肢拉（髖主導）、上肢水平推、上肢水平拉、上肢垂直推、上肢垂直拉、核心、補強、有氧
 
-CHANGE_04 刪除了轉體、負重行走、違常姿勢三類，原本的動作都併入核心；讀舊資料或舊備份時，這三個分類一律當成核心。沒有動作的分類在首頁隱藏。
+CHANGE_04 刪除了轉體、負重行走、違常姿勢三類，原本的動作都併入核心；讀舊資料或舊備份時，這三個分類一律當成核心。
 
 ## 動作庫
 格式：名稱（標籤）｜器材｜logType（weight 省略）／別名。動作庫 v2（CHANGE_06）共 51 個重訓動作加跑步機；標「新」的是 CHANGE_06 新增的 9 個（定義在 `seed.json` 與 `ExerciseGuides.json`，已有資料的 App 啟動時由 `LibraryAdditions` 補進來）。標籤和輪替順序由 `ConjugateLibrary`（`Data/Backup.swift`）在啟動時依名稱更新一次，只改動作的設定，不動任何訓練紀錄；之後使用者自己改的標籤不會被蓋掉。核心是分類不是標籤。
@@ -241,7 +242,7 @@ CHANGE_04 刪除了轉體、負重行走、違常姿勢三類，原本的動作�
 - 背部下拉訓練機｜上肢垂直拉
 - 垂直舉肩訓練機｜補強
 
-封存的動作不出現在「該練什麼」、動作庫預設列表與訓練中的「新增動作」，但「近 30 天」統計仍計入它們的歷史。動作庫可開「顯示已封存」查看、看圖表或取消封存。
+封存的動作不出現在「該練什麼」、動作庫預設列表與訓練中的「新增動作」，但「近 30 天」統計（平衡卡）和「本週」卡的提醒仍計入它們的歷史。動作庫可開「顯示已封存」查看、看圖表或取消封存。
 Cable 類（滑輪下拉、坐姿 Cable 划船、三頭肌滑輪下拉、面拉、腹前推）與輔助類（輔助引體向上、雙槓撐）不封存。
 
 CHANGE_04 刪除了 15 個從沒練過的動作（前抱式深蹲、分腿蹲、單腳深蹲、跳箱、早安運動、單手分腿抓舉、伏地挺身、屈體划船、單手啞鈴划船、爆發上推、攪拌式、農夫走路、單手負重行走、熊爬、懸吊）與它們的說明；背蹲舉改名深蹲、壺鈴原地起跳改名負重原地起跳（舊名放進別名）；六角槓階梯上下併入六角槓原地踏步（那筆紀錄備註「階梯上下」）。
@@ -249,25 +250,27 @@ CHANGE_04 刪除了 15 個從沒練過的動作（前抱式深蹲、分腿蹲、
 ## 功能
 
 ### 1. 今天（第 1 層）
-- 只回答「下一次該練什麼？」，一個畫面放得下（iPhone 17 Pro 不用捲動；近 30 天的卡片底部離分頁列 20.8 pt，`TodayLayoutUITests` 量）。標題是自己畫的 `ScreenHeader`、隱藏導覽列：CHANGE_12 §3 試過系統的大標題（`navigationTitle`＋`.large`），整頁往下推 53.3 pt，最後一列「有氧」跑到分頁列後面（差 32.5 pt），照規格停下來、維持原樣。統計都從 `StatsCache` 讀，body 裡不掃描訓練紀錄。
-- 「下一次」卡片：「下一次 ME 上肢　建議主項：臥推」與「2 個動作・不加跑步機」，內容就是建立菜單三個問題的預設答案和主項格的第一個建議；點一下帶著這些答案進入建立菜單。這是開始訓練唯一的入口（見「2. 開始訓練」）。
-- 訓練日曆點陣圖（`TrainingCalendar`，類似 GitHub contribution graph，CHANGE_08 §4 改版）：
-  - 每天一格，顏色依那天的部位（`DayRegion`，依那天有完成組的動作分類推算，同一天多次訓練依合併後的部位：下肢＋上肢＝全身，有氧不影響有重訓的日子）：下肢 accent、上肢 upperBody、全身沿對角線一半 accent 一半 upperBody、有氧與其他（只有有氧，或只有核心、補強）textSecondary 40%；沒練的日子 field。格子的顏色顯示所有有完成組的日子（「只有有氧的訓練也算」關閉時，只有有氧的日子照樣上色，只是不算進次數）。
-  - 每一欄是一週，從週一開始（CHANGE_09 §2，不管手機的地區設定）。格子固定大小（12 pt、間距 3 pt），週數依寬度剛好塞滿，不橫向捲動；月份標籤和下個月太近（3 週內）時省略。
-  - 下方一行小字圖例「■ 下肢　■ 上肢　◪ 全身　■ 有氧與其他」，用實際的顏色。一次訓練都沒有時，圖例換成「還沒有訓練紀錄。點上面的「下一次」建立第一份菜單。」
-  - 整張卡是一個按鈕（按壓色），點一下打開「訓練狀態」浮窗；格子本身沒有個別的點擊（CHANGE_10 §2）。CHANGE_09 的達標小點、圖例的「達標」、標題列的「本週 N/目標・連續 N 週達標」，以及 CHANGE_08 的浮出標籤、拖曳和震動都拿掉；連續達標週數不再顯示在任何地方。
-- 「訓練狀態」浮窗（`TrainingStatusSheet`，CHANGE_10 §3）：由 RootView 呈現。高度等於內容的高度（CHANGE_11 §7，拿掉半高）：量捲動內容的高度加上標題列和底部的安全區域（`onScrollGeometryChange`），打開就看得到全部；超過螢幕（例如系統字級很大）時用全高，內容可以捲動。往下拖可以關閉。數字存檔時和其他統計一起算（`StatsSnapshot.trainingStatus`，`Logic/TrainingStatus.swift`），每個數字都來自共用的函式。
-  - 本週三行：「本週・N 天（目標 M）・N 組」「下肢 N・上肢 N・其他 N 組・有氧 N 分鐘」「上週同期：N 天・N 組」。本週是週一到今天；上週同期是上週一到上週的同一個星期幾（含當天）。天數用每週目標同一套（`TrainingCount.days`／`count(in:)`）；組數只算已結束訓練中打勾的正式組和 MAX 組，熱身不算，和近 30 天同一個函式（`PlanHistory.setCount(in:)`）；下肢＝下肢推＋下肢拉、上肢＝四個上肢分類、其他＝核心＋補強；有氧不算組數，改算跑步機的分鐘（`PlanHistory.cardioMinutes(in:)`，歷程的有氧卡也用它）。
-  - 輪替狀態四列（ME 下肢、ME 上肢、DE 下肢、DE 上肢）：日型名稱；上次「N 天前（10/15）」，超過 14 天用 warning 色，沒有紀錄「還沒練過」（只算該日型、有完成組的已結束訓練）；「主項：上次 深蹲 → 下次 傳統硬舉」，沒有紀錄只寫「主項：下次 深蹲」。下次主項用 `PlanRanking.suggestedMain`（「下一次」卡的建議主項、建立菜單主項格的第一個建議也用它）；「下一次」卡推薦的日型那一列加上 accent 的「下一次」標記。有紀錄的列整列可點：先關掉這個浮窗，再打開那次訓練的摘要浮窗（和歷程同一個元件）；沒有紀錄的列不能點。
+- 只回答「下一次練什麼？」（CHANGE_13 §2）。從上到下：系統的大標題「今天」（`navigationTitle`＋`.large`，右上角是設定的齒輪，見「9. 設定」）、「下一次」卡、「本週」卡。一個畫面放得下：沒有訓練、有進行中的訓練（附屬列顯示）兩種狀態，兩張卡都整張在分頁列和附屬列上方（iPhone 17 Pro：本週卡底部離分頁列 216.5 pt、離附屬列 182.5 pt，`TodayLayoutUITests` 量）。CHANGE_12 的自畫標題 `ScreenHeader` 刪掉了。統計都從 `StatsCache` 讀，body 裡不掃描訓練紀錄；卡片的內容由純邏輯 `NextCard`、`WeekCard` 決定（`Logic/TodayCards.swift`）。
+- 「下一次」卡（§2-1）：
+  - 小字「下一次」；大字的日型（「DE 上肢」）；主項一行；「3 個動作・跑步機 30 分鐘」（不加跑步機時「3 個動作」），內容就是建立菜單三個問題的預設答案（`PlanDefaults.answers`），跑步機的分鐘是有氧的預設值（`Prescription.cardioMinutes`）。
+  - 主項一行，主項是主項格的第一個建議（`PlanRanking.suggestedMain`，存在 `StatsSnapshot.suggestedMain`，連同它的歷次紀錄）：DE 速度主項「主項：臥推（速度）・建議 32.5 kg」，建議重量和建立菜單同一個函式（`SlotAdvice.make`，強度換算表 60%），沒有可以計算的紀錄時只寫「主項：臥推（速度）」；DE（爆）只寫名稱「主項：壺鈴擺盪」；ME「主項：深蹲・做到 3RM」（早安式 5RM，`Prescription.maxEffortRM`）；沒有主項的候選「主項：—」。主項名稱和建議重量用 accent（建議值）。
+  - 卡片底部全寬的「開始」（`PrimaryButtonLabel`）。整張卡是一個按鈕（按「開始」或卡片其他地方都一樣），帶著預設答案進入建立菜單，走 `WorkoutLauncher`。這是開始訓練的主要入口（見「2. 開始訓練」）。
+  - 有進行中的訓練時改成顯示這次的訓練：小字「進行中」、大字日型和下一行訓練名稱（沒有日型時名稱是大字）、經過時間（系統的計時文字 `ElapsedTimeText`）、「繼續」，點了打開訓練畫面；不顯示下一次的建議。
+- 「本週」卡（§2-2），整張卡點一下打開「訓練狀態」浮窗：
+  - 標題列：左邊「本週」，右邊「N 天・N 組」，就是訓練狀態浮窗的本週（`StatsSnapshot.trainingStatus.thisWeek`：天數 `TrainingCount`、組數 `PlanHistory.setCount`）。
+  - 7 個圓點，週一到週日（不管地區設定），上方標「一」到「日」（`WeekCard.days`）：有完成組的已結束訓練的日子依部位上色（`StatsSnapshot.dayRegions`，同一天多次訓練合併；`DayRegion`）：下肢 lowerBody、上肢 upperBody、全身沿對角線兩色、只有有氧或其他（核心、補強）中性灰（textSecondary 40%）；沒練的日子 field；今天 accent 外框；今天之後是空的淡色圓點（field 的外框）。系統「不以顏色區分」開啟時，圓點裡加上部位的字「下」「上」「全」（有氧與其他是中性灰，不加字）。
+  - 輪替：四個膠囊，依輪替順序兩排（ME 下肢、ME 上肢／DE 下肢、DE 上肢，和建立菜單的日型一樣）（`WeekCard.rotation`）：「下一次」的日型 accent 外框、文字「DE 上肢・下一次」；排在它前面的加勾勾（這一輪練過）；後面的不加標記（文字次要色）。「下一次」是「下一次」卡同一個日型（`PlanDefaults.answers`）；「下一次」是 ME 下肢時四個都沒有勾勾。
+  - 提醒（只有需要時出現）：下肢推、下肢拉和四個上肢分類中，距離該分類最近一次完成組（任何動作，含封存；用訓練的開始日期，以日曆日算，用統計快照的「現在」）超過 14 天（和訓練狀態的警示同一個門檻）的，在卡片最下方用 warning 色寫一行「下肢拉已經 18 天沒練」；好幾個都超過時只寫天數最多的（一樣多時依分類順序）；核心、補強、有氧不列入；從來沒練過的分類不列入（`WeekCard.reminder`，存在 `StatsSnapshot.weekReminder`）。
+- CHANGE_13 §2-3 拿掉：訓練日曆卡（`TrainingCalendar`、`ActivityCalendar`、`CalendarGrid`）、「近 30 天」卡（`RecentVolume` 的紅黃綠門檻）和從它點進去的第 2 層「分類待練清單」（`CategoryTodoList`、`-todayCategory`）；「今天」沒有第 2 層了。近 30 天各分類的組數搬到歷程統計的「平衡」卡（見「12. 統計」）。歷程的訓練頻率圖照舊。
+- 「訓練狀態」浮窗（`TrainingStatusSheet`，CHANGE_10 §3）：由 RootView 呈現，點「本週」卡打開（CHANGE_13 §2-2；以前是日曆卡）。高度等於內容的高度（CHANGE_11 §7，拿掉半高）：量捲動內容的高度加上標題列和底部的安全區域（`onScrollGeometryChange`），打開就看得到全部；超過螢幕（例如系統字級很大）時用全高，內容可以捲動。往下拖可以關閉。數字存檔時和其他統計一起算（`StatsSnapshot.trainingStatus`，`Logic/TrainingStatus.swift`），每個數字都來自共用的函式。
+  - 本週三行：「本週・N 天（目標 M）・N 組」「● 下肢 N・● 上肢 N・其他 N 組・有氧 N 分鐘」（兩個圓點是部位色，CHANGE_13 §3）「上週同期：N 天・N 組」。本週是週一到今天；上週同期是上週一到上週的同一個星期幾（含當天）。天數用每週目標同一套（`TrainingCount.days`／`count(in:)`）；組數只算已結束訓練中打勾的正式組和 MAX 組，熱身不算，和平衡卡的近 30 天同一個函式（`PlanHistory.setCount(in:)`）；下肢＝下肢推＋下肢拉、上肢＝四個上肢分類、其他＝核心＋補強；有氧不算組數，改算跑步機的分鐘（`PlanHistory.cardioMinutes(in:)`，歷程的有氧卡也用它）。
+  - 輪替狀態四列（ME 下肢、ME 上肢、DE 下肢、DE 上肢）：日型名稱；上次「N 天前（10/15）」，超過 14 天用 warning 色，沒有紀錄「還沒練過」（只算該日型、有完成組的已結束訓練）；「主項：上次 深蹲 → 下次 傳統硬舉」，沒有紀錄只寫「主項：下次 深蹲」。下次主項用 `PlanRanking.suggestedMain`（「下一次」卡的主項、建立菜單主項格的第一個建議也用它）；「下一次」卡推薦的日型那一列加上 accent 的「下一次」標記。有紀錄的列整列可點：先關掉這個浮窗，再打開那次訓練的摘要浮窗（和歷程同一個元件）；沒有紀錄的列不能點。
   - 開發用：`-trainingStatus YES` 打開。
-- 「近 30 天」：9 個分類完成的組數（不含熱身），只算已結束的訓練；30 天 = 含今天的 30 個日曆日。長條以最大值為基準；0 組紅色、未滿 10 組黃色、10 組以上綠色。點一列到第 2 層「分類待練清單」。
-- 第 2 層「分類待練清單」：該分類未封存的動作，依多久沒練排序，沒練過的排最前並標「新」。每列：名稱、標籤；「上次 2026/10/20・6 天前」（顏色依多久沒練）；上次的精簡紀錄。點一列到動作詳情。
-- CHANGE_06 首頁的主項紀錄、推拉比、單邊／爆發次數搬到「歷程 → 統計」；分類分區、篩選和右下角懸浮的「＋」移除。
-- `StatsCache`（`Logic/StatsCache.swift`）：啟動時算一次，之後在資料庫存檔（`ModelContext.didSave`）後 0.3 秒內重算；「只有有氧的訓練也算」改變時也重算。日期改變時也重算（CHANGE_11 §2，規則在 `StatsRefresh`）：App 回到前景而且日期和上次計算時不同；App 開著時跨過午夜（`NSCalendarDayChanged`）；時區或系統時間改變（`significantTimeChangeNotification`、`NSSystemTimeZoneDidChange`、`NSSystemClockDidChange`）。快照記下計算時的「現在」（`StatsSnapshot.now`），畫面上的「N 天前」、日曆和有氧卡的最後一週都用它，所以和本週、近 30 天同一個時間點；「現在」來自 `AppClock`（DEBUG 可以用 `-fakeNow` 固定）。動作庫分類列的「最久沒練」也在快照裡算（`neglectedDays`）。內容：每個動作的上次日期、訓練次數、上次的組；近 30 天各分類組數；每天的訓練（日曆用）；算進次數的日子和每週天數（`countedDays`、`weekCounts`）、每週目標的預設值；建立菜單的預設答案與建議主項；主項趨勢；推拉平衡；每週有氧分鐘；訓練頻率；訓練狀態（本週、上週同期、輪替）。只算已結束的訓練。
-- 訓練次數的規則（`TrainingCount`，`Logic/WeeklyGoal.swift`，CHANGE_09 §2）：全 App 只有這一套，「訓練狀態」的天數、歷程的訓練頻率卡、每週目標的預設值都用 `TrainingCount.days` 算出來的日子：
-  - 一週從週一開始（`TrainingCount.weekCalendar`，和今天的日曆的欄位一致）。
+- `StatsCache`（`Logic/StatsCache.swift`）：啟動時算一次，之後在資料庫存檔（`ModelContext.didSave`）後 0.3 秒內重算；「只有有氧的訓練也算」改變時也重算。日期改變時也重算（CHANGE_11 §2，規則在 `StatsRefresh`）：App 回到前景而且日期和上次計算時不同；App 開著時跨過午夜（`NSCalendarDayChanged`）；時區或系統時間改變（`significantTimeChangeNotification`、`NSSystemTimeZoneDidChange`、`NSSystemClockDidChange`）。快照記下計算時的「現在」（`StatsSnapshot.now`），畫面上的「N 天前」、本週卡、提醒和有氧卡的最後一週都用它，所以和本週、近 30 天同一個時間點；「現在」來自 `AppClock`（DEBUG 可以用 `-fakeNow` 固定）。內容：每個動作的上次日期、訓練次數、上次的組；近 30 天各分類組數；每天的部位（本週卡）；每個分類最近一次完成組的日期和本週卡的提醒；算進次數的日子和每週天數（`countedDays`、`weekCounts`）、每週目標的預設值；建立菜單的預設答案與建議主項（含它的紀錄）；主項趨勢；推拉平衡；每週有氧分鐘；訓練頻率；訓練狀態（本週、上週同期、輪替）。只算已結束的訓練。CHANGE_13 §4 刪掉了動作庫分類列的「最久沒練」（`neglectedDays`）。
+- 訓練次數的規則（`TrainingCount`，`Logic/WeeklyGoal.swift`，CHANGE_09 §2）：全 App 只有這一套，「訓練狀態」和「本週」卡的天數、歷程的訓練頻率卡、每週目標的預設值都用 `TrainingCount.days` 算出來的日子：
+  - 一週從週一開始（`TrainingCount.weekCalendar`，和本週卡的圓點一致）。
   - 只算有完成組的已結束訓練。以天為單位：同一天練兩次只算 1 次（部位合併）。
-  - 「只有有氧的訓練也算」關閉時，當天只有有氧動作的完成組就不算；只要有任何一個非有氧動作的完成組（包括只有核心或補強），那天就算。
+  - 「只有有氧的訓練也算」關閉時，當天只有有氧動作的完成組就不算；只要有任何一個非有氧動作的完成組（包括只有核心或補強），那天就算。本週卡的圓點照樣依部位上色（只有有氧的日子是中性灰），只是不算進天數。
   - 每週目標用在「訓練狀態」的本週（「N 天（目標 M）」）和歷程訓練頻率卡的目標線。CHANGE_09 的達標判斷和連續達標週數在 CHANGE_10 §2 拿掉了。
 
 ### 1-1. 建立菜單（「下一次」卡片）
@@ -319,8 +322,8 @@ CHANGE_04 刪除了 15 個從沒練過的動作（前抱式深蹲、分腿蹲、
 
 ### 3. 訓練中畫面
 - 全螢幕呈現（`fullScreenCover`），可縮小成分頁列附屬列裡的橫條（「訓練中 0:42」，CHANGE_11 §1），點一下展開；重開 App 時有進行中的訓練會顯示橫條。放大轉場見「分頁列」（CHANGE_12 §2：附屬列不能當來源，維持原樣）。
-- 頂部：標題（`SessionTitleField`，規則見「2. 開始訓練」）、日期、經過時間（一律用 startedAt 推算）、休息計時器、「完成」。CHANGE_10 §0-3 拿掉右上角的 ⋯ 選單（裡面只有「捨棄訓練」）：最後一個動作和「新增動作」下面是紅字的「捨棄訓練」，按下用置中的 alert 確認「捨棄這次訓練？／這次訓練的所有組都會刪除，無法復原。」「取消」「捨棄訓練」（`WorkoutActions.resolveDiscard`：取消不改任何資料）。
-- 每個動作一張卡片：標題旁只顯示這次的角色標記（例如「DE 主項」），不顯示動作庫的主、單、爆標籤（CHANGE_10 §0-7），下一行是預設參數（「8 組 × 2 下・休息 45–60 秒」），DE 速度主項加上建議重量，ME 主項和 DE（爆）加上提示；標題點一下開唯讀的動作說明 sheet（`ExerciseInfoSheet`，不離開訓練畫面）；「⋯」選單：換動作、加備註、上移、下移、移除（跑步機另有「從 Apple Watch 帶入」）。
+- 頂部：標題（`SessionTitleField`，規則見「2. 開始訓練」；自動名稱是輸入框的提示文字，CHANGE_13 §3 起用主要文字的顏色，不再是像停用狀態的灰色粗體）、日期、經過時間（一律用 startedAt 推算）、休息計時器、「完成」。CHANGE_10 §0-3 拿掉右上角的 ⋯ 選單（裡面只有「捨棄訓練」）：最後一個動作和「新增動作」下面是紅字的「捨棄訓練」，按下用置中的 alert 確認「捨棄這次訓練？／這次訓練的所有組都會刪除，無法復原。」「取消」「捨棄訓練」（`WorkoutActions.resolveDiscard`：取消不改任何資料）。
+- 每個動作一張卡片：標題（accent，點了開說明，是連結）旁只顯示這次的角色標記（例如「DE 主項」，中性的外框，CHANGE_13 §3），不顯示動作庫的主、單、爆標籤（CHANGE_10 §0-7），下一行是預設參數（「8 組 × 2 下・休息 45–60 秒」），DE 速度主項加上建議重量，ME 主項和 DE（爆）加上提示；標題點一下開唯讀的動作說明 sheet（`ExerciseInfoSheet`，不離開訓練畫面）；「⋯」選單：換動作、加備註、上移、下移、移除（跑步機另有「從 Apple Watch 帶入」）。
 - 欄位（kg 依全域設定顯示為 kg 或 lbs；啞鈴、壺鈴顯示「kg（單顆）」）：
   - weight：組｜上一次｜kg｜次｜✓（自重器材的 weight 型，例如輔助引體向上，可以記負數）
   - assisted：組｜上一次｜輔助 kg｜次｜✓
@@ -340,7 +343,7 @@ CHANGE_04 刪除了 15 個從沒練過的動作（前抱式深蹲、分腿蹲、
 
 ### 4. 休息計時器
 - 打勾後自動開始倒數（設定頁可關閉）。預設時間依這張卡片的角色（見「角色系統」的預設參數）：ME 主項 180 秒；DE 速度主項 60 秒；DE（爆）、下肢輔助、推、拉 90 秒；核心、補強 60 秒。動作在「編輯」裡有個別設定時以個別設定為準。
-- 頂部顯示倒數，提供 -15 秒、+15 秒、跳過；也可從計時器按鈕手動開始。倒數的數字和進度條是系統的計時文字和計時進度條（CHANGE_12 §1：`Text(timerInterval: 開始...結束, countsDown: true)`、`ProgressView(timerInterval:countsDown:)`，進度條 accent 色、底色是系統的），系統自己跳秒；調整或跳過時換掉時間區間，畫面立刻更新。
+- 頂部顯示倒數，提供 -15 秒、+15 秒、跳過；也可從計時器按鈕手動開始。倒數的數字和進度條是系統的計時文字和計時進度條（CHANGE_12 §1：`Text(timerInterval: 開始...結束, countsDown: true)`、`ProgressView(timerInterval:countsDown:)`，進度條 textPrimary 色、底色是系統的；計時圖示和外框是中性色，CHANGE_13 §3），系統自己跳秒；調整或跳過時換掉時間區間，畫面立刻更新。
 - 倒數結束時震動；App 在背景時發本機通知。結束時間以時間戳記保存，切到背景或重開 App 仍準確。
 
 ### 5. 完成訓練
@@ -367,34 +370,36 @@ CHANGE_04 刪除了 15 個從沒練過的動作（前抱式深蹲、分腿蹲、
 - **補登訓練**：第 1 步選日期、開始時間、結束時間（預設今天、現在往前 1 小時到現在，結束必須晚於開始），再選「照建議建立菜單」或「自由選動作」。補登的是已結束的訓練：不問進行中的訓練、沒有休息計時和即時動態；建立後直接進入編輯（自由選動作時打開新增動作）。
 
 ### 7. 動作詳情
-- 頁首：名稱、分類、tags、器材；「上次：X 天前」「近 90 天：N 次」。開始訓練的按鈕移除（CHANGE_07）。右上角 ⋯ 裡是「編輯動作」。分頁列照常顯示（CHANGE_11 §1：只有系統的縮小行為）。
+- 頁首：名稱、分類、tags、器材；「上次：X 天前」（超過 60 天 warning 色，其他主要文字色）「近 90 天：N 次」（CHANGE_13 §3 起不用 accent）。開始訓練的按鈕移除（CHANGE_07）。右上角 ⋯ 裡是「編輯動作」。分頁列照常顯示（CHANGE_11 §1：只有系統的縮小行為）。
 - 分段控制：數據／說明／歷史。
 - **數據**
-  - 個人紀錄（每項顯示日期，點一下開那次訓練的摘要浮窗；熱身組不計）：
+  - 個人紀錄（每項顯示日期，點一下開那次訓練的摘要浮窗；熱身組不計；標題和數字都是中性色，CHANGE_13 §3）：
     - weight：最重單次、1RM／3RM／5RM 最佳（次數 ≥ N 中最重）、估算 1RM（Epley：重量 × (1 + 次數/30)，只算 1–10 下的正式組與 MAX 組；取最近 90 天最大值，90 天內沒有則取全期並標示）。
     - assisted：5 下以上的最低輔助重量。
     - bodyweight：單組最多次數；有負重時另列最重負重。
     - timed：最長秒數；有負重時另列最重負重。
-  - 折線圖：每次訓練一點，排除熱身組。weight 可切換最重組／估算 1RM；assisted 取輔助最少、縱軸反向並標示「越低越好」；bodyweight 取單組最多次；timed 有負重用最重負重，否則最長秒數；cardio 可切換速度／坡度／時間。MAX 用菱形。範圍 3 個月／6 個月／1 年／全部。單位跟隨全域設定（圖表上的 kg／lbs 切換移除）。點一下浮出最接近那一點的「10/20・93.5 kg」，2 秒後消失；按住約 0.2 秒後拖曳，數字跟著手指，放開後 2 秒消失（CHANGE_11 §5，和其他圖表同一套）。CHANGE_10 的「打開這次訓練」拿掉了，要看某一次訓練從「歷史」分頁打開。少於 2 點顯示「紀錄不足，無法畫圖」。
-  - 強度換算表（只有 weight）：基準可選估算 1RM／最近一次 MAX／手動輸入；列出 60–95%（每 5%）並依器材進位（槓鈴 2.5 kg／5 lb，其他 1 kg／2.5 lb，設定頁可改）；標示目的：60–70% 爆發力、65–85% 肌肥大、85% 以上最大肌力（重疊照實顯示）。
+  - 折線圖：每次訓練一點，排除熱身組。weight 可切換最重組／估算 1RM；assisted 取輔助最少、縱軸反向並標示「越低越好」；bodyweight 取單組最多次；timed 有負重用最重負重，否則最長秒數；cardio 可切換速度／坡度／時間。MAX 用菱形（顏色和一般的點一樣是中性色，只靠形狀區分，CHANGE_13 §3）。範圍 3 個月／6 個月／1 年／全部。單位跟隨全域設定（圖表上的 kg／lbs 切換移除）。點一下浮出最接近那一點的「10/20・93.5 kg」，2 秒後消失；按住約 0.2 秒後拖曳，數字跟著手指，放開後 2 秒消失（CHANGE_11 §5，和其他圖表同一套）。CHANGE_10 的「打開這次訓練」拿掉了，要看某一次訓練從「歷史」分頁打開。少於 2 點顯示「紀錄不足，無法畫圖」。
+  - 強度換算表（只有 weight）：基準可選估算 1RM／最近一次 MAX／手動輸入；列出 60–95%（每 5%）並依器材進位（槓鈴 2.5 kg／5 lb，其他 1 kg／2.5 lb，設定頁可改）；標示目的：60–70% 爆發力、65–85% 肌肥大、85% 以上最大肌力（重疊照實顯示；CHANGE_13 §3 起是次要文字色，不再用綠黃紅）。
 - **說明**：核心抗動類型、動作要點（3–5 條）、常見錯誤（2–3 條）、退階、進階、我的筆記，按「編輯說明」修改。初始內容在 bundle 的 `ExerciseGuides.json`，第一次啟動時依名稱或別名匯入；之後的編輯存在資料庫並包含在備份。教練給的變化動作（爆發划船、窄跪姿單手啞鈴肩推、坐姿分腿壺鈴三點搬移、地雷管抗旋轉、拋沙包、滾木槓臥推、單手硬舉原地踏步、六角槓原地踏步）要點與錯誤標「待補（請向教練確認）」。
-- **歷史**：每次訓練一行；每組相同時「2026/10/20 · 42.6 kg × 5 下 × 5 組」，不同時逐組列出「60×5、65×3、70×1 (MAX)」。點一行開那次訓練的摘要浮窗。
+- **歷史**：每次訓練一行；每組相同時「2026/10/20 · 42.6 kg × 5 下 × 5 組」，不同時逐組列出「60×5、65×3、70×1 (MAX)」（有 MAX 的行不另外上色，CHANGE_13 §3）。點一行開那次訓練的摘要浮窗。
 - 「編輯動作」可改名稱、分類、tags、別名、英文名、器材、紀錄類型、休息時間，也可封存。
 
 ### 8. 動作庫（第 1 層）
-- 只回答「我有哪些動作？」。第 1 層是 9 個分類列和「已封存（N）」：每列分類全名和「6 個動作・最久沒練：120 天・1 個未練過」。右上角「＋」新增動作。動作庫是空的時，最上面寫怎麼新增或匯入。
+- 只回答「我有哪些動作？」。第 1 層是 9 個分類列和「已封存（N）」：每列分類全名和「6 個動作」（CHANGE_13 §4 拿掉「最久沒練」和「N 個未練過」）。右上角「＋」新增動作。動作庫是空的時，最上面寫怎麼新增或匯入。
 - 搜尋（名稱、別名、英文名）：直接列出所有分類的結果（不含封存），每列加上分類。
 - 第 2 層「分類清單」：右上角的排序和篩選（popover）：
   - 排序：最久沒練（預設）／最近練過／次數最少／次數最多，記住上次的選擇（`library.sort`）。沒練過的動作在「最久沒練」排最前。
   - 篩選：主項、單邊、爆發，可複選，選多個時都要符合。
-- 每列：名稱與標籤；「N 天前」或「未練過」（顏色依多久沒練）；右側「N 次」。點一下到動作詳情。
+- 每列：名稱與標籤；「N 天前」或「未練過」（超過 60 天 warning 色，其他次要文字色；CHANGE_13 §3 拿掉紅綠燈）；右側「N 次」。點一下到動作詳情。
 - 向左滑封存（已封存清單裡是取消封存）；長按：合併到…、封存、刪除。
 - 刪除規則：有紀錄的動作只能封存；沒有紀錄的才可以刪除。
 - 合併動作：長按 →「合併到…」→ 選目標 → 確認。所有紀錄移到目標（同一次訓練兩者都有時，來源的組接在目標後面），來源的名稱和別名併入目標的 aliases，最後刪除來源。
 - CHANGE_04 的分區收合、四組排序和「全部／練過／未練過」篩選移除。
 
-### 9. 設定（第 1 層）
-- 5 列，各自一頁（第 2 層）：
+### 9. 設定（「今天」右上角的齒輪，CHANGE_13 §1）
+- 不是分頁：「今天」導覽列右上角的系統 toolbar 按鈕（SF Symbol `gearshape`）用 sheet 打開。sheet 裡是自己的 NavigationStack，第 1 層是下面 5 列（大標題「設定」），右上角是系統的關閉按鈕（`Button(role: .close)`），往下拖也能關。關掉之後再打開是第 1 層。
+- sheet 由 RootView 呈現，放在換主題重建的範圍外面：在「外觀」換主題時 sheet 不會關掉，裡面自己依主題重建，導覽路徑放在 `WorkoutCoordinator`（`settingsPath`），所以停在原本那一頁。App 裡沒有其他會切到設定的地方；深層連結在 sheet 開著時先關掉 sheet 再導向。動作庫是空的時，說明寫「到「今天」右上角的設定 → 備份與還原匯入備份」。
+- 5 列，各自一頁（第 2 層，內容和 CHANGE_13 之前一樣）：
   - 外觀：主題（見下節）。
   - 單位與進位：重量單位 kg／lbs（全域）、強度換算表的進位單位（槓鈴、其他器材）。
   - 訓練：每週目標、只有有氧的訓練也算、打勾後自動開始休息計時、訓練中顯示即時動態。
@@ -404,27 +409,30 @@ CHANGE_04 刪除了 15 個從沒練過的動作（前抱式深蹲、分腿蹲、
   - 關於：App 名稱、版本，以及免費簽署的到期日「簽署到期 2026/11/02 上午9:30・還有 7 天」（剩一天以內用 warning 色）。到期日讀 App 裡 `embedded.mobileprovision` 的 ExpirationDate，每次用 Xcode 重新安裝都會更新；模擬器沒有這個檔，不顯示（開發用：啟動參數 `-previewExpirationDays 6` 顯示假的到期日）。
 
 ### 9-1. 主題配色
-- 所有顏色集中在 `Shared/Theme.swift`，畫面只使用 token：
-  - background（頁面底色）、card（卡片與分區）、field（輸入框、未選取的 chip、長條底）、separator（分隔線、卡片外框）
-  - textPrimary、textSecondary
-  - accent（主要按鈕、選取狀態、圖表線條、分頁列）、onAccent（accent 上的文字）
-  - done（完成的組：整列底色 done 18%，打勾符號 done；60 天內、狀態良好的數字）
-  - warning（超過 60 天、MAX 標記）、danger（超過 180 天、刪除、錯誤）
+- 所有顏色集中在 `Shared/Theme.swift`，畫面只使用 token。每個顏色只有一個意思（CHANGE_13 §3）：
+  - background（頁面底色）、card（卡片與分區）、field（輸入框、未選取的 chip、長條底、沒練的圓點）、separator（分隔線、卡片外框、角色標記的外框）
+  - textPrimary、textSecondary：資料本身（圖表的線和長條、平衡卡的長條、個人紀錄的數字、組數）一律用這兩個中性色。textSecondary 在 background、card、field 上的對比度都至少 4.5:1（6.9、6.3、5.2，`ThemeTests`），六個主題都不用調整。
+  - accent（強調色）：只用在可以點的主要按鈕和連結（`PrimaryButton`、`FilterCapsule` 的選取、「設定時間」「還原」這類文字按鈕、訓練中動作卡的標題、系統的 tint）、選取的狀態（選取的候選、主題、排序、圖表選取的那一根有氧長條）、建議值（「下一次」卡的建議主項和建議重量、建立菜單的「建議」和原因）、「下一次」的標記（本週卡的膠囊外框、訓練狀態的「下一次」）、今天的外框（本週卡）。onAccent 是 accent 上的文字。
+  - lowerBody、upperBody（部位色，CHANGE_13 §3）：本週卡的圓點、訓練狀態的「● 下肢・● 上肢」、訓練頻率長條和圖例、主題預覽；全身用這兩色（圓點沿對角線各一半、長條斜紋）；有氧與其他是中性灰（textSecondary 40%）。每個主題各自定義：兩色和該主題的 accent、warning 色相差至少 40 度（石墨銀沒有色相：部位色的彩度至少 0.35），兩色之間至少 60 度、亮度相近、在深色底上清楚（`ThemeTests`）。
+  - done：只用在完成的組（整列底色 done 18%，打勾符號 done）和即時動態的「完成這組」。不拿來表示好壞。
+  - warning：只用在提醒和警示——本週卡的提醒、訓練狀態裡超過 14 天、動作超過 60 天沒練的「N 天前」、平衡卡的「拉偏少」和「0 沒練」、簽署剩一天以內、結束時間早於開始、同一天已有體重、ME 和 DE（爆）的安全提示、封存的滑動按鈕。CHANGE_13 起不再用綠色和黃色表示好壞（主項進步的增減、換算表的目的、新紀錄、MAX 都改成中性色）。
+  - danger：刪除和錯誤（捨棄訓練、名稱重複、讀取失敗、常見錯誤的項目符號）。
   - pressed（CHANGE_10 §4）：可以點的卡片和列按下時的底色，每個主題都是 #2F3035（比卡片亮、和輸入框分得開）。
-  - upperBody（CHANGE_08）：上肢（日曆格子、訓練頻率長條；下肢用 accent）。每個主題各自定義，色相和 accent 明顯不同（至少 60 度；石墨銀沒有色相，用彩度夠的淺藍）、亮度相近：石墨橙 #4FA3FF、石墨藍 #E07A35、石墨紫 #2EC4D6、石墨粉 #4FA3FF、石墨青 #B48CFF、石墨銀 #9BCBFF。
-- 只有深色：所有主題共用石墨深灰的底，只換強調色（accent／onAccent）。共用的 token：background #111214、card #1B1C1F、field #2A2B30、separator #34363B、textPrimary #F3F3F4、textSecondary #9C9DA3、done #3FB97C、warning #F2C14E、danger #EF5350。
-- 六個主題（accent / onAccent；upperBody 見上）：
-  1. 石墨橙 #FF8A3D / #111214（預設）
-  2. 石墨藍 #4C7DF0 / #FFFFFF（和 App icon 同色）
-  3. 石墨紫 #A683FF / #111214
-  4. 石墨粉 #FF6B9D / #111214
-  5. 石墨青 #2EC4D6 / #111214
-  6. 石墨銀 #E6E6E6 / #111214
-  強調色避開 done（綠）、warning（黃）、danger（紅），以免和狀態顏色混淆。
-- 設定頁「主題」：每個主題一張預覽卡片（一列已完成的組、一列未完成的組、選取中的 chip、主要按鈕、近 30 天長條），點一下立即套用。
+- 只有深色：所有主題共用石墨深灰的底，只換 accent／onAccent 和兩個部位色。共用的 token：background #111214、card #1B1C1F、field #2A2B30、separator #34363B、textPrimary #F3F3F4、textSecondary #9C9DA3、done #3FB97C、warning #F2C14E、danger #EF5350。
+- 六個主題（accent / onAccent；下肢 lowerBody / 上肢 upperBody）：
+  1. 石墨橙 #FF8A3D / #111214（預設）；#E07CF5（洋紫）/ #4FA3FF（天藍）
+  2. 石墨藍 #4C7DF0 / #FFFFFF（和 App icon 同色）；#FF7AB8（粉）/ #2EC4B6（青綠）
+  3. 石墨紫 #A683FF / #111214；#FF7AB8（粉）/ #2EC4D6（青）
+  4. 石墨粉 #FF6B9D / #111214；#B48CFF（淡紫）/ #2EC4B6（青綠）
+  5. 石墨青 #2EC4D6 / #111214；#FF7AB8（粉）/ #B48CFF（淡紫）
+  6. 石墨銀 #E6E6E6 / #111214；#E07CF5（洋紫）/ #9BCBFF（淺藍）
+  強調色避開 done（綠）、warning（黃）、danger（紅），以免和狀態顏色混淆。CHANGE_08 的下肢是 accent，CHANGE_13 改成獨立的 lowerBody；石墨藍的上肢原本是橘色（和 warning 只差 18 度），改成青綠。
+- 不只靠顏色（CHANGE_13 §3）：系統「不以顏色區分」（`accessibilityDifferentiateWithoutColor`）開啟時，本週卡的圓點裡加上部位的字「下」「上」「全」，訓練頻率圖例的色塊放大並加上同樣的字（`RegionLetter`）。其他地方本來就有文字或形狀（正負號、「拉偏少」「沒練」、MAX 的菱形、W／M 組號）。
+- 設定頁「主題」：每個主題一張預覽卡片（一列已完成的組、一列未完成的組、選取中的 chip、主要按鈕、兩個部位色「● 下肢 ● 上肢」；CHANGE_13 以前最下面是近 30 天的長條），點一下立即套用。
 - 設定存在 AppStorage：`theme.id`（預設石墨橙）。CHANGE_04 的主題在啟動時換成強調色相近的新主題：午夜藍、冷灰 → 石墨藍，純黑 → 石墨銀，暖砂 → 石墨橙；開著「跟隨系統外觀」時用當時選的深色主題。`theme.followSystem`、`theme.dark`、`theme.light` 刪除。
-- preferredColorScheme 固定深色，讓鍵盤、sheet 等系統元件一致。換主題時整個畫面重建。
-- 熱身組號用 accent，MAX 組號用 warning。
+- preferredColorScheme 固定深色，讓鍵盤、sheet 等系統元件一致。換主題時整個畫面重建（設定的 sheet 自己重建，停在原本那一頁）。
+- 組號：熱身 W 用次要文字色、MAX M 用主要文字色（CHANGE_13 §3；以前熱身 accent、MAX warning），字本身就看得出種類。
+- 小工具和即時動態是系統畫面，顏色照舊（accent、done）。
 
 ### 9-2. App icon
 - 壺鈴，鈴身挖出一條往右上升的折線箭頭（`kettlebell/` 第 1 版），午夜藍配色（底 #0B1220、壺鈴 #4C7DF0），扁平、沒有文字。
@@ -476,7 +484,8 @@ CHANGE_04 刪除了 15 個從沒練過的動作（前抱式深蹲、分腿蹲、
 #### 11-2. 深層連結
 - `liftlog://new`：打開建立菜單，帶入預設答案；有進行中的訓練時由 `WorkoutLauncher` 先問「繼續目前訓練／建立新菜單」。
 - `liftlog://workout`：打開進行中的訓練；沒有的話和 `liftlog://today` 相同。
-- `liftlog://today`（CHANGE_07）：切到「今天」分頁並回到第 1 層（關掉摘要浮窗和訓練的全螢幕畫面）。
+- `liftlog://today`（CHANGE_07）：切到「今天」分頁並回到第 1 層（關掉摘要浮窗和訓練的全螢幕畫面）。「今天」CHANGE_13 起沒有第 2 層。
+- 設定的 sheet 開著時（CHANGE_13 §1），三種連結都先關掉 sheet，關完再依那時的狀態導向。
 - 網址（onOpenURL）、控制項、App Shortcut 和小工具＋的 intent 都交給 `DeepLinkRouter`，由 RootView 依當下有沒有進行中的訓練導向。如果完成摘要的全螢幕畫面還開著，先關掉再開建立菜單。
 - 小工具的＋如果被系統放在小工具的程序執行，那邊的 perform 把連結存進 App Group（`Shared/PendingDeepLink.swift`，key `pendingDeepLink`），App 回到前景（scenePhase active）時接手一次就清掉；App 的 perform 也會清掉它，避免重複打開。
 - 開發用：啟動參數 `-openURL liftlog://new` 走同一套導向（`simctl openurl` 會先跳出系統確認視窗）；`-discardActive YES` 捨棄進行中的訓練。
@@ -530,24 +539,25 @@ CHANGE_04 刪除了 15 個從沒練過的動作（前抱式深蹲、分腿蹲、
 - 預覽頁：`-widgetGallery control`（控制項的外觀由系統決定，這裡是模擬）。
 
 ### 12. 統計與體重（歷程 → 統計，CHANGE_07 D）
-- 五張卡，資料都來自 `StatsCache`：
-  1. 主項進步：90 天內有紀錄的「主」動作各一列（依分類、ME 輪替順序）：估算 1RM（全 App 唯一的估算 1RM，CHANGE_11 §3；4 週前的值是同一個函式在 4 週前那時候算的）、近 12 週的迷你折線（沒練的週斷開）、和 4 週前相比（進步綠色、退步紅色、一樣時「和 4 週前一樣」）；其他主項只寫「另外 N 個主項 90 天內沒有紀錄」。點一列到動作詳情。
-  2. 體重：最新體重、「近 30 天 −0.9 kg」（和 30 天前那天或之前最近的一筆相比；沒有比較對象時不顯示）、日期；範圍 3 個月／6 個月（預設）／1 年／全部；折線圖加 7 日平均（那天和前 6 天內的紀錄平均）；點一下（或按住拖曳）浮出最接近那天的「10/20・69.3 kg」。右上角＋記錄體重。
-  3. 有氧：近 12 週每週的跑步機分鐘（長條圖，週一開始）。點一下長條（或按住拖曳）浮出「10/19–10/25・120 分鐘」。
-  4. 訓練頻率（CHANGE_08 §3 改版，點點日曆只留在「今天」；CHANGE_09 §4）：標題列「本週 2/3・近 12 週平均 M 次」（本週天數／每週目標；平均只算近 12 個已經過完的週，不含本週）；分段「週｜月」（記住選擇，`history.frequencyPeriod`）：週＝近 12 週每週一根（週一開始）、月＝近 12 個月每月一根。長條的高度用「訓練次數的規則」：以天為單位，同一天的部位合併後再疊色，和今天的日曆的數字一致。長條依部位分段疊色（由下往上：下肢、上肢、全身、有氧與其他），顏色和今天的日曆相同；全身在長條上用兩色斜紋（細長的長條沿對角線分一半會看起來像下肢和上肢疊在一起），圖例裡也是斜紋。虛線是平均：近 12 個已經過完的週或月，不含本週或本月（CHANGE_09 §0-2；本週或本月的長條照樣畫，x 軸一律留 12 段的位置）。「週」另外有一條實線是每週目標（y 軸範圍一定包含目標線）。圖例「━ 目標 3　┄ 平均 3.8」（月只有平均），和部位圖例放不下一列時換到第二列。點一下長條，在圖表上方浮出「10/19–10/25・4 次」或「2026 年 8 月・22 次」，2 秒後消失；按住 0.2 秒後拖曳，標籤跟著手指，放開後 2 秒消失（CHANGE_11 §5）（共用的圖表選取，上下滑交給捲動）；不導向其他頁面（`TrainingFrequency`、`StatsSnapshot.frequencyWeeks／frequencyMonths`）。開發用：`-frequencyPeriod month`、`-frequencyPeek <倒數第幾段>`。
-  5. 平衡・近 30 天：「推：拉」組數（拉比推少時用警示色）、單邊與爆發各有幾次訓練包含。
+- 五張卡，資料都來自 `StatsCache`。圖表和數字都是中性色，只有選取的部分用 accent（CHANGE_13 §3）：
+  1. 主項進步：90 天內有紀錄的「主」動作各一列（依分類、ME 輪替順序）：估算 1RM（全 App 唯一的估算 1RM，CHANGE_11 §3；4 週前的值是同一個函式在 4 週前那時候算的）、近 12 週的迷你折線（沒練的週斷開，主要文字色）、和 4 週前相比（「+2.5」「−2.5」，次要文字色，正負號表示進步或退步，CHANGE_13 §3 拿掉綠色和紅色；一樣時「和 4 週前一樣」）；其他主項只寫「另外 N 個主項 90 天內沒有紀錄」。點一列到動作詳情。
+  2. 體重：最新體重、「近 30 天 −0.9 kg」（和 30 天前那天或之前最近的一筆相比；沒有比較對象時不顯示）、日期；範圍 3 個月／6 個月（預設）／1 年／全部；折線圖加 7 日平均（那天和前 6 天內的紀錄平均；每天的點和線是次要文字色，7 日平均是主要文字色，CHANGE_13 §3）；點一下（或按住拖曳）浮出最接近那天的「10/20・69.3 kg」。右上角＋記錄體重。
+  3. 有氧：近 12 週每週的跑步機分鐘（長條圖，週一開始；長條是次要文字色，選取的那一根 accent）。點一下長條（或按住拖曳）浮出「10/19–10/25・120 分鐘」。
+  4. 訓練頻率（CHANGE_08 §3 改版；CHANGE_09 §4；「今天」的點點日曆在 CHANGE_13 §2-3 刪掉了）：標題列「本週 2/3・近 12 週平均 M 次」（本週天數／每週目標；平均只算近 12 個已經過完的週，不含本週）；分段「週｜月」（記住選擇，`history.frequencyPeriod`）：週＝近 12 週每週一根（週一開始）、月＝近 12 個月每月一根。長條的高度用「訓練次數的規則」：以天為單位，同一天的部位合併後再疊色，和「本週」卡、訓練狀態的天數同一套。長條依部位分段疊色（由下往上：下肢、上肢、全身、有氧與其他），顏色是主題的部位色（lowerBody、upperBody，CHANGE_13 §3，和本週卡的圓點相同；有氧與其他中性灰）；全身在長條上用兩色斜紋（細長的長條沿對角線分一半會看起來像下肢和上肢疊在一起），圖例裡也是斜紋。系統「不以顏色區分」開啟時，圖例的色塊放大並加上「下」「上」「全」。虛線是平均：近 12 個已經過完的週或月，不含本週或本月（CHANGE_09 §0-2；本週或本月的長條照樣畫，x 軸一律留 12 段的位置）。「週」另外有一條實線是每週目標（y 軸範圍一定包含目標線）。圖例「━ 目標 3　┄ 平均 3.8」（月只有平均），和部位圖例放不下一列時換到第二列。點一下長條，在圖表上方浮出「10/19–10/25・4 次」或「2026 年 8 月・22 次」，2 秒後消失；按住 0.2 秒後拖曳，標籤跟著手指，放開後 2 秒消失（CHANGE_11 §5）（共用的圖表選取，上下滑交給捲動）；不導向其他頁面（`TrainingFrequency`、`StatsSnapshot.frequencyWeeks／frequencyMonths`）。開發用：`-frequencyPeriod month`、`-frequencyPeek <倒數第幾段>`。
+  5. 平衡・近 30 天：「推：拉」組數（拉比推少時數字用 warning 色並加上「拉偏少」，其他時候主要文字色，CHANGE_13 §3）、單邊與爆發各有幾次訓練包含；下面是近 30 天 9 個分類的組數長條（CHANGE_13 §2-4，從「今天」搬過來）：下肢推、下肢拉、四個上肢分類、核心、補強、有氧，完成的正式組和 MAX 組（不含熱身），只算已結束的訓練，30 天 = 含今天的 30 個日曆日（`StatsSnapshot.recentSets`，`PlanHistory.setCount(within:)`）；長條以最大值為基準、一律中性色；0 組的分類數字用 warning 色寫「0 沒練」。這些列不能點，沒有下一層。
 - 記錄體重（sheet）：日期（預設今天；從摘要浮窗開時是那次訓練的日期）、體重（單位跟隨全域設定）。同一天已經有紀錄時提示，儲存前確認覆蓋（同一天只保留一筆）。
 - 從健康 App 帶入：列出健康 App 最近 30 天的體重（HealthKit bodyMass，要求讀取權限），可以多選；App 裡同一天已經有紀錄的不能選（以 App 內的為準）；同一天多筆取最新的。讀取說明加上體重（`NSHealthShareUsageDescription`）。
 - 體重也出現在訓練摘要浮窗（當天）和完成訓練的摘要（今天體重）。
 
 ### 13. 開發用啟動參數（只在 DEBUG）
+- CHANGE_13：`-openSettings YES`（打開設定的 sheet）、`-settingsPage backup`（改成打開設定的 sheet 並直接進入那一頁；以前是切到設定分頁後進入）。`-startTab` 只剩 0…2（設定不是分頁了）。`-todayCategory` 隨分類待練清單刪掉。「不以顏色區分」用模擬器的系統設定（`simctl spawn <裝置> defaults write com.apple.Accessibility DifferentiateWithoutColor -bool true`，App 重開後生效），沒有另外的參數。`-dumpStats` 的輸出加上本週卡（天數、組數、每一天的部位、輪替膠囊、提醒），拿掉「最久沒練」。
 - CHANGE_12 沒有新增參數（§2 實驗用的參數隨實驗拿掉，沒有 commit）。
 - 資料：`-demoData YES`（seed 之外加 5 次示範訓練與近期體重，只加一次）、`-emptyData YES`（清空所有資料、不匯入 seed，檢查空狀態）。
 - CHANGE_11：`-importBackup <路徑>`（啟動時匯入備份，和「從 JSON 匯入」同一條路）、`-fakeNow <ISO 時間>`（固定 App 的「現在」，例如 `2026-01-05T00:05:00+08:00`）、`-dumpStats <路徑>`（統計快照算好後輸出要比對的數值；三個都只用在第 9 節的真實資料驗證，路徑一律在 `tools/fixtures/`）、`-demoWorkoutDayType deUpper`、`-demoWorkoutTitle <名稱>`（示範訓練的日型和自訂名稱，截動態島用）。`-tabBarLog` 隨自己寫的分頁列收起邏輯刪掉。
 - CHANGE_10：`-trainingStatus YES`（打開訓練狀態）、`-demoWorkoutElapsed <秒>`（示範訓練的開始時間往前推）、`-demoWorkoutRoles dynamicEffort,pull,cardio`（示範訓練三個動作的角色）。`-calendarPeek` 隨日曆的標籤拿掉。
 - CHANGE_09 沒有新增參數。
 - CHANGE_08：`-scrollToBottom 紀錄｜統計｜動作庫｜分類`、`-tabBarLog YES`（CHANGE_11 刪掉）、`-frequencyPeriod month`、`-frequencyPeek <倒數第幾段>`、`-calendarPeek 2026-10-24`、`-demoBackfillPrompt YES`、`-editorFinishPrompt YES`、`-openWeightEntry YES`、`-previewFinishSummary YES`、`-focusWeight YES`。
-- 導航：`-startTab 0…3`、`-todayCategory core`、`-historySegment stats`、`-statsScrollTo weight`、`-openBackfill YES`、`-openSummary latest｜edit`、`-libraryCategory kneeDominant`、`-librarySortMenu YES`、`-openArchived YES`、`-openExercise 臥推`、`-detailTab guide｜history`、`-settingsPage backup`、`-planStep 2`、`-planAnswers deUpper,2,1`、`-demoWorkout YES`、`-demoRest YES`、`-discardActive YES`、`-openURL liftlog://today`、`-widgetGallery small｜lock｜live｜island｜control`、`-previewExpirationDays 6`。
+- 導航：`-startTab 0…2`（CHANGE_13 以前是 0…3）、`-historySegment stats`、`-statsScrollTo weight`、`-openBackfill YES`、`-openSummary latest｜edit`、`-libraryCategory kneeDominant`、`-librarySortMenu YES`、`-openArchived YES`、`-openExercise 臥推`、`-detailTab guide｜history`、`-settingsPage backup`、`-planStep 2`、`-planAnswers deUpper,2,1`、`-demoWorkout YES`、`-demoRest YES`、`-discardActive YES`、`-openURL liftlog://today`、`-widgetGallery small｜lock｜live｜island｜control`、`-previewExpirationDays 6`。
 
 ## 初始資料
 - `tools/parse_log.py` 解析 `tools/workout_log.txt`，產生 `LiftLog/Data/seed.json`、`tools/unmatched.txt` 與 `tools/unit_review.txt`。
@@ -578,6 +588,7 @@ CHANGE_04 刪除了 15 個從沒練過的動作（前抱式深蹲、分腿蹲、
   - 手機上另外留著 CHANGE_04 之前的 `LiftLog3.store`，App 已經不讀它。
 
 ## 已移除
+- CHANGE_13 移除：設定分頁（`AppTab.settings`，改成「今天」右上角的 sheet）；「今天」的訓練日曆卡（`TrainingCalendar`、`ActivityCalendar`、`CalendarGrid`、`ActivityCalendarTests`）、近 30 天卡（`RecentSetsCard`、`RecentVolume`）、分類待練清單（`CategoryTodoList`、`TodoRow`、`-todayCategory`、「今天」的導覽路徑 `todayPath`）；自畫的標題 `ScreenHeader`；統計快照裡只給日曆用的 `DayStat`（`exerciseCount`、`sessionIDs`，改成 `dayRegions`）；動作庫分類列的「最久沒練」和「N 個未練過」（`StatsSnapshot.neglectedDays`）；只給日曆用的圖例變體（`RegionLegend(forBars:)`）；換算表目的的紅黃綠（`purposeColor`）。
 - CHANGE_02 移除了舊的單筆記錄頁，連帶移除 lbs 輸入切換與 +1.25 快速鍵（新的鍵盤快捷鍵為 -2.5／+2.5／+5）。CHANGE_03 以全域 kg／lbs 設定取代 lbs 輸入切換。
 - CHANGE_12 移除：`RestTimer.remaining(at:)`（只有休息倒數的 TimelineView 在用，改成系統的計時文字後只剩測試在用）。
 - CHANGE_11 移除：自己寫的分頁列收起邏輯（`TabBarAutoHide`、`.hidesTabBarOnScroll()`、`BottomInset`、`-tabBarLog`）；訓練中的鍵盤列（-2.5／+2.5／+5、±、下一格、完成）；ME 紀錄（`MaxEffortRecords`）、`MainLiftSummary`、`Exercise.homeSummary`、`ActivityCalendar.dailyCounts`／`level`；掃描出來沒有引用的 `WorkoutSession.inferredRegion`、`Equipment.weightHint`、`IntensityTable.defaultStep`、`Recency.trainingDays`、`SetLogic.finish`（只有測試在用，完成訓練走 `WorkoutActions.finish`）和 `RecentVolume` 的計數（只留顏色門檻）；動作詳情折線圖的「打開這次訓練」。

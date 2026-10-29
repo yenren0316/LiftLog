@@ -23,11 +23,11 @@
 
 ## 設計原則（CHANGE_07）
 
-- 四個分頁（`AppTab`）各只回答一個問題：
+- 三個分頁（`AppTab`）各只回答一個問題（CHANGE_13 §1 起設定不是分頁）：
   - 今天：下一次該練什麼？
   - 歷程：我練了什麼、進步了多少？
   - 動作庫：我有哪些動作？
-  - 設定：App 怎麼運作？
+  - 設定（「今天」右上角齒輪打開的 sheet）：App 怎麼運作？
 - 最多三層：第 1 層是分頁，第 2 層是清單或摘要，第 3 層是詳情或編輯。第 3 層不再 push，連到其他內容一律用唯讀浮窗。
 - 開始新訓練只走 `WorkoutLauncher`（主要入口是「今天」的「下一次」卡）。
 
@@ -130,6 +130,7 @@
 - 開了 MemberImportVisibility：用到哪個框架就明確 import（`SwiftData`、`AppIntents`、`UIKit`、`CoreGraphics`、`Foundation`）。
 - 註解和畫面文字用繁體中文，註解密度跟著周圍的程式碼。
 - 顏色只用主題 token（`Theme.*`，定義在 `Shared/Theme.swift`）。新 token 要每個主題都有值，並加進 `ThemeTests`。
+  - 每個顏色只有一個意思（CHANGE_13 §3）：強調色只用在可以點的主要按鈕和連結、選取的狀態、建議值、「下一次」的標記、今天的外框；部位用 `lowerBody`／`upperBody`；done 只用在完成的組；warning 只用在提醒和警示；danger 是刪除和錯誤。資料本身（圖表、數字）用 textPrimary／textSecondary，不用綠黃紅表示好壞。
 - 共用的做法，不要另寫一套：
   - 可以點的卡片和列：`TapSurfaceStyle`（`.tapCard`／`.tapRow`／`.tapListRow`、`TapListRow`），不用列尾的「›」。
   - 小按鈕：`.pressable`。
