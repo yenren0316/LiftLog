@@ -30,10 +30,16 @@ final class ChartSelectionUITests: XCTestCase {
         return chart.value as? String ?? ""
     }
 
+    /// CHANGE_14 §3：選到的那一根維持強調色、其他的變淡（截圖 V4_cardio_selected）；2 秒後選取消失，恢復原本的樣子
     func testTapOnCardioChartSelectsAWeek() async throws {
-        let value = await tapAndRead("cardioChart", at: CGVector(dx: 0.3, dy: 0.7))
-        attachScreenshot("cardio_peek")
+        // 第 2 根（示範資料裡有分鐘數的一週），截圖看得出選到的那一根和變淡的其他長條
+        let value = await tapAndRead("cardioChart", at: CGVector(dx: 0.12, dy: 0.7))
+        attachScreenshot("V4_cardio_selected")
         XCTAssertTrue(value.contains("分鐘") && value.contains("–"), "點有氧的長條沒有選到：「\(value)」")
+        try await Task.sleep(for: .seconds(2.5))
+        let chart = app.descendants(matching: .any)["cardioChart"].firstMatch
+        XCTAssertEqual(chart.value as? String ?? "", "", "選取 2 秒後消失")
+        attachScreenshot("V4_cardio_restored")
     }
 
     func testTapOnWeightChartSelectsADay() async throws {

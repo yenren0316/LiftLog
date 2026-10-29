@@ -102,7 +102,7 @@ private struct MainLiftProgressCard: View {
     }
 }
 
-/// 近 12 週的迷你折線（沒練的週斷開）
+/// 近 12 週的迷你折線（沒練的週斷開）：單一數列，強調色（CHANGE_14 §3）；整列可點，沒有自己的選取
 private struct Sparkline: View {
     var values: [Double?]
 
@@ -111,7 +111,7 @@ private struct Sparkline: View {
         if points.count >= 2 {
             Chart(points, id: \.0) { point in
                 LineMark(x: .value("週", point.0), y: .value("1RM", point.1))
-                    .foregroundStyle(Theme.textPrimary)
+                    .foregroundStyle(ChartEmphasis.series)
                     .interpolationMethod(.monotone)
             }
             .chartXScale(domain: 0...max(values.count - 1, 1))
@@ -124,7 +124,8 @@ private struct Sparkline: View {
     }
 }
 
-/// 有氧：近 12 週，每週跑步機的分鐘數。點一下長條（或按住拖曳）浮出「10/19–10/25・120 分鐘」
+/// 有氧：近 12 週，每週跑步機的分鐘數（強調色的長條，CHANGE_14 §3）。點一下長條（或按住拖曳）浮出「10/19–10/25・120 分鐘」，
+/// 選到的那一根維持強調色、其他的變淡，選取消失後恢復
 private struct CardioCard: View {
     var minutes: [Double]
     /// 統計快照的「現在」：最後一根是這一週
@@ -146,9 +147,8 @@ private struct CardioCard: View {
                 let current = selected.flatMap { date in weeks.indices.last { weeks[$0] <= date } }
                 Chart {
                     ForEach(Array(zip(weeks, minutes).enumerated()), id: \.offset) { index, entry in
-                        // 長條中性色，選取的那一根用強調色（CHANGE_13 §3）
                         BarMark(x: .value("週", entry.0, unit: .weekOfYear, calendar: Self.calendar), y: .value("分鐘", entry.1))
-                            .foregroundStyle(index == current ? Theme.accent : Theme.textSecondary)
+                            .foregroundStyle(ChartEmphasis.bar(isSelected: index == current, hasSelection: current != nil))
                             .cornerRadius(3)
                     }
                     if let current {
@@ -167,6 +167,7 @@ private struct CardioCard: View {
                         AxisValueLabel(format: .dateTime.month(.defaultDigits).day())
                     }
                 }
+                .animation(.tap, value: current)
                 .chartDateSelection($selected)
                 .frame(height: 140)
                 .accessibilityIdentifier("cardioChart")

@@ -8,6 +8,24 @@ import Charts
 // 以前用 SwiftUI 的 LongPressGesture.sequenced(before: DragGesture(minimumDistance: 0))：
 // 手指從圖表上開始時，整頁捲不動（歷程統計頁捲到底部後，從訓練頻率卡開始往上滑沒有反應）
 
+/// 圖表的顏色（CHANGE_14 §3）：圖表是資料，不是狀態。單一數列的圖表（主項進步的迷你折線、體重的線和點、有氧的長條、
+/// 動作詳情的折線和點）用強調色；按部位分的訓練頻率用部位色。格線、座標軸、圖表上的文字維持中性色。
+/// 選取時：折線圖選到的那一點放大（PeekLabel 浮出數字）；長條圖選到的那一根維持強調色，其他的變淡。選取消失後恢復
+enum ChartEmphasis {
+    /// 單一數列的顏色
+    static let series = Theme.accent
+    /// 長條圖有選取時，沒選到的長條的不透明度
+    static let dimmedOpacity = 0.4
+    /// 折線圖的點，和選到的那一點（放大）
+    static let pointSize: CGFloat = 36
+    static let selectedPointSize: CGFloat = 130
+
+    /// 長條的顏色：沒有選取時全部都是強調色；有選取時選到的那一根維持，其他的變淡
+    static func bar(isSelected: Bool, hasSelection: Bool) -> Color {
+        series.opacity(hasSelection && !isSelected ? dimmedOpacity : 1)
+    }
+}
+
 extension View {
     /// 圖表的 x 軸是日期時用這個：手指的位置換成日期寫進 selected，2 秒後清掉
     func chartDateSelection(_ selected: Binding<Date?>) -> some View {

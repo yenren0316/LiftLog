@@ -67,17 +67,17 @@ struct BodyWeightCard: View {
         // 最接近選取位置的那一筆
         let current = selected.flatMap { date in entries.min { abs($0.date.timeIntervalSince(date)) < abs($1.date.timeIntervalSince(date)) } }
         return Chart {
+            // 單一數列，強調色（CHANGE_14 §3）：每天的體重是淡的細線和點，7 日平均是主要的粗線
             ForEach(entries) { entry in
-                // 每天的體重淡一點，7 日平均是主要的線；都是中性色（CHANGE_13 §3）
                 LineMark(x: .value("日期", entry.date), y: .value("體重", unit.fromKg(entry.kg)), series: .value("線", "體重"))
-                    .foregroundStyle(Theme.textSecondary.opacity(0.45))
+                    .foregroundStyle(ChartEmphasis.series.opacity(0.35))
                 PointMark(x: .value("日期", entry.date), y: .value("體重", unit.fromKg(entry.kg)))
-                    .foregroundStyle(Theme.textSecondary)
+                    .foregroundStyle(ChartEmphasis.series.opacity(0.6))
                     .symbolSize(18)
             }
             ForEach(average) { entry in
                 LineMark(x: .value("日期", entry.date), y: .value("體重", unit.fromKg(entry.kg)), series: .value("線", "7 日平均"))
-                    .foregroundStyle(Theme.textPrimary)
+                    .foregroundStyle(ChartEmphasis.series)
                     .lineStyle(StrokeStyle(lineWidth: 2))
             }
             if let current {
@@ -87,6 +87,10 @@ struct BodyWeightCard: View {
                                 overflowResolution: .init(x: .fit(to: .chart), y: .fit(to: .chart))) {
                         PeekLabel(text: label(current))
                     }
+                // 選到的那一點放大
+                PointMark(x: .value("日期", current.date), y: .value("體重", unit.fromKg(current.kg)))
+                    .foregroundStyle(ChartEmphasis.series)
+                    .symbolSize(ChartEmphasis.selectedPointSize)
             }
         }
         // 上面留空間給標籤
@@ -98,7 +102,11 @@ struct BodyWeightCard: View {
         .accessibilityIdentifier("weightChart")
         .accessibilityValue(current.map(label) ?? "")
         .overlay(alignment: .topTrailing) {
-            Label("7 日平均", systemImage: "line.diagonal").font(.caption2).foregroundStyle(Theme.textPrimary)
+            // 圖例：線是數列的顏色，字是中性色
+            Label { Text("7 日平均").foregroundStyle(Theme.textSecondary) } icon: {
+                Image(systemName: "line.diagonal").foregroundStyle(ChartEmphasis.series)
+            }
+            .font(.caption2)
         }
     }
 }

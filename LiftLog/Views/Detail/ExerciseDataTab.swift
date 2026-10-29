@@ -72,7 +72,8 @@ private struct RecordsCard: View {
 
 // MARK: - (b) 折線圖
 
-/// 趨勢折線圖：選取和其他圖表一樣（CHANGE_11 §5），點一下浮出那一點的數字，2 秒後消失；
+/// 趨勢折線圖：單一數列，線和點用強調色（CHANGE_14 §3）。選取和其他圖表一樣（CHANGE_11 §5），
+/// 點一下浮出那一點的數字、那一點放大，2 秒後消失；
 /// 不再有「打開這次訓練」，要看某一次訓練從「歷史」分頁打開
 private struct TrendChartCard: View {
     let exercise: Exercise
@@ -136,12 +137,13 @@ private struct TrendChartCard: View {
             ForEach(points) { p in
                 let y = display(p.value, metric: metric)
                 LineMark(x: .value("日期", p.date), y: .value("數值", y))
-                    .foregroundStyle(Theme.textSecondary.opacity(0.6))
+                    .foregroundStyle(ChartEmphasis.series.opacity(0.6))
                     .interpolationMethod(.monotone)
                 PointMark(x: .value("日期", p.date), y: .value("數值", y))
                     .foregroundStyle(by: .value("類型", p.isMax ? "MAX" : "一般"))
                     .symbol(by: .value("類型", p.isMax ? "MAX" : "一般"))
-                    .symbolSize(p.isMax ? 90 : 40)
+                    .symbolSize(p.id == selected?.id ? ChartEmphasis.selectedPointSize * (p.isMax ? 1.6 : 1)
+                                                     : ChartEmphasis.pointSize * (p.isMax ? 2.2 : 1))
             }
             if let selected {
                 RuleMark(x: .value("日期", selected.date))
@@ -152,8 +154,8 @@ private struct TrendChartCard: View {
                     }
             }
         }
-        // 一般和 MAX 用形狀區分（圓、菱形），顏色都是中性的（CHANGE_13 §3）
-        .chartForegroundStyleScale(["一般": Theme.textPrimary, "MAX": Theme.textPrimary])
+        // 一般和 MAX 用形狀區分（圓、菱形），顏色都是數列的強調色（CHANGE_14 §3）
+        .chartForegroundStyleScale(["一般": ChartEmphasis.series, "MAX": ChartEmphasis.series])
         .chartSymbolScale(["一般": .circle, "MAX": .diamond])
         .chartYScale(domain: .automatic(includesZero: false, reversed: reversed))
         .chartLegend(points.contains(where: \.isMax) ? .visible : .hidden)
