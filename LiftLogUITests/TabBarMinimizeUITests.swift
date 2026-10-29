@@ -18,8 +18,9 @@ final class TabBarMinimizeUITests: XCTestCase {
         let barShown = await bar.waitForHittable(true, timeout: 10)
         if !barShown { attachScreenshot("workout_bar_missing") }
         XCTAssertTrue(barShown, "縮小之後要有訓練中橫條")
-        let settings = app.buttons["設定"].firstMatch
-        let expanded = await settings.waitForHittable(true)
+        // 停在「歷程」：分頁列縮小時其他分頁（今天）的按鈕會收起來（CHANGE_13 §1 起沒有設定分頁）
+        let today = app.tabBars.firstMatch.buttons["今天"]
+        let expanded = await today.waitForHittable(true)
         XCTAssertTrue(expanded, "一開始分頁列是展開的")
         attachScreenshot("V1_tabbar_expanded")
         // 往下捲：系統把分頁列縮小，只留目前的分頁
@@ -27,7 +28,7 @@ final class TabBarMinimizeUITests: XCTestCase {
         try await Task.sleep(for: .seconds(1))
         for _ in 0..<2 where !minimized {
             app.swipeUp(velocity: .slow)
-            minimized = await settings.waitForHittable(false, timeout: 3)
+            minimized = await today.waitForHittable(false, timeout: 3)
         }
         attachScreenshot("V1_tabbar_minimized")
         XCTAssertTrue(minimized, "往下捲之後分頁列應該縮小")
@@ -37,7 +38,7 @@ final class TabBarMinimizeUITests: XCTestCase {
         var restored = false
         for _ in 0..<3 where !restored {
             app.swipeDown(velocity: .fast)
-            restored = await settings.waitForHittable(true, timeout: 3)
+            restored = await today.waitForHittable(true, timeout: 3)
         }
         if !restored { attachScreenshot("V1_tabbar_not_restored") }
         XCTAssertTrue(restored, "捲回頂端之後分頁列應該恢復")
@@ -55,7 +56,7 @@ final class TabBarMinimizeUITests: XCTestCase {
     func testNoAccessoryWithoutWorkout() async throws {
         let app = XCUIApplication()
         app.launchWithoutActiveWorkout(["-demoData", "YES", "-startTab", "1"])
-        XCTAssertTrue(app.buttons["設定"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.tabBars.firstMatch.buttons["今天"].waitForExistence(timeout: 15))
         try await Task.sleep(for: .seconds(1))
         XCTAssertFalse(app.buttons["workoutMiniBar"].exists, "沒有訓練時不該有訓練中橫條")
     }

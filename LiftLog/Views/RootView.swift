@@ -42,6 +42,16 @@ struct RootView: View {
             .scrollDismissesKeyboard(.interactively)
             .background(KeyboardDismissOnTap())
             .preferredColorScheme(.dark)
+            // 設定（CHANGE_13 §1）：放在換主題重建的範圍外面，在「外觀」換主題時 sheet 不會被關掉重開；
+            // 裡面自己依主題重建（導覽路徑在 coordinator，留在原本那一頁）
+            .sheet(isPresented: $coordinator.showingSettings, onDismiss: settingsDismissed) {
+                SettingsView()
+                    .id(theme)
+                    .environment(coordinator)
+                    .environment(launcher)
+                    .environment(stats)
+                    .preferredColorScheme(.dark)
+            }
             .onChange(of: theme) {
                 SnapshotWriter.shared.update()
                 LiveActivityController.shared.scheduleSync()
@@ -61,9 +71,16 @@ struct RootView: View {
             }
     }
 
-    /// 深層連結：workout 打開進行中的訓練；new 進入建立菜單（有進行中的訓練時由 WorkoutLauncher 先詢問）
+    /// 深層連結：workout 打開進行中的訓練；new 進入建立菜單（有進行中的訓練時由 WorkoutLauncher 先詢問）。
+    /// 設定的 sheet 開著時先關掉，關完再導向（同一時間只能呈現一個）
     private func handle(_ link: DeepLink) {
         router.pending = nil
+        guard !coordinator.showingSettings else {
+            // 關完再交回 router，用那時候的狀態（有沒有進行中的訓練）導向
+            launcher.afterSheetDismiss { [router] in router.pending = link }
+            coordinator.showingSettings = false
+            return
+        }
         let coverShown = coordinator.isExpanded && (active.first != nil || coordinator.summary != nil)
         switch link.destination(hasActiveWorkout: !active.isEmpty) {
         case .workout:
@@ -88,6 +105,11 @@ struct RootView: View {
         }
     }
 
+    private func settingsDismissed() {
+        coordinator.settingsPath = []
+        launcher.sheetDismissed()
+    }
+
     private func closeWorkoutCover() {
         coordinator.isExpanded = false
         coordinator.summary = nil
@@ -101,7 +123,6 @@ struct RootView: View {
                     case .today: TodayView()
                     case .history: HistoryView()
                     case .library: LibraryView()
-                    case .settings: SettingsView()
                     }
                 }
             }
@@ -190,9 +211,16 @@ struct RootView: View {
             SnapshotWriter.shared.start(context: context)
             LiveActivityController.shared.start()
             #if DEBUG
-            // 開發用：啟動參數 -startTab 1 直接切到該分頁（0 今天、1 歷程、2 動作庫、3 設定）
+            // 開發用：啟動參數 -startTab 1 直接切到該分頁（0 今天、1 歷程、2 動作庫）
             let index = UserDefaults.standard.integer(forKey: "startTab")
             if AppTab.allCases.indices.contains(index) { coordinator.tab = AppTab.allCases[index] }
+            // 開發用：-openSettings YES 打開設定的 sheet；-settingsPage backup 打開設定並直接進入該頁（CHANGE_13 §1）
+            if let raw = UserDefaults.standard.string(forKey: "settingsPage"), let page = SettingsView.Page(rawValue: raw) {
+                coordinator.settingsPath = [page]
+                coordinator.showingSettings = true
+            } else if UserDefaults.standard.bool(forKey: "openSettings") {
+                coordinator.showingSettings = true
+            }
             // 開發用：啟動參數 -demoWorkout YES 開一個示範訓練；-demoWorkoutElapsed 3930 把開始時間往前推（即時動態的經過時間）；
             // -demoWorkoutRoles dynamicEffort,pull,cardio 指定三個動作的角色（臥推當 DE 主項，截建議重量用）；
             // -demoWorkoutDayType deUpper 指定日型、-demoWorkoutTitle <名稱> 用自訂的名稱（動態島的日型簡稱，CHANGE_11 V3）

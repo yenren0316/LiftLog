@@ -2,7 +2,8 @@ import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
 
-/// 第 1 層「設定」：只回答「App 怎麼運作？」——五列，點進去才是各自的內容
+/// 「設定」：只回答「App 怎麼運作？」——五列，點進去才是各自的內容。
+/// CHANGE_13 §1 起不是分頁：「今天」右上角的齒輪用 sheet 打開，右上角是系統的關閉按鈕
 struct SettingsView: View {
     enum Page: String, CaseIterable, Identifiable, Hashable {
         case appearance, units, training, backup, about
@@ -30,13 +31,15 @@ struct SettingsView: View {
         }
     }
 
-    @State private var path: [Page] = []
+    @Environment(WorkoutCoordinator.self) private var coordinator
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationStack(path: $path) {
+        @Bindable var coordinator = coordinator
+        NavigationStack(path: $coordinator.settingsPath) {
             List {
                 ForEach(Page.allCases) { page in
-                    TapListRow { path.append(page) } label: {
+                    TapListRow { coordinator.settingsPath.append(page) } label: {
                         Label(page.title, systemImage: page.systemImage).font(.body.weight(.semibold))
                     }
                 }
@@ -44,6 +47,12 @@ struct SettingsView: View {
             .scrollContentBackground(.hidden)
             .screenBackground()
             .navigationTitle("設定")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(role: .close) { dismiss() }
+                        .accessibilityIdentifier("closeSettings")
+                }
+            }
             .navigationDestination(for: Page.self) { page in
                 Group {
                     switch page {
@@ -57,12 +66,6 @@ struct SettingsView: View {
                 .navigationTitle(page.title)
                 .navigationBarTitleDisplayMode(.inline)
             }
-            #if DEBUG
-            // 開發用：-settingsPage backup 直接打開該頁
-            .task {
-                if let raw = UserDefaults.standard.string(forKey: "settingsPage"), let page = Page(rawValue: raw) { path = [page] }
-            }
-            #endif
         }
     }
 }

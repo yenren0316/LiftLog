@@ -21,7 +21,7 @@ struct LibraryView: View {
             List {
                 if query.isEmpty {
                     if exercises.isEmpty {
-                        Text("動作庫是空的。按右上角的＋新增動作，或到「設定 → 備份與還原」匯入備份。")
+                        Text("動作庫是空的。按右上角的＋新增動作，或到「今天」右上角的設定 → 備份與還原匯入備份。")
                             .font(.subheadline)
                             .foregroundStyle(Theme.textSecondary)
                             .listRowBackground(Theme.card)
