@@ -29,6 +29,7 @@
   - 動作庫：我有哪些動作？
   - 設定（「今天」右上角齒輪打開的 sheet）：App 怎麼運作？
 - 最多三層：第 1 層是分頁，第 2 層是清單或摘要，第 3 層是詳情或編輯。第 3 層不再 push，連到其他內容一律用唯讀浮窗。
+  - 例外（CHANGE_14 §4）：訓練摘要是推入的頁面（`WorkoutSummaryPage`），從歷程的紀錄、動作詳情的歷史和個人紀錄在各自的 NavigationStack 推入；摘要頁本身不再往下推。
 - 開始新訓練只走 `WorkoutLauncher`（主要入口是「今天」的「下一次」卡）。
 
 ## 建置與測試
@@ -130,12 +131,17 @@
 - 開了 MemberImportVisibility：用到哪個框架就明確 import（`SwiftData`、`AppIntents`、`UIKit`、`CoreGraphics`、`Foundation`）。
 - 註解和畫面文字用繁體中文，註解密度跟著周圍的程式碼。
 - 顏色只用主題 token（`Theme.*`，定義在 `Shared/Theme.swift`）。新 token 要每個主題都有值，並加進 `ThemeTests`。
-  - 每個顏色只有一個意思（CHANGE_13 §3）：強調色只用在可以點的主要按鈕和連結、選取的狀態、建議值、「下一次」的標記、今天的外框；部位用 `lowerBody`／`upperBody`；done 只用在完成的組；warning 只用在提醒和警示；danger 是刪除和錯誤。資料本身（圖表、數字）用 textPrimary／textSecondary，不用綠黃紅表示好壞。
+  - 每個顏色只有一個意思（CHANGE_13 §3，CHANGE_14 §2 修訂）：
+    - 強調色只出現在按鈕、連結、選取的狀態、建議值、「下一次」的標記，以及單一數列的圖表（主項進步的迷你折線、體重、有氧、動作詳情的折線，用 `ChartEmphasis`）。
+    - 部位色 `Theme.lowerBody`／`upperBody` 是系統藍、系統橘（`BodyPart`，六個主題共用一份，直接用系統色、不寫死色碼），只出現在資料圖形上（格子、長條、圓點、圖例）。石墨藍、石墨青的強調色和下肢相近，石墨橙的強調色和上肢相近：刻意的，靠形狀區分。
+    - done 只用在完成的組；danger 是刪除和錯誤。
+    - warning 只用在提醒和警示，而且每個地方都同時有圖示或文字，不只靠顏色（文字用 `Text.warning`，前面自動加 `exclamationmark.circle`）。
+    - 其他資料（個人紀錄的數字、換算表、增減的正負號）、格線、座標軸和圖表上的文字用 textPrimary／textSecondary，不用綠黃紅表示好壞。今天的外框（本週卡的日曆）是主要文字色。
 - 共用的做法，不要另寫一套：
   - 可以點的卡片和列：`TapSurfaceStyle`（`.tapCard`／`.tapRow`／`.tapListRow`、`TapListRow`），不用列尾的「›」。
   - 小按鈕：`.pressable`。
   - 確認：一律置中的 `.alert`，要有明確的「取消」。不用 confirmationDialog。
-  - 圖表的選取：`chartDateSelection`。
+  - 圖表的選取：`chartDateSelection`；單一數列的顏色和長條選取時變淡：`ChartEmphasis`。
   - 分頁列：交給系統的 `.tabBarMinimizeBehavior(.onScrollDown)`，不另外處理（CHANGE_11 §1 刪掉 `.hidesTabBarOnScroll()`）。
   - 收起鍵盤：`dismissKeyboard()`、`KeyboardDismissOnTap`。不要在鍵盤上方加「完成」。
   - 訓練次數：`TrainingCount.days`；開始訓練：`WorkoutLauncher`。

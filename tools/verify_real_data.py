@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CHANGE_11 §9、CHANGE_13 R1：用備份 JSON 獨立驗算統計，和 App 的 -dumpStats 比對。
+"""CHANGE_11 §9、CHANGE_13 R1、CHANGE_14 R1：用備份 JSON 獨立驗算統計，和 App 的 -dumpStats 比對。
 
 只依 SPEC.md 的文字規則自己算一次，不呼叫、不複製 App 的程式碼。
 備份含個人資料：所有輸出只能放在 tools/fixtures/ 底下（已在 .gitignore），終端機只印「一致／不一致」。
