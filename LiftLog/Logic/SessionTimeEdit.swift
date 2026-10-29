@@ -24,6 +24,11 @@ nonisolated enum SessionTimeEdit {
                      completions: times.completions.map { $0.map { min(max($0, times.start), newEnd) } })
     }
 
+    /// 補登的預設時間：今天，現在往前 1 小時到現在（不跨到前一天）
+    static func defaultBackfill(now: Date = .now, calendar: Calendar = .current) -> DateInterval {
+        DateInterval(start: max(calendar.startOfDay(for: now), now.addingTimeInterval(-3600)), end: now)
+    }
+
     /// day 那天、time 的時和分
     static func combine(day: Date, time: Date, calendar: Calendar = .current) -> Date {
         let t = calendar.dateComponents([.hour, .minute], from: time)

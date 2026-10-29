@@ -167,6 +167,19 @@ struct Chip: View {
     }
 }
 
+/// 強調色的小膠囊：只用在建議和「下一次」（CHANGE_13 §3）
+struct AccentChip: View {
+    var text: String
+
+    var body: some View {
+        Text(text)
+            .font(.caption.weight(.bold))
+            .foregroundStyle(Theme.onAccent)
+            .padding(.horizontal, 8).padding(.vertical, 3)
+            .background(Theme.accent, in: .capsule)
+    }
+}
+
 // MARK: - 點擊回饋與動畫
 
 extension Animation {

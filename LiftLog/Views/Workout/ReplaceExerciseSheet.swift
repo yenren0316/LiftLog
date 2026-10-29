@@ -30,8 +30,7 @@ struct ReplaceExerciseSheet: View {
                         }
                         ForEach(Array(ranked.items.enumerated()), id: \.element.id) { index, candidate in
                             TapListRow { pick(candidate) } label: {
-                                CandidateRow(candidate: candidate, isSelected: nil,
-                                             suggestion: index == 0 ? .some(ranked.reason) : nil)
+                                CandidateRow(candidate: candidate, suggestion: index == 0 ? .some(ranked.reason) : nil)
                             }
                         }
                     }
@@ -63,5 +62,41 @@ struct ReplaceExerciseSheet: View {
         guard let exercise = exercises.first(where: { $0.id == candidate.id }) else { return }
         onPick(exercise, slot.role)
         dismiss()
+    }
+}
+
+/// 候選動作的一列：名稱、標籤、「新」、建議與原因、幾天沒做
+struct CandidateRow: View {
+    var candidate: PlanCandidate
+    /// 有值代表是建議的那一個；內層是原因
+    var suggestion: String??
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Text(candidate.exercise.name)
+                        .font(.title3.weight(.semibold))
+                        .lineLimit(1)
+                    ForEach(candidate.exercise.tags) { Chip(text: $0.title) }
+                    if candidate.isNew { Chip(text: "新") }
+                }
+                if let suggestion {
+                    HStack(spacing: 6) {
+                        AccentChip(text: "建議")
+                        if let reason = suggestion {
+                            Text(reason).font(.subheadline).foregroundStyle(Theme.accent)
+                        }
+                    }
+                }
+            }
+            Spacer(minLength: 8)
+            if let days = candidate.daysSince {
+                Recency.staleness(days: days).text(RelativeDay.text(days))
+                    .font(.headline.monospacedDigit())
+            }
+        }
+        .padding(.vertical, 10)
+        .contentShape(.rect)
     }
 }

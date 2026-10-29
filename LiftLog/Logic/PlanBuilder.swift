@@ -99,7 +99,7 @@ nonisolated struct PlanExercise: Sendable, Identifiable, Equatable {
     func has(_ tag: ExerciseTag) -> Bool { tags.contains(tag) }
 }
 
-// MARK: - 第一步：三個問題
+// MARK: - 三個答案：日型、動作數、跑步機
 
 nonisolated struct PlanAnswers: Equatable, Sendable {
     var dayType: DayType
@@ -129,7 +129,7 @@ nonisolated enum PlanDefaults {
     }
 }
 
-// MARK: - 第二步：格子
+// MARK: - 格子
 
 /// 菜單裡的一格
 nonisolated enum Slot: String, Hashable, Sendable, CaseIterable {
@@ -177,7 +177,7 @@ nonisolated enum Slot: String, Hashable, Sendable, CaseIterable {
     }
 }
 
-// MARK: - 第三步：候選動作
+// MARK: - 候選動作
 
 nonisolated struct PlanCandidate: Identifiable, Equatable, Sendable {
     var exercise: PlanExercise
@@ -378,7 +378,7 @@ nonisolated struct Rotation {
 
 // MARK: - 建議重量
 
-/// 某一格選定動作的建議：重量、參數、提示（建立菜單第三步和訓練中畫面共用）
+/// 某一格選定動作的建議：重量、參數、提示（建立菜單的每一格和訓練中畫面共用）
 nonisolated struct SlotAdvice: Equatable, Sendable {
     var prescription: Prescription
     /// 「建議 32.5 kg（60%）」「上次 60 kg」「用能做得很快的重量」

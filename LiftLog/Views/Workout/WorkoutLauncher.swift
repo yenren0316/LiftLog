@@ -23,6 +23,15 @@ final class WorkoutLauncher {
         /// 補登：這次訓練的開始和結束時間
         var backfill: DateInterval?
         var origin: Origin = .root
+
+        /// 建立菜單的「開始訓練」：依格子的順序，每個動作的角色就是格子的角色；一個動作都沒有時為 nil
+        static func plan(_ selection: [(exerciseID: UUID, role: Role)], exercises: [Exercise], dayType: DayType,
+                         backfill: DateInterval?) -> Request? {
+            let byID = Dictionary(exercises.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+            let chosen = selection.compactMap { pick in byID[pick.exerciseID].map { ($0, pick.role) } }
+            guard !chosen.isEmpty else { return nil }
+            return Request(exercises: chosen.map(\.0), roles: chosen.map(\.1), dayType: dayType, backfill: backfill, origin: .plan)
+        }
     }
 
     /// 建立菜單的 sheet（RootView 呈現）

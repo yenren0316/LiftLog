@@ -49,4 +49,12 @@ struct SessionTimeEditTests {
         let untimed = WorkoutSession(startedAt: at(25, 12), endedAt: at(25, 12), hasTime: false)
         #expect(WorkoutSummaryPage.timeText(untimed, calendar: calendar) == "未記錄時間")
     }
+
+    /// CHANGE_15 §2：補登的預設時間（從歷程 ⋯ 打開建立菜單的畫面）：今天，現在往前 1 小時到現在，不跨到前一天
+    @Test func backfillDefaultsToTheLastHourOfToday() {
+        #expect(SessionTimeEdit.defaultBackfill(now: at(20, 14, 5), calendar: calendar)
+                == DateInterval(start: at(20, 13, 5), end: at(20, 14, 5)))
+        #expect(SessionTimeEdit.defaultBackfill(now: at(20, 0, 30), calendar: calendar)
+                == DateInterval(start: at(20, 0, 0), end: at(20, 0, 30)))
+    }
 }

@@ -134,7 +134,7 @@ struct RootView: View {
         .environment(restTimer)
         .environment(stats)
         .sheet(item: $launcher.planRequest, onDismiss: launcher.sheetDismissed) { request in
-            PlanFlowView(request: request)
+            PlanSheet(request: request)
                 .environment(coordinator)
                 .environment(launcher)
                 .environment(stats)

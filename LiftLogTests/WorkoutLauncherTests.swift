@@ -131,4 +131,26 @@ struct WorkoutLauncherTests {
         f.launcher.requestPlan(backfill: interval, context: f.context)
         #expect(f.launcher.planRequest?.backfill == interval && f.launcher.planWithActive == nil)
     }
+
+    /// CHANGE_15 §2：補登用建立菜單的畫面，「補登這次訓練」之後沿用 CHANGE_14：切到歷程、推入摘要頁並打開編輯
+    @Test func backfillFromThePlanScreenOpensTheSummaryEditor() throws {
+        let f = try makeFixture()
+        let interval = SessionTimeEdit.defaultBackfill()
+        f.launcher.requestPlan(backfill: interval, context: f.context)
+        #expect(f.launcher.planRequest?.backfill == interval && f.launcher.planWithActive == nil)
+        // 畫面的「補登這次訓練」：依格子的順序和角色
+        let request = try #require(WorkoutLauncher.Request.plan([(f.bench.id, .maxEffort), (f.row.id, .pull)],
+                                                                exercises: [f.bench, f.row], dayType: .meUpper, backfill: interval))
+        let session = try #require(f.launcher.start(request, context: f.context))
+        #expect(f.launcher.pendingStart == nil && f.current.isActive)
+        #expect(!session.isActive && session.dayType == .meUpper && session.startedAt == interval.start)
+        #expect(session.orderedItems.map(\.role) == [.maxEffort, .pull])
+        // sheet 關掉之後才切到歷程
+        #expect(f.launcher.planRequest == nil && f.launcher.coordinator.tab == .today)
+        f.launcher.sheetDismissed()
+        #expect(f.launcher.coordinator.tab == .history && f.launcher.coordinator.historyPath == NavigationPath([session]))
+        #expect(f.launcher.coordinator.editOnSummaryOpen && !f.launcher.coordinator.isExpanded)
+        // 一個動作都沒有時不開始
+        #expect(WorkoutLauncher.Request.plan([], exercises: [f.bench], dayType: .meUpper, backfill: interval) == nil)
+    }
 }

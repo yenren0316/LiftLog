@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 
 /// 第 1 層「歷程」：只回答「我練了什麼、進步了多少？」。分段「紀錄｜統計」（記住上次的選擇），右上角 ⋯ 裡是「補登訓練」
+/// （CHANGE_15 §2：打開和建立菜單同一個畫面，最上面多一張日期和時間的卡片）
 struct HistoryView: View {
     enum Segment: String, CaseIterable, Identifiable {
         case records, stats
@@ -14,9 +15,6 @@ struct HistoryView: View {
     @Environment(WorkoutLauncher.self) private var launcher
     @Environment(WorkoutCoordinator.self) private var coordinator
     @AppStorage("history.segment") private var segment: Segment = .records
-    @State private var showingBackfill = false
-    /// 補登第 1 步選好之後，等 sheet 關掉再進入下一步
-    @State private var pendingBackfill: (interval: DateInterval, followsPlan: Bool)?
 
     var body: some View {
         // 導覽路徑在 coordinator：補登時切到歷程、推入摘要頁（CHANGE_14 §4）
@@ -41,7 +39,7 @@ struct HistoryView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
-                        Button("補登訓練", systemImage: "calendar.badge.plus") { showingBackfill = true }
+                        Button("補登訓練", systemImage: "calendar.badge.plus", action: backfill)
                     } label: {
                         Image(systemName: "ellipsis")
                     }
@@ -50,12 +48,6 @@ struct HistoryView: View {
             }
             .navigationDestination(for: Exercise.self) { ExerciseDetailView(exercise: $0) }
             .navigationDestination(for: WorkoutSession.self) { WorkoutSummaryPage(session: $0) }
-            .sheet(isPresented: $showingBackfill, onDismiss: continueBackfill) {
-                BackfillSheet { interval, followsPlan in
-                    pendingBackfill = (interval, followsPlan)
-                    showingBackfill = false
-                }
-            }
             #if DEBUG
             // 開發用：-historySegment stats 切到統計；-openBackfill YES 打開補登；
             // -scrollToBottom 紀錄｜統計 切到那個分段並捲到最底部（CHANGE_08 §2）
@@ -67,21 +59,15 @@ struct HistoryView: View {
                    let value = Segment.allCases.first(where: { $0.title == raw || $0.rawValue == raw }) {
                     segment = value
                 }
-                if UserDefaults.standard.bool(forKey: "openBackfill") { showingBackfill = true }
+                if UserDefaults.standard.bool(forKey: "openBackfill") { backfill() }
             }
             #endif
         }
     }
 
-    /// 補登第 2 步：照建議走建立菜單，或自由選動作（建立已結束的訓練後直接進入編輯）
-    private func continueBackfill() {
-        guard let pending = pendingBackfill else { return }
-        pendingBackfill = nil
-        if pending.followsPlan {
-            launcher.requestPlan(backfill: pending.interval, context: context)
-        } else {
-            launcher.start(.init(openAdd: true, backfill: pending.interval), context: context)
-        }
+    /// 補登：和建立菜單同一個畫面（RootView 呈現），預設今天、現在往前 1 小時到現在；建立後切到歷程、推入摘要頁並打開編輯
+    private func backfill() {
+        launcher.requestPlan(backfill: SessionTimeEdit.defaultBackfill(), context: context)
     }
 }
 
@@ -172,64 +158,6 @@ private struct HistoryRow: View {
         let exercises = "\(count) 個動作"
         guard session.hasTime, let duration = session.duration else { return exercises }
         return "\(Int((duration / 60).rounded())) 分・\(exercises)"
-    }
-}
-
-/// 補登第 1 步：日期、開始時間、結束時間（預設今天、現在往前 1 小時到現在），再選照建議建立菜單或自由選動作
-private struct BackfillSheet: View {
-    var onChoose: (DateInterval, Bool) -> Void
-
-    @Environment(\.dismiss) private var dismiss
-    @State private var day = Date.now
-    @State private var start = max(Calendar.current.startOfDay(for: .now), Date.now.addingTimeInterval(-3600))
-    @State private var end = Date.now
-
-    private var interval: DateInterval? {
-        let s = SessionTimeEdit.combine(day: day, time: start), e = SessionTimeEdit.combine(day: day, time: end)
-        return e > s ? DateInterval(start: s, end: e) : nil
-    }
-
-    var body: some View {
-        NavigationStack {
-            VStack(alignment: .leading, spacing: 16) {
-                VStack(spacing: 12) {
-                    row("日期") { DatePicker("日期", selection: $day, in: ...Date.now, displayedComponents: .date) }
-                    row("開始時間") { DatePicker("開始時間", selection: $start, displayedComponents: .hourAndMinute) }
-                    row("結束時間") { DatePicker("結束時間", selection: $end, displayedComponents: .hourAndMinute) }
-                    if interval == nil {
-                        Text.warning("結束時間必須晚於開始時間").font(.footnote)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                }
-                .card()
-                Text("補登的訓練是已經結束的訓練：沒有休息計時、即時動態，也不會影響進行中的訓練。")
-                    .font(.footnote)
-                    .foregroundStyle(Theme.textSecondary)
-                Spacer()
-                PrimaryButton(title: "照建議建立菜單", isEnabled: interval != nil) {
-                    if let interval { onChoose(interval, true) }
-                }
-                PrimaryButton(title: "自由選動作", prominent: false, isEnabled: interval != nil) {
-                    if let interval { onChoose(interval, false) }
-                }
-            }
-            .padding(16)
-            .screenBackground()
-            .navigationTitle("補登訓練")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
-            }
-        }
-        .presentationDetents([.large])
-    }
-
-    private func row(_ title: String, @ViewBuilder picker: () -> some View) -> some View {
-        HStack {
-            Text(title).foregroundStyle(Theme.textSecondary)
-            Spacer()
-            picker().labelsHidden()
-        }
     }
 }
 
