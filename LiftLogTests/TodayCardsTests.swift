@@ -107,38 +107,132 @@ struct TodayCardsTests {
         #expect(snapshot.suggestedMainLogs.count == 1)
     }
 
-    // MARK: 「本週」卡的圓點
+    // MARK: 「本週」卡的點點日曆（CHANGE_14 §1）
 
-    @Test func dotsAreColoredByRegionAndTodayIsMarked() {
-        let now = date(10, 28, 9)   // 週三
-        let regions: [Date: DayRegion] = [day(10, 26): .lower, day(10, 27): .cardio, day(10, 28): .full, day(10, 25): .upper]
-        let dots = WeekCard.days(regions: regions, now: now, calendar: calendar)
-        #expect(dots.map(\.label) == ["一", "二", "三", "四", "五", "六", "日"])
-        #expect(dots.map(\.date) == (26...31).map { day(10, $0) } + [day(11, 1)])
-        // 依部位；只有有氧的日子是有氧與其他（中性灰）；上週日的訓練不在這週
-        #expect(dots.map(\.region) == [.lower, .cardio, .full, nil, nil, nil, nil])
-        #expect(dots.map(\.isToday) == [false, false, true, false, false, false, false])
-        #expect(dots.map(\.isFuture) == [false, false, false, true, true, true, true])
-        // 顏色：下肢、上肢各自的部位色，全身兩色，有氧與其他中性灰
-        #expect(DayRegion.lower.swatch == .solid(.lower) && DayRegion.upper.swatch == .solid(.upper))
-        #expect(DayRegion.full.swatch == .split(.lower, .upper) && DayRegion.cardio.swatch == .neutral)
-        // 「不以顏色區分」時圓點裡的字
-        #expect(DayRegion.allCases.map(\.letter) == ["下", "上", "全", nil])
+    private func day(_ year: Int, _ month: Int, _ day: Int) -> Date {
+        calendar.startOfDay(for: calendar.date(from: DateComponents(year: year, month: month, day: day, hour: 12))!)
     }
 
-    @Test func mondayAndSundayBoundaries() {
-        let regions: [Date: DayRegion] = [day(10, 25): .upper, day(10, 26): .lower, day(11, 1): .full, day(11, 2): .lower]
-        // 週一早上：第一個是今天，後面 6 天都是之後的日子；前一天（週日）屬於上一週
-        let monday = WeekCard.days(regions: regions, now: date(10, 26, 0), calendar: calendar)
-        #expect(monday.first?.date == day(10, 26) && monday.first?.isToday == true)
-        #expect(monday.first?.region == .lower)
-        #expect(monday.dropFirst().allSatisfy { $0.isFuture && $0.region == nil })
-        // 週日晚上：最後一個是今天，沒有之後的日子；下一個週一不在這週
-        let sunday = WeekCard.days(regions: regions, now: date(11, 1, 23), calendar: calendar)
-        #expect(sunday.first?.date == day(10, 26) && sunday.last?.date == day(11, 1))
-        #expect(sunday.last?.isToday == true && sunday.last?.region == .full)
-        #expect(sunday.allSatisfy { !$0.isFuture })
-        #expect(sunday.filter(\.isToday).count == 1)
+    @Test func calendarColumnsFollowTheWidthAndAreAtLeastTwelveWeeks() {
+        // iPhone 17 Pro 的卡片裡 338 pt：14 pt 的格子放得下 20 週，12 pt 放得下 22 週
+        #expect(WeekCard.Grid.layout(width: 338, cell: 14) == (20, 14))
+        #expect(WeekCard.Grid.layout(width: 338, cell: 12) == (22, 12))
+        // 剛好 20 週：20 × 14 + 19 × 3 = 337
+        #expect(WeekCard.Grid.layout(width: 337, cell: 14).weeks == 20)
+        #expect(WeekCard.Grid.layout(width: 336, cell: 14).weeks == 19)
+        // 格子限制在 12～14 pt
+        #expect(WeekCard.Grid.layout(width: 338, cell: 20) == (20, 14))
+        #expect(WeekCard.Grid.layout(width: 338, cell: 8) == (22, 12))
+        // 放不下 12 週：格子縮小塞滿 12 週，最小 12 pt
+        let narrow = WeekCard.Grid.layout(width: 200, cell: 14)
+        #expect(narrow.weeks == 12 && abs(narrow.cell - (200 - 33) / 12) < 0.001)
+        #expect(WeekCard.Grid.layout(width: 150, cell: 14) == (12, 12))
+        #expect(WeekCard.Grid.height(cell: 14) == 116 && WeekCard.Grid.height(cell: 12) == 102)
+    }
+
+    @Test func lastColumnIsThisWeekMondayToSunday() {
+        let now = date(10, 28, 9)   // 週三
+        let weeks = WeekCard.weeks(regions: [:], now: now, count: 20, calendar: calendar)
+        #expect(weeks.count == 20)
+        // 最右邊一欄是本週：週一到週日（地區設定的一週從週日開始也一樣）
+        #expect(weeks.last?.monday == day(10, 26))
+        #expect(weeks.last?.days.map(\.date) == (26...31).map { day(10, $0) } + [day(11, 1)])
+        // 每一欄是連續的一週，由上到下週一到週日；第一欄是 19 週前
+        #expect(weeks.first?.monday == day(2026, 6, 15))
+        for (index, week) in weeks.enumerated() {
+            #expect(week.days.count == 7)
+            #expect(week.days.map(\.date) == (0..<7).map { calendar.date(byAdding: .day, value: $0, to: week.monday)! })
+            #expect(calendar.component(.weekday, from: week.monday) == 2)
+            if index > 0 { #expect(calendar.date(byAdding: .day, value: 7, to: weeks[index - 1].monday) == week.monday) }
+        }
+    }
+
+    @Test func todayIsMarkedAndTheRestOfThisWeekIsOutlined() {
+        let now = date(10, 28, 9)
+        // 今天之後的日子即使有資料也不上色（只畫外框）
+        let regions: [Date: DayRegion] = [day(10, 26): .lower, day(10, 28): .upper, day(10, 30): .full, day(10, 21): .cardio]
+        let weeks = WeekCard.weeks(regions: regions, now: now, count: 12, calendar: calendar)
+        let all = weeks.flatMap(\.days)
+        #expect(all.filter(\.isToday).map(\.date) == [day(10, 28)])
+        #expect(all.filter(\.isFuture).map(\.date) == [29, 30, 31].map { day(10, $0) } + [day(11, 1)])
+        #expect(all.filter(\.isFuture).allSatisfy { $0.region == nil })
+        // 今天有練：照部位上色，外框另外畫
+        #expect(all.first { $0.isToday }?.region == .upper)
+        // 前面的週沒有「之後」的日子
+        #expect(weeks.dropLast().allSatisfy { $0.days.allSatisfy { !$0.isFuture && !$0.isToday } })
+        // 週一 0 點：本週只有今天，後面 6 天都是之後；週日晚上：沒有之後的日子
+        let monday = WeekCard.weeks(regions: regions, now: date(10, 26, 0), count: 12, calendar: calendar).last!
+        #expect(monday.days.first?.isToday == true && monday.days.dropFirst().allSatisfy(\.isFuture))
+        let sunday = WeekCard.weeks(regions: regions, now: date(11, 1, 23), count: 12, calendar: calendar).last!
+        #expect(sunday.monday == day(10, 26) && sunday.days.last?.isToday == true && sunday.days.allSatisfy { !$0.isFuture })
+        // 下一個週一是新的一欄
+        #expect(WeekCard.weeks(regions: regions, now: date(11, 2, 0), count: 12, calendar: calendar).last?.monday == day(11, 2))
+    }
+
+    @Test func monthsAreLabeledOnTheFirstMondayColumn() {
+        let weeks = WeekCard.weeks(regions: [:], now: date(10, 28, 9), count: 20, calendar: calendar)
+        let labeled = weeks.filter { $0.month != nil }
+        // 每個月第一個週一：7/6、8/3、9/7、10/5（6/15 那欄不是 6 月的第一個週一）
+        #expect(labeled.map(\.monday) == [day(7, 6), day(8, 3), day(9, 7), day(10, 5)])
+        #expect(labeled.map(\.month) == ["7月", "8月", "9月", "10月"])
+        // 月初不是週一：那個月第一個週一（1～7 號）才標
+        #expect(WeekCard.monthLabel(monday: day(2026, 6, 1), calendar: calendar) == "6月")
+        #expect(WeekCard.monthLabel(monday: day(2026, 6, 8), calendar: calendar) == nil)
+        #expect(WeekCard.monthLabel(monday: day(2026, 9, 7), calendar: calendar) == "9月")
+        #expect(WeekCard.monthLabel(monday: day(2026, 8, 31), calendar: calendar) == nil)
+    }
+
+    @Test func calendarCrossesMonthsAndTheYear() {
+        // 2027/1/6（週三）：本週從 2027/1/4（週一）開始，那天也是 1 月的第一個週一
+        let now = calendar.date(from: DateComponents(year: 2027, month: 1, day: 6, hour: 9))!
+        let regions: [Date: DayRegion] = [day(2026, 12, 31): .lower, day(2027, 1, 1): .upper, day(2027, 1, 4): .full]
+        let weeks = WeekCard.weeks(regions: regions, now: now, count: 12, calendar: calendar)
+        #expect(weeks.last?.monday == day(2027, 1, 4) && weeks.last?.month == "1月")
+        // 跨年的那一週：12/28（週一）到 1/3（週日）在同一欄，不標月份
+        let newYear = weeks[weeks.count - 2]
+        #expect(newYear.monday == day(2026, 12, 28) && newYear.month == nil)
+        #expect(newYear.days.map(\.date) == [28, 29, 30, 31].map { day(2026, 12, $0) } + [1, 2, 3].map { day(2027, 1, $0) })
+        #expect(newYear.days.map(\.region) == [nil, nil, nil, .lower, .upper, nil, nil])
+        #expect(weeks.last?.days.first?.region == .full)
+        // 跨月：11/30 那週有 12/1～12/6，標在 12/7（12 月第一個週一）
+        #expect(weeks.first { $0.monday == day(2026, 11, 30) }?.month == nil)
+        #expect(weeks.first { $0.monday == day(2026, 12, 7) }?.month == "12月")
+        #expect(weeks.first { $0.monday == day(2026, 11, 2) }?.month == "11月")
+    }
+
+    /// 日曆每一格的部位就是統計快照的 dayRegions（DayRegion.of／merged，和訓練頻率同一套）
+    @Test func cellsMatchTheSnapshotDayRegions() {
+        let now = date(10, 28, 9)
+        let squat = PlanHistory.Item(exerciseID: UUID(), category: .kneeDominant, role: .lowerAssist, sets: [set(60, 5)])
+        let bench = PlanHistory.Item(exerciseID: UUID(), category: .horizontalPush, role: .push, sets: [set(40, 8)])
+        let run = PlanHistory.Item(exerciseID: UUID(), category: .cardio, role: .cardio, sets: [SetValues(minutes: 30, isCompleted: true)])
+        // 沒打勾：PlanHistory(sessions:) 只帶完成的組，所以這個動作沒有組（SwiftData 的版本在 TrainingRegionTests）
+        let unchecked = PlanHistory.Item(exerciseID: UUID(), category: .kneeDominant, role: .lowerAssist, sets: [])
+        let history = PlanHistory([
+            // 同一天下肢、上肢分兩次練：全身
+            PlanHistory.Session(date: date(10, 27, 8), items: [squat]),
+            PlanHistory.Session(date: date(10, 27, 19), items: [bench]),
+            // 只有有氧：中性灰
+            PlanHistory.Session(date: date(10, 26), items: [run]),
+            // 有氧不影響有重訓的日子
+            PlanHistory.Session(date: date(10, 20), items: [bench, run]),
+            // 沒打勾的那天沒有顏色
+            PlanHistory.Session(date: date(10, 19), items: [unchecked]),
+            // 很久以前（日曆的第一欄）也有
+            PlanHistory.Session(date: date(8, 4), items: [squat]),
+        ])
+        let snapshot = StatsSnapshot.make(history: history, exercises: [], now: now, calendar: calendar)
+        let cells = WeekCard.weeks(regions: snapshot.dayRegions, now: now, count: 13, calendar: calendar).flatMap(\.days)
+        for cell in cells where !cell.isFuture {
+            #expect(cell.region == snapshot.dayRegions[cell.date], "\(cell.date)")
+        }
+        let byDay = Dictionary(uniqueKeysWithValues: cells.map { ($0.date, $0.region) })
+        #expect(byDay[day(10, 27)] == .full)
+        #expect(byDay[day(10, 26)] == .cardio)
+        #expect(byDay[day(10, 20)] == .upper)
+        #expect(byDay[day(10, 19)] == .some(nil))
+        #expect(byDay[day(8, 4)] == .lower)
+        #expect(cells.first?.date == day(8, 3))
     }
 
     // MARK: 輪替膠囊

@@ -101,9 +101,9 @@ struct TrainingCountTests {
         // 週日 10/25 屬於 10/19 那週，週一 10/26 是新的一週（地區設定是週日開始也一樣）
         #expect(TrainingCount.weekStart(of: date(10, 25, 23), calendar: weekCalendar) == day(10, 19))
         #expect(TrainingCount.weekStart(of: date(10, 26, 0), calendar: weekCalendar) == day(10, 26))
-        // 「本週」卡的圓點（CHANGE_13 §2-2）：第一個是週一
-        let dots = WeekCard.days(regions: [:], now: date(10, 28), calendar: calendar)
-        #expect(dots.first?.date == day(10, 26) && dots.last?.date == day(11, 1))
+        // 「本週」卡的日曆（CHANGE_14 §1）：最右邊一欄是本週，由上到下週一到週日
+        let thisWeek = WeekCard.weeks(regions: [:], now: date(10, 28), count: 12, calendar: calendar).last
+        #expect(thisWeek?.days.first?.date == day(10, 26) && thisWeek?.days.last?.date == day(11, 1))
         let days = TrainingCount.days([session(date(10, 25), [(.kneeDominant, true)]),
                                        session(date(10, 26), [(.horizontalPush, true)])],
                                       cardioOnlyCounts: false, calendar: calendar)

@@ -1,6 +1,7 @@
 #if DEBUG
 import Foundation
 import SwiftData
+import UIKit
 
 /// 開發用（CHANGE_11 §9）：用真實的備份在模擬器上驗證統計。
 /// -importBackup <路徑> 啟動時匯入備份（取代全部資料，和「從 JSON 匯入」同一條路，含補做遷移和還原設定）；
@@ -27,6 +28,12 @@ enum RealDataDebug {
         } catch {
             print("dumpStats failed: \(error)")
         }
+    }
+
+    /// 「本週」卡的日曆在這台裝置上的週數：螢幕寬度扣掉頁面和卡片的左右邊距（各 16 pt）
+    private static var calendarWeeks: Int {
+        let width = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.screen.bounds.width ?? 402
+        return WeekCard.Grid.layout(width: width - 64, cell: 14).weeks
     }
 
     /// 和 verify_real_data.py 的 compute() 同樣的結構
@@ -63,10 +70,12 @@ enum RealDataDebug {
             ] as [String: Any]
         }
 
-        // 「本週」卡（CHANGE_13 §2-2）：天數和組數、每一天的部位（今天之後為 null）、輪替膠囊、提醒
-        var dots: [String: Any] = [:]
-        for day in WeekCard.days(regions: snapshot.dayRegions, now: now, calendar: calendar) {
-            dots[day.date.formatted(dayFormat)] = day.region?.rawValue ?? NSNull()
+        // 「本週」卡（CHANGE_13 §2-2）：天數和組數、輪替膠囊、提醒；
+        // 點點日曆（CHANGE_14 §1）顯示的每一天的部位（今天之後為 null），週數和這台模擬器上的卡片一樣
+        var calendarDays: [String: Any] = [:]
+        let weeks = WeekCard.weeks(regions: snapshot.dayRegions, now: now, count: calendarWeeks, calendar: calendar)
+        for day in weeks.flatMap(\.days) {
+            calendarDays[day.date.formatted(dayFormat)] = day.region?.rawValue ?? NSNull()
         }
         var capsules: [String: Any] = [:]
         for item in WeekCard.rotation(next: snapshot.nextPlan.dayType) {
@@ -90,8 +99,8 @@ enum RealDataDebug {
             "rotation": rotation,
             "nextDayType": snapshot.nextPlan.dayType.rawValue,
             "mainLifts": mainLifts,
-            "weekCard": ["days": status.thisWeek.days, "sets": status.thisWeek.sets, "dots": dots, "rotation": capsules,
-                         "reminder": reminder] as [String: Any],
+            "weekCard": ["days": status.thisWeek.days, "sets": status.thisWeek.sets, "calendarWeeks": weeks.count,
+                         "calendar": calendarDays, "rotation": capsules, "reminder": reminder] as [String: Any],
         ]
     }
 }

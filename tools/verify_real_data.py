@@ -253,7 +253,14 @@ def round_half_away(x):
     return math.floor(x + 0.5) if x >= 0 else -math.floor(-x + 0.5)
 
 
-def compute(data, now):
+def calendar_weeks(screen_width):
+    """CHANGE_14 §1：點點日曆的週數＝卡片裡放得下的週數（格子 14 pt、間距 3 pt），至少 12 週；
+    卡片裡的寬度是螢幕寬度扣掉頁面和卡片的左右邊距（各 16 pt）"""
+    width, cell, gap = screen_width - 64, 14, 3
+    return max(12, int((width + gap) // (cell + gap)))
+
+
+def compute(data, now, screen_width=402):
     tz = data.tz
     today = now.astimezone(tz).date()
     tomorrow = start_of_day(today + timedelta(days=1), tz)
@@ -306,14 +313,16 @@ def compute(data, now):
             "speed60Kg": round_half_away(value * 0.6 / step) * step if value is not None else None,
         }
 
-    # 「本週」卡（CHANGE_13 §2-2）：天數和組數、週一到週日每一天的部位（今天之後為 null）、輪替膠囊、提醒
+    # 「本週」卡（CHANGE_13 §2-2）：天數和組數、輪替膠囊、提醒；
+    # 點點日曆（CHANGE_14 §1）：最右邊一欄是本週，每一天的部位（今天之後為 null）
     week = period(data, this_start, tomorrow, days)
     regions = day_regions(data)
-    monday = week_start(today)
-    dots = {}
-    for i in range(7):
-        d = monday + timedelta(days=i)
-        dots[d.isoformat()] = None if d > today else regions.get(d)
+    weeks = calendar_weeks(screen_width)
+    first_monday = week_start(today) - timedelta(days=7 * (weeks - 1))
+    calendar = {}
+    for i in range(7 * weeks):
+        d = first_monday + timedelta(days=i)
+        calendar[d.isoformat()] = None if d > today else regions.get(d)
     nxt = DAY_TYPES.index(next_day_type)
     capsules = {dt: "done" if i < nxt else "next" if i == nxt else "upcoming" for i, dt in enumerate(DAY_TYPES)}
     last = category_last_dates(data)
@@ -335,8 +344,8 @@ def compute(data, now):
         "rotation": rotation,
         "nextDayType": next_day_type,
         "mainLifts": main_lifts,
-        "weekCard": {"days": week["days"], "sets": week["sets"], "dots": dots, "rotation": capsules,
-                     "reminder": reminder},
+        "weekCard": {"days": week["days"], "sets": week["sets"], "calendarWeeks": weeks, "calendar": calendar,
+                     "rotation": capsules, "reminder": reminder},
     }
 
 
@@ -368,7 +377,8 @@ GROUPS = [
     ("rotation.", "日型（上次日期、幾天前、上次主項、下次主項）"), ("nextDayType", "「下一次」的日型"),
     ("mainLifts.", "主動作的估算 1RM 與 60% 建議重量"),
     ("weekCard.days", "本週卡的天數"), ("weekCard.sets", "本週卡的組數"),
-    ("weekCard.dots.", "本週卡每一天的部位顏色"), ("weekCard.rotation.", "本週卡的輪替膠囊"),
+    ("weekCard.calendarWeeks", "日曆的週數"), ("weekCard.calendar.", "日曆顯示的每一天的部位"),
+    ("weekCard.rotation.", "本週卡的輪替膠囊"),
     ("weekCard.reminder", "本週卡的提醒（分類和天數）"),
 ]
 
@@ -415,6 +425,7 @@ def main():
     parser.add_argument("--tz", default="Asia/Taipei", help="模擬器的時區")
     parser.add_argument("--now", help="ISO 8601，例如 2026-01-05T00:05:00+08:00")
     parser.add_argument("--app", help="App 的 -dumpStats 輸出")
+    parser.add_argument("--width", type=float, default=402, help="模擬器的螢幕寬度（pt），iPhone 17 Pro 是 402")
     parser.add_argument("--details", action="store_true")
     args = parser.parse_args()
 
@@ -432,7 +443,7 @@ def main():
         return
 
     now = datetime.fromisoformat(args.now)
-    result = compute(data, now)
+    result = compute(data, now, args.width)
     out = check_output(FIXTURES / f"script_{now.strftime('%Y%m%dT%H%M')}.json")
     out.write_text(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
     app = json.loads(Path(check_output(args.app)).read_text())

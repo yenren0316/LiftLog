@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 
 // 「今天」的兩張卡（CHANGE_13 §2）：「下一次」卡和「本週」卡要顯示的內容。
 // 純邏輯；數字都來自統計快照和建立菜單的共用函式，畫面只排版
@@ -64,32 +65,80 @@ nonisolated enum NextCard {
     }
 }
 
-/// 「本週」卡：週一到週日 7 個圓點、輪替的四個膠囊、很久沒練的分類提醒
+/// 「本週」卡：點點日曆（最右邊一欄是本週）、輪替的四個膠囊、很久沒練的分類提醒
 nonisolated enum WeekCard {
+    // MARK: 點點日曆（CHANGE_14 §1）
+
+    /// 日曆的一格：一天
     struct Day: Equatable, Sendable, Identifiable {
         /// 那天 0 點
         var date: Date
-        /// 「一」…「日」
-        var label: String
-        /// 有完成組的已結束訓練的部位（同一天多次訓練合併）；沒練或今天之後為 nil
+        /// 有完成組的已結束訓練的部位（StatsSnapshot.dayRegions，同一天多次訓練合併）；沒練或今天之後為 nil
         var region: DayRegion?
         var isToday: Bool
+        /// 本週今天之後的日子：只畫外框、不填色
         var isFuture: Bool
 
         var id: Date { date }
     }
 
-    static let weekdayLabels = ["一", "二", "三", "四", "五", "六", "日"]
+    /// 日曆的一欄：一週，由上到下是週一到週日
+    struct Week: Equatable, Sendable, Identifiable {
+        /// 那週的週一 0 點
+        var monday: Date
+        var days: [Day]
+        /// 這週的週一是那個月的第一個週一時標月份（「11月」），其他週為 nil
+        var month: String?
 
-    /// 這一週（週一開始，TrainingCount.weekCalendar）的 7 天。regions：每天 0 點 → 部位（StatsSnapshot.days）
-    static func days(regions: [Date: DayRegion], now: Date, calendar: Calendar = .current) -> [Day] {
+        var id: Date { monday }
+    }
+
+    /// 由舊到新 weeks 週，最右邊（最後）一欄是本週。週一開始（TrainingCount.weekCalendar，不管地區設定）。
+    /// regions：每天 0 點 → 部位（StatsSnapshot.dayRegions，快照裡是全部的紀錄，所以涵蓋日曆顯示的每一週）
+    static func weeks(regions: [Date: DayRegion], now: Date, count: Int, calendar: Calendar = .current) -> [Week] {
         let weekCalendar = TrainingCount.weekCalendar(calendar)
         let today = calendar.startOfDay(for: now)
-        guard let monday = TrainingCount.weekStart(of: now, calendar: weekCalendar) else { return [] }
-        return weekdayLabels.enumerated().compactMap { index, label in
-            guard let day = calendar.date(byAdding: .day, value: index, to: monday) else { return nil }
-            let isFuture = day > today
-            return Day(date: day, label: label, region: isFuture ? nil : regions[day], isToday: day == today, isFuture: isFuture)
+        guard let thisMonday = TrainingCount.weekStart(of: now, calendar: weekCalendar) else { return [] }
+        return (0..<max(count, 0)).reversed().compactMap { back -> Week? in
+            guard let shifted = weekCalendar.date(byAdding: .weekOfYear, value: -back, to: thisMonday) else { return nil }
+            let monday = calendar.startOfDay(for: shifted)
+            let days = (0..<7).compactMap { index -> Day? in
+                guard let date = calendar.date(byAdding: .day, value: index, to: monday).map({ calendar.startOfDay(for: $0) }) else { return nil }
+                let isFuture = date > today
+                return Day(date: date, region: isFuture ? nil : regions[date], isToday: date == today, isFuture: isFuture)
+            }
+            return Week(monday: monday, days: days, month: monthLabel(monday: monday, calendar: calendar))
+        }
+    }
+
+    /// 每個月的第一個週一（1～7 號）所在的那一欄標「N月」；跨年的一月一樣寫「1月」
+    static func monthLabel(monday: Date, calendar: Calendar = .current) -> String? {
+        let parts = calendar.dateComponents([.month, .day], from: monday)
+        guard let day = parts.day, day <= 7, let month = parts.month else { return nil }
+        return "\(month)月"
+    }
+
+    /// 格子的大小：12～14 pt、間距 3 pt，欄數是寬度放得下的週數，至少 12 週
+    enum Grid {
+        static let gap: CGFloat = 3
+        static let cellRange: ClosedRange<CGFloat> = 12...14
+        static let minWeeks = 12
+        /// 格子上方的月份那一列（文字 14、和格子的間距 4）
+        static let monthLabel: CGFloat = 14
+        static let monthRow: CGFloat = monthLabel + 4
+
+        /// 想要的格子大小（限制在 12～14）放得下幾週；放不下 12 週時把格子縮小（最小 12 pt）塞滿 12 週
+        static func layout(width: CGFloat, cell preferred: CGFloat) -> (weeks: Int, cell: CGFloat) {
+            let cell = min(max(preferred, cellRange.lowerBound), cellRange.upperBound)
+            let fits = Int(((width + gap) / (cell + gap)).rounded(.down))
+            guard fits < minWeeks else { return (fits, cell) }
+            let shrunk = (width - CGFloat(minWeeks - 1) * gap) / CGFloat(minWeeks)
+            return (minWeeks, max(cellRange.lowerBound, min(cell, shrunk)))
+        }
+
+        /// 7 列格子的高度（不含月份）
+        static func height(cell: CGFloat) -> CGFloat {
+            7 * cell + 6 * gap
         }
     }
 

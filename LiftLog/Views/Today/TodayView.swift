@@ -29,7 +29,7 @@ struct TodayView: View {
                             launcher.requestPlan(snapshot.nextPlan, context: context)
                         }
                     }
-                    WeekCardView(days: WeekCard.days(regions: snapshot.dayRegions, now: snapshot.now),
+                    WeekCardView(regions: snapshot.dayRegions, now: snapshot.now,
                                  week: snapshot.trainingStatus.thisWeek, next: snapshot.nextPlan.dayType,
                                  reminder: snapshot.weekReminder) {
                         coordinator.showingTrainingStatus = true
@@ -106,10 +106,11 @@ private struct NextCardView: View {
     }
 }
 
-/// 「本週」卡：「N 天・N 組」（和訓練狀態的本週同一份數字）、週一到週日的圓點（依部位上色、今天外框）、
-/// 輪替的四個膠囊、很久沒練的分類提醒。整張卡點一下打開「訓練狀態」浮窗
+/// 「本週」卡：「N 天・N 組」（和訓練狀態的本週同一份數字）、點點日曆（最右邊一欄是本週，CHANGE_14 §1）和圖例、
+/// 輪替的四個膠囊、很久沒練的分類提醒。整張卡點一下打開「訓練狀態」浮窗；日曆的格子本身不能點
 private struct WeekCardView: View {
-    var days: [WeekCard.Day]
+    var regions: [Date: DayRegion]
+    var now: Date
     var week: TrainingStatus.Period
     var next: DayType
     var reminder: WeekCard.Reminder?
@@ -125,16 +126,9 @@ private struct WeekCardView: View {
                     Spacer()
                     Text("\(week.days) 天・\(week.sets) 組").font(.subheadline.weight(.semibold).monospacedDigit())
                 }
-                HStack(spacing: 0) {
-                    ForEach(days) { day in
-                        VStack(spacing: 6) {
-                            Text(day.label)
-                                .font(.caption.weight(day.isToday ? .bold : .regular))
-                                .foregroundStyle(day.isToday ? Theme.textPrimary : Theme.textSecondary)
-                            WeekDot(day: day)
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
+                VStack(alignment: .leading, spacing: 8) {
+                    WeekCalendar(regions: regions, now: now)
+                    RegionLegend(style: .cells)
                 }
                 // 和建立菜單的日型一樣兩排：ME 一排、DE 一排
                 LazyVGrid(columns: columns, spacing: 8) {
@@ -156,33 +150,76 @@ private struct WeekCardView: View {
     }
 }
 
-/// 一天的圓點：有完成組的日子依部位上色（全身沿對角線兩色），今天強調色外框，今天之後是空的淡色圓點。
-/// 系統「不以顏色區分」開啟時，圓點裡加上部位的字（下、上、全，CHANGE_13 §3）
-private struct WeekDot: View {
-    var day: WeekCard.Day
+/// 點點日曆（CHANGE_14 §1）：每一欄是一週，由上到下是週一到週日，最右邊一欄是本週。
+/// 欄數是卡片寬度放得下的週數（格子 14 pt、間距 3 pt，至少 12 週）；上方在每個月第一個週一那一欄標月份
+private struct WeekCalendar: View {
+    var regions: [Date: DayRegion]
+    var now: Date
 
-    @Environment(\.accessibilityDifferentiateWithoutColor) private var withoutColor
-
-    static let size: CGFloat = 28
+    /// 格子的大小（12～14 pt）：首頁要一個畫面放得下
+    static let cell: CGFloat = 14
 
     var body: some View {
+        GeometryReader { geo in
+            let layout = WeekCard.Grid.layout(width: geo.size.width, cell: Self.cell)
+            let weeks = WeekCard.weeks(regions: regions, now: now, count: layout.weeks)
+            VStack(alignment: .leading, spacing: WeekCard.Grid.monthRow - WeekCard.Grid.monthLabel) {
+                monthLabels(weeks, cell: layout.cell)
+                HStack(alignment: .top, spacing: WeekCard.Grid.gap) {
+                    ForEach(weeks) { week in
+                        VStack(spacing: WeekCard.Grid.gap) {
+                            ForEach(week.days) { CalendarCell(day: $0, size: layout.cell) }
+                        }
+                    }
+                }
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("近 \(layout.weeks) 週的訓練日曆")
+        }
+        .frame(height: WeekCard.Grid.monthRow + WeekCard.Grid.height(cell: Self.cell))
+    }
+
+    /// 月份標在那個月第一個週一的那一欄；最右邊一欄的字靠右對齊，不超出日曆
+    private func monthLabels(_ weeks: [WeekCard.Week], cell: CGFloat) -> some View {
+        HStack(spacing: WeekCard.Grid.gap) {
+            ForEach(weeks) { week in
+                Text(week.month ?? "")
+                    .font(.caption2)
+                    .foregroundStyle(Theme.textSecondary)
+                    .fixedSize()
+                    .frame(width: cell, height: WeekCard.Grid.monthLabel,
+                           alignment: week.id == weeks.last?.id ? .trailing : .leading)
+            }
+        }
+    }
+}
+
+/// 日曆的一格：有完成組的日子依部位上色（全身沿對角線兩色、有氧與其他中性灰），沒練的日子 field，
+/// 本週今天之後只畫外框；今天在格子外面一圈主要文字色的外框（不用強調色）。
+/// 系統「不以顏色區分」開啟時格子裡不放字（太小），圖例裡有
+private struct CalendarCell: View {
+    var day: WeekCard.Day
+    var size: CGFloat
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: size / 4)
         Group {
             if day.isFuture {
-                Circle().stroke(Theme.field, lineWidth: 1.5)
+                shape.strokeBorder(Theme.field, lineWidth: 1.5)
             } else if let region = day.region {
-                Circle().fill(region.fill)
-                    .overlay { if withoutColor { RegionLetter(region: region, size: 13) } }
+                shape.fill(region.fill)
             } else {
-                Circle().fill(Theme.field)
+                shape.fill(Theme.field)
             }
         }
-        .frame(width: Self.size, height: Self.size)
+        .frame(width: size, height: size)
         .overlay {
             if day.isToday {
-                Circle().stroke(Theme.accent, lineWidth: 2).padding(-4)
+                RoundedRectangle(cornerRadius: size / 4 + 2)
+                    .strokeBorder(Theme.textPrimary, lineWidth: 1.5)
+                    .padding(-2.5)
             }
         }
-        .padding(4)
     }
 }
 
