@@ -133,9 +133,17 @@ struct ElapsedTimeText: View {
 }
 
 extension Staleness {
-    /// 「N 天前」的顏色：不用紅綠燈（CHANGE_13 §3），很久沒練是提醒（warning），其他中性
-    var color: Color {
-        isNeglected ? Theme.warning : Theme.textSecondary
+    /// 「N 天前」：不用紅綠燈（CHANGE_13 §3），很久沒練是提醒（warning 色加圖示），其他中性
+    func text(_ string: String, normal: Color = Theme.textSecondary) -> Text {
+        .warning(string, when: isNeglected, normal: normal)
+    }
+}
+
+extension Text {
+    /// 提醒和警示：warning 色，前面一定加上圖示，不只靠顏色（CHANGE_14 §2）；不是提醒時用 normal 色、不加圖示
+    static func warning(_ string: String, when isWarning: Bool = true, normal: Color = Theme.textSecondary) -> Text {
+        guard isWarning else { return Text(string).foregroundStyle(normal) }
+        return Text("\(Image(systemName: "exclamationmark.circle")) \(string)").foregroundStyle(Theme.warning)
     }
 }
 

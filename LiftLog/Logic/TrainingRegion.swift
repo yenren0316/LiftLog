@@ -17,18 +17,18 @@ nonisolated enum DayRegion: String, CaseIterable, Sendable {
         }
     }
 
-    /// 部位的顏色（主題的部位色 token，CHANGE_13 §3）：下肢 lowerBody、上肢 upperBody、全身兩色各一半、有氧與其他中性灰
+    /// 部位的顏色（CHANGE_14 §2：六個主題共用的部位色 BodyPart）：下肢、上肢各一色，全身兩色各一半，有氧與其他中性灰
     enum Swatch: Equatable, Sendable {
-        case solid(UInt32)
-        case split(UInt32, UInt32)
+        case solid(BodyPart)
+        case split(BodyPart, BodyPart)
         case neutral
     }
 
-    func swatch(_ palette: Palette) -> Swatch {
+    var swatch: Swatch {
         switch self {
-        case .lower: .solid(palette.lowerBody)
-        case .upper: .solid(palette.upperBody)
-        case .full: .split(palette.lowerBody, palette.upperBody)
+        case .lower: .solid(.lower)
+        case .upper: .solid(.upper)
+        case .full: .split(.lower, .upper)
         case .cardio: .neutral
         }
     }

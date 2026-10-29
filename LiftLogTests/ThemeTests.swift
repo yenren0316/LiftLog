@@ -9,8 +9,8 @@ struct ThemeTests {
         #expect(AppTheme.allCases.count == 6)
         for theme in AppTheme.allCases {
             let tokens = theme.palette.tokens
-            #expect(tokens.count == 14, "\(theme)")
-            #expect(Set(tokens.map(\.name)).count == 14, "\(theme)")
+            #expect(tokens.count == 12, "\(theme)")
+            #expect(Set(tokens.map(\.name)).count == 12, "\(theme)")
             #expect(tokens.allSatisfy { $0.hex <= 0xFFFFFF }, "\(theme)")
         }
     }
@@ -26,7 +26,7 @@ struct ThemeTests {
         let base = AppTheme.graphiteOrange.palette
         for theme in AppTheme.allCases {
             var palette = theme.palette
-            (palette.accent, palette.onAccent, palette.lowerBody, palette.upperBody) = (base.accent, base.onAccent, base.lowerBody, base.upperBody)
+            (palette.accent, palette.onAccent) = (base.accent, base.onAccent)
             #expect(palette == base, "\(theme)")
         }
         #expect(Set(AppTheme.allCases.map(\.palette.accent)).count == AppTheme.allCases.count)
@@ -67,21 +67,51 @@ struct ThemeTests {
         return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
     }
 
-    /// CHANGE_13 §3：兩個部位色和該主題的強調色、warning 色都清楚可分（色相差至少 40 度；銀色沒有色相，部位色要有彩度），
-    /// 兩個部位色之間至少 60 度、亮度相近，在深色底上清楚
-    @Test func bodyColorsAreDistinctFromAccentAndWarning() {
+    /// 系統色在某個外觀下的 0xRRGGBB（App 固定深色；increased 是系統的「增加對比」）
+    @MainActor
+    static func resolved(_ color: UIColor, increased: Bool = false) -> UInt32 {
+        let traits = UITraitCollection { traits in
+            traits.userInterfaceStyle = .dark
+            traits.accessibilityContrast = increased ? .high : .normal
+        }
+        var (r, g, b, a): (CGFloat, CGFloat, CGFloat, CGFloat) = (0, 0, 0, 0)
+        color.resolvedColor(with: traits).getRed(&r, green: &g, blue: &b, alpha: &a)
+        func byte(_ v: CGFloat) -> UInt32 { UInt32((min(max(v, 0), 1) * 255).rounded()) }
+        return byte(r) << 16 | byte(g) << 8 | byte(b)
+    }
+
+    /// CHANGE_14 §2：部位色只有一份共用的定義，是系統的藍和橘，六個主題都一樣（主題沒有自己的部位色）
+    @MainActor
+    @Test func bodyColorsAreTheSameSystemColorsInEveryTheme() {
+        #expect(BodyPart.lower.uiColor == .systemBlue && BodyPart.upper.uiColor == .systemOrange)
         for theme in AppTheme.allCases {
-            let p = theme.palette
-            for (name, body) in [("lowerBody", p.lowerBody), ("upperBody", p.upperBody)] {
-                #expect(Self.hsv(body).saturation >= 0.35, "\(theme) \(name)")
-                if Self.hsv(p.accent).saturation >= 0.1 {
-                    #expect(Self.hueGap(body, p.accent) >= 40, "\(theme) \(name) 和 accent 差 \(Self.hueGap(body, p.accent)) 度")
+            let names = theme.palette.tokens.map(\.name)
+            #expect(!names.contains("lowerBody") && !names.contains("upperBody"), "\(theme)")
+        }
+        // 畫面用的 token 和日曆、長條的顏色都是這兩個系統色，不讀主題
+        #expect(Self.resolved(UIColor(Theme.lowerBody)) == Self.resolved(.systemBlue))
+        #expect(Self.resolved(UIColor(Theme.upperBody)) == Self.resolved(.systemOrange))
+        #expect(DayRegion.lower.swatch == .solid(.lower) && DayRegion.upper.swatch == .solid(.upper))
+        #expect(DayRegion.full.swatch == .split(.lower, .upper) && DayRegion.cardio.swatch == .neutral)
+        // 不是寫死的色碼：系統開啟「增加對比」時會換成加強的版本
+        for part in BodyPart.allCases {
+            #expect(Self.resolved(part.uiColor) != Self.resolved(part.uiColor, increased: true), "\(part)")
+        }
+    }
+
+    /// CHANGE_14 §2：下肢和上肢的色相至少差 60 度；兩色和卡片背景的對比度至少 3:1（非文字元素），一般和「增加對比」都是
+    @MainActor
+    @Test func bodyColorsAreDistinctAndVisibleOnCards() {
+        for increased in [false, true] {
+            let lower = Self.resolved(BodyPart.lower.uiColor, increased: increased)
+            let upper = Self.resolved(BodyPart.upper.uiColor, increased: increased)
+            #expect(Self.hueGap(lower, upper) >= 60, "增加對比 \(increased)：差 \(Self.hueGap(lower, upper)) 度")
+            for theme in AppTheme.allCases {
+                for (name, body) in [("下肢", lower), ("上肢", upper)] {
+                    let ratio = Self.contrast(body, theme.palette.card)
+                    #expect(ratio >= 3, "\(theme) \(name) 在卡片上只有 \(ratio):1（增加對比 \(increased)）")
                 }
-                #expect(Self.hueGap(body, p.warning) >= 40, "\(theme) \(name) 和 warning 差 \(Self.hueGap(body, p.warning)) 度")
-                #expect(Self.brightness(body) - Self.brightness(p.background) >= 0.45, "\(theme) \(name)")
             }
-            #expect(Self.hueGap(p.lowerBody, p.upperBody) >= 60, "\(theme)")
-            #expect(abs(Self.brightness(p.lowerBody) - Self.brightness(p.upperBody)) <= 0.15, "\(theme)")
         }
     }
 

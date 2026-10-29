@@ -22,7 +22,8 @@ struct ThemeSection: View {
     }
 }
 
-/// 用該主題自己的顏色畫：一列已完成的組、一列未完成的組、選取中的 chip、主要按鈕、兩個部位色（CHANGE_13 §3）
+/// 用該主題自己的顏色畫：一列已完成的組、一列未完成的組、選取中的 chip、主要按鈕、兩個部位色
+/// （CHANGE_13 §3；CHANGE_14 §2 起部位色六個主題都一樣，是系統的藍和橘）
 struct ThemePreviewCard: View {
     var theme: AppTheme
     var isSelected: Bool
@@ -51,8 +52,8 @@ struct ThemePreviewCard: View {
                     .frame(maxWidth: .infinity, minHeight: 24)
                     .background(Color(hex: p.accent), in: .capsule)
                 HStack(spacing: 8) {
-                    bodyColor("下肢", p.lowerBody, p)
-                    bodyColor("上肢", p.upperBody, p)
+                    bodyColor("下肢", .lower, p)
+                    bodyColor("上肢", .upper, p)
                 }
             }
             .padding(8)
@@ -84,9 +85,9 @@ struct ThemePreviewCard: View {
         .background(Color(hex: p.done).opacity(done ? 0.18 : 0), in: .rect(cornerRadius: 6))
     }
 
-    private func bodyColor(_ title: String, _ hex: UInt32, _ p: Palette) -> some View {
+    private func bodyColor(_ title: String, _ part: BodyPart, _ p: Palette) -> some View {
         HStack(spacing: 4) {
-            Circle().fill(Color(hex: hex)).frame(width: 10, height: 10)
+            Circle().fill(part.color).frame(width: 10, height: 10)
             Text(title).font(.caption2).foregroundStyle(Color(hex: p.textSecondary))
         }
     }

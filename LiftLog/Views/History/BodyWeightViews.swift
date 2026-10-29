@@ -150,9 +150,8 @@ struct BodyWeightEntrySheet: View {
                         Text(unit.symbol).foregroundStyle(Theme.textSecondary)
                     }
                     if let existing = BodyWeightLog.existing(on: date, in: context) {
-                        Text("這天已經有 \(unit.formatWithUnit(kg: existing.kg))，儲存會覆蓋")
+                        Text.warning("這天已經有 \(unit.formatWithUnit(kg: existing.kg))，儲存會覆蓋")
                             .font(.footnote)
-                            .foregroundStyle(Theme.warning)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }

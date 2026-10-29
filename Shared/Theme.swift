@@ -4,7 +4,7 @@ import UIKit
 // 配色系統（CHANGE_04 第 6 節）：所有顏色都集中在這個檔案，畫面只用 Theme 的 token。
 // 這個檔案在 Shared 資料夾，App 和小工具（CHANGE_05）共用；畫面元件在 App 的 Theme/Components.swift。
 
-/// 一個主題的 14 個顏色（0xRRGGBB）
+/// 一個主題的 12 個顏色（0xRRGGBB）。部位色不在這裡：六個主題共用系統色（BodyPart，CHANGE_14 §2）
 nonisolated struct Palette: Equatable, Sendable {
     /// 頁面底色
     var background: UInt32
@@ -16,21 +16,18 @@ nonisolated struct Palette: Equatable, Sendable {
     var separator: UInt32
     var textPrimary: UInt32
     var textSecondary: UInt32
-    /// 強調色（CHANGE_13 §3）：只用在可以點的主要按鈕和連結、選取的狀態、建議值（建議主項、建議重量）、
-    /// 「下一次」的標記、今天的外框
+    /// 強調色（CHANGE_13 §3、CHANGE_14 §2）：只用在按鈕和連結、選取的狀態、建議值（建議主項、建議重量）、
+    /// 「下一次」的標記，以及單一數列的圖表（主項進步、體重、有氧、動作詳情的折線）
     var accent: UInt32
     /// accent 上面的文字顏色
     var onAccent: UInt32
     /// 完成的組（整列底色用 18% 透明度，打勾符號用原色）；不拿來表示好壞（CHANGE_13 §3）
     var done: UInt32
-    /// 提醒和警示（很久沒練、拉偏少、沒練、簽署快到期、輸入錯誤的提示、安全提示）；不拿來表示好壞（CHANGE_13 §3）
+    /// 提醒和警示（很久沒練、拉偏少、沒練、簽署快到期、輸入錯誤的提示、安全提示）；不拿來表示好壞（CHANGE_13 §3）。
+    /// 每個用到的地方都同時有圖示或文字，不只靠顏色（CHANGE_14 §2）
     var warning: UInt32
     /// 刪除、錯誤
     var danger: UInt32
-    /// 部位色（CHANGE_13 §3）：下肢、上肢。「本週」卡的圓點、訓練狀態、訓練頻率長條；全身用這兩色。
-    /// 兩色和這個主題的 accent、warning 色相差至少 40 度（銀色沒有色相：要有彩度），兩色之間至少 60 度、亮度相近
-    var lowerBody: UInt32 = 0xE07CF5
-    var upperBody: UInt32 = 0x4FA3FF
     /// 可以點的卡片和列按下時的底色（CHANGE_10 §4）：比卡片亮，和輸入框分得開
     var pressed: UInt32 = 0x2F3035
 
@@ -50,8 +47,7 @@ nonisolated struct Palette: Equatable, Sendable {
     var tokens: [(name: String, hex: UInt32)] {
         [("background", background), ("card", card), ("field", field), ("separator", separator),
          ("textPrimary", textPrimary), ("textSecondary", textSecondary), ("accent", accent), ("onAccent", onAccent),
-         ("done", done), ("warning", warning), ("danger", danger), ("lowerBody", lowerBody), ("upperBody", upperBody),
-         ("pressed", pressed)]
+         ("done", done), ("warning", warning), ("danger", danger), ("pressed", pressed)]
     }
 }
 
@@ -74,20 +70,19 @@ nonisolated enum AppTheme: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// 石墨深灰的底；accent、onAccent 和兩個部位色由各主題決定
+    /// 石墨深灰的底；只有 accent 和 onAccent 由各主題決定（部位色六個主題共用，見 BodyPart）
     private static let graphite = Palette([0x111214, 0x1B1C1F, 0x2A2B30, 0x34363B, 0xF3F3F4, 0x9C9DA3,
                                            0xFF8A3D, 0x111214, 0x3FB97C, 0xF2C14E, 0xEF5350])
 
     var palette: Palette {
         var palette = Self.graphite
-        // 部位色避開 accent 和 warning（黃，約 42 度）的色相（CHANGE_13 §3）
-        (palette.accent, palette.onAccent, palette.lowerBody, palette.upperBody) = switch self {
-        case .graphiteOrange: (0xFF8A3D, 0x111214, 0xE07CF5, 0x4FA3FF)   // 下肢：洋紫；上肢：天藍
-        case .graphiteBlue: (0x4C7DF0, 0xFFFFFF, 0xFF7AB8, 0x2EC4B6)     // 下肢：粉；上肢：青綠
-        case .graphitePurple: (0xA683FF, 0x111214, 0xFF7AB8, 0x2EC4D6)   // 下肢：粉；上肢：青
-        case .graphitePink: (0xFF6B9D, 0x111214, 0xB48CFF, 0x2EC4B6)     // 下肢：淡紫；上肢：青綠
-        case .graphiteCyan: (0x2EC4D6, 0x111214, 0xFF7AB8, 0xB48CFF)     // 下肢：粉；上肢：淡紫
-        case .graphiteSilver: (0xE6E6E6, 0x111214, 0xE07CF5, 0x9BCBFF)   // 下肢：洋紫；上肢：淺藍（銀色沒有色相）
+        (palette.accent, palette.onAccent) = switch self {
+        case .graphiteOrange: (0xFF8A3D, 0x111214)
+        case .graphiteBlue: (0x4C7DF0, 0xFFFFFF)
+        case .graphitePurple: (0xA683FF, 0x111214)
+        case .graphitePink: (0xFF6B9D, 0x111214)
+        case .graphiteCyan: (0x2EC4D6, 0x111214)
+        case .graphiteSilver: (0xE6E6E6, 0x111214)
         }
         return palette
     }
@@ -118,6 +113,22 @@ nonisolated enum AppTheme: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
+/// 部位色（CHANGE_14 §2）：下肢系統藍、上肢系統橘，六個主題共用這一份。
+/// 直接用系統色、不寫死色碼：App 固定深色時系統自動用深色版本，系統開啟「增加對比」時自動加強。
+/// 只出現在資料圖形上（「本週」卡的日曆和圖例、訓練狀態的圓點、訓練頻率的長條和圖例、主題預覽）；全身用這兩色
+nonisolated enum BodyPart: CaseIterable, Sendable {
+    case lower, upper
+
+    var uiColor: UIColor {
+        switch self {
+        case .lower: .systemBlue
+        case .upper: .systemOrange
+        }
+    }
+
+    var color: Color { Color(uiColor: uiColor) }
+}
+
 /// 畫面使用的顏色 token：依目前主題動態決定
 enum Theme {
     static let background = token { $0.background }
@@ -131,8 +142,9 @@ enum Theme {
     static let done = token { $0.done }
     static let warning = token { $0.warning }
     static let danger = token { $0.danger }
-    static let lowerBody = token { $0.lowerBody }
-    static let upperBody = token { $0.upperBody }
+    /// 部位色：六個主題共用的系統色（BodyPart）
+    static let lowerBody = BodyPart.lower.color
+    static let upperBody = BodyPart.upper.color
     static let pressed = token { $0.pressed }
 
     static let cardRadius: CGFloat = 28

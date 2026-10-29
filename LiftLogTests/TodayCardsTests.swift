@@ -119,14 +119,9 @@ struct TodayCardsTests {
         #expect(dots.map(\.region) == [.lower, .cardio, .full, nil, nil, nil, nil])
         #expect(dots.map(\.isToday) == [false, false, true, false, false, false, false])
         #expect(dots.map(\.isFuture) == [false, false, false, true, true, true, true])
-        // 顏色：下肢、上肢各自的 token，全身兩色，有氧與其他中性灰
-        for theme in AppTheme.allCases {
-            let palette = theme.palette
-            #expect(DayRegion.lower.swatch(palette) == .solid(palette.lowerBody))
-            #expect(DayRegion.upper.swatch(palette) == .solid(palette.upperBody))
-            #expect(DayRegion.full.swatch(palette) == .split(palette.lowerBody, palette.upperBody))
-            #expect(DayRegion.cardio.swatch(palette) == .neutral)
-        }
+        // 顏色：下肢、上肢各自的部位色，全身兩色，有氧與其他中性灰
+        #expect(DayRegion.lower.swatch == .solid(.lower) && DayRegion.upper.swatch == .solid(.upper))
+        #expect(DayRegion.full.swatch == .split(.lower, .upper) && DayRegion.cardio.swatch == .neutral)
         // 「不以顏色區分」時圓點裡的字
         #expect(DayRegion.allCases.map(\.letter) == ["下", "上", "全", nil])
     }

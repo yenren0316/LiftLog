@@ -369,9 +369,8 @@ struct CandidateRow: View {
             }
             Spacer(minLength: 8)
             if let days = candidate.daysSince {
-                Text(RelativeDay.text(days))
+                Recency.staleness(days: days).text(RelativeDay.text(days))
                     .font(.headline.monospacedDigit())
-                    .foregroundStyle(Recency.staleness(days: days).color)
             }
         }
         .padding(.vertical, 10)

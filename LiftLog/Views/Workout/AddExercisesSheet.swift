@@ -107,9 +107,8 @@ struct AddExercisesSheet: View {
                 if added {
                     Chip(text: "已加入")
                 } else if let days {
-                    Text(RelativeDay.text(days))
+                    Recency.staleness(days: days).text(RelativeDay.text(days))
                         .font(.subheadline.monospacedDigit())
-                        .foregroundStyle(Recency.staleness(days: days).color)
                 } else {
                     Chip(text: "新")
                 }

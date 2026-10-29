@@ -107,14 +107,14 @@ struct TrainingStatusSheet: View {
         .padding(.vertical, 6)
     }
 
-    /// 「12 天前（10/15）」；超過 14 天用 warning 色；沒有紀錄「還沒練過」
+    /// 「12 天前（10/15）」；超過 14 天用 warning 色加圖示（CHANGE_14 §2）；沒有紀錄「還沒練過」
     @ViewBuilder
     private func lastText(_ row: TrainingStatus.Rotation) -> some View {
         if let date = row.lastDate {
             let days = TrainingStatus.daysAgo(date, now: stats.snapshot.now, calendar: .current)
-            Text("\(days) 天前（\(date.formatted(.dateTime.month(.defaultDigits).day()))）")
+            Text.warning("\(days) 天前（\(date.formatted(.dateTime.month(.defaultDigits).day()))）",
+                         when: TrainingStatus.isStale(daysAgo: days))
                 .font(.subheadline.monospacedDigit())
-                .foregroundStyle(TrainingStatus.isStale(daysAgo: days) ? Theme.warning : Theme.textSecondary)
         } else {
             Text("還沒練過").font(.subheadline).foregroundStyle(Theme.textSecondary)
         }

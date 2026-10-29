@@ -92,18 +92,18 @@ private struct DetailHeader: View {
                 .foregroundStyle(Theme.textSecondary)
 
             HStack(spacing: 0) {
-                stat(days.map(RelativeDay.text) ?? "未練過", "上次",
-                     color: Recency.staleness(days: days).isNeglected ? Theme.warning : Theme.textPrimary)
-                stat("\(exercise.trainingCount(withinDays: 90)) 次", "近 90 天", color: Theme.textPrimary)
+                stat(Recency.staleness(days: days).text(days.map(RelativeDay.text) ?? "未練過", normal: Theme.textPrimary), "上次")
+                stat(Text("\(exercise.trainingCount(withinDays: 90)) 次"), "近 90 天")
             }
         }
         .card()
     }
 
-    private func stat(_ value: String, _ title: String, color: Color) -> some View {
+    /// value 自己帶顏色：很久沒練是 warning 色加圖示（CHANGE_14 §2），其他主要文字色
+    private func stat(_ value: Text, _ title: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title).font(.footnote).foregroundStyle(Theme.textSecondary)
-            Text(value).font(.title3.bold().monospacedDigit()).foregroundStyle(color)
+            value.font(.title3.bold().monospacedDigit())
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

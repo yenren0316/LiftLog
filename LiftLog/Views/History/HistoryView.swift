@@ -192,7 +192,7 @@ private struct BackfillSheet: View {
                     row("開始時間") { DatePicker("開始時間", selection: $start, displayedComponents: .hourAndMinute) }
                     row("結束時間") { DatePicker("結束時間", selection: $end, displayedComponents: .hourAndMinute) }
                     if interval == nil {
-                        Text("結束時間必須晚於開始時間").font(.footnote).foregroundStyle(Theme.warning)
+                        Text.warning("結束時間必須晚於開始時間").font(.footnote)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }

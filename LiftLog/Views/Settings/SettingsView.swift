@@ -331,15 +331,15 @@ private struct AboutSettings: View {
     }
 }
 
-/// 免費簽署的到期日，剩一天以內用 warning 色提醒重新安裝
+/// 免費簽署的到期日，剩一天以內用 warning 色加圖示提醒重新安裝（CHANGE_14 §2）
 private struct ExpirationLine: View {
     var expiration: Date
 
     var body: some View {
         let days = ProvisioningProfile.daysLeft(until: expiration)
         let left = days > 0 ? "還有 \(days) 天" : "今天到期"
-        Text("簽署到期 \(expiration.formatted(.dateTime.year().month(.twoDigits).day(.twoDigits).hour().minute()))・\(left)")
+        Text.warning("簽署到期 \(expiration.formatted(.dateTime.year().month(.twoDigits).day(.twoDigits).hour().minute()))・\(left)",
+                     when: days <= 1)
             .font(.footnote.monospacedDigit())
-            .foregroundStyle(days <= 1 ? Theme.warning : Theme.textSecondary)
     }
 }

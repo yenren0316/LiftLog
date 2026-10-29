@@ -24,10 +24,9 @@ struct LibraryExerciseRow: View {
                         if exercise.isArchived { Chip(text: "封存") }
                     }
                     let last = RelativeDay.text(since: stat?.lastDate, now: stats.snapshot.now) ?? "未練過"
-                    Text(showsCategory ? "\(exercise.category.title)・\(last)" : last)
+                    let lastText = Recency.staleness(days: Recency.daysSince(stat?.lastDate, now: stats.snapshot.now)).text(last)
+                    (showsCategory ? Text("\(Text("\(exercise.category.title)・").foregroundStyle(Theme.textSecondary))\(lastText)") : lastText)
                         .font(.footnote)
-                        .foregroundStyle(stat?.lastDate == nil ? Theme.textSecondary
-                                                               : Recency.staleness(days: Recency.daysSince(stat?.lastDate, now: stats.snapshot.now)).color)
                         .lineLimit(1)
                 }
                 Spacer()
