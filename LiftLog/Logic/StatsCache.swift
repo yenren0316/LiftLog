@@ -52,8 +52,6 @@ nonisolated struct StatsSnapshot: Sendable {
     /// 計算時的「現在」：畫面的「N 天前」「今天」都用它，和快照裡的本週、近 30 天同一個時間點（CHANGE_11 §2）
     var now = Date.now
     var exercises: [UUID: ExerciseStat] = [:]
-    /// 動作庫各分類「最久沒練」的天數：未封存、練過的動作裡最久沒練的那個距今幾天；都沒練過的分類沒有值
-    var neglectedDays: [ExerciseCategory: Int] = [:]
     /// 近 30 天各分類完成的組數（不含熱身）：歷程統計的平衡卡（CHANGE_13 §2-4）
     var recentSets: [ExerciseCategory: Int] = [:]
     /// 每天（0 點）有完成組的已結束訓練的部位，同一天多次訓練合併：「本週」卡的圓點（CHANGE_13 §2-2）
@@ -114,12 +112,6 @@ nonisolated struct StatsSnapshot: Sendable {
         }
         snapshot.dayRegions = regionsByDay.compactMapValues(DayRegion.merged)
         snapshot.weekReminder = WeekCard.reminder(lastDates: snapshot.categoryLastDates, now: now, calendar: calendar)
-
-        // 動作庫的分類列：最久沒練
-        for category in ExerciseCategory.allCases {
-            let dates = exercises.filter { $0.category == category && !$0.isArchived }.compactMap { snapshot.exercises[$0.id]?.lastDate }
-            if let oldest = dates.min() { snapshot.neglectedDays[category] = Recency.daysSince(oldest, now: now, calendar: calendar) }
-        }
 
         // 近 30 天
         let recent = PlanHistory(history.sessions.filter { RecentWindow.contains($0.date, now: now, calendar: calendar) })

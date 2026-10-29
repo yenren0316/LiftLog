@@ -87,18 +87,12 @@ struct LibraryView: View {
         .environment(navigation)
     }
 
-    /// 分類名稱、「N 個動作・最久沒練：N 天」；有沒練過的動作時另外寫「M 個未練過」
+    /// 分類名稱、「N 個動作」（CHANGE_13 §4：拿掉「最久沒練」和「N 個未練過」，那些在分類清單裡排序看）
     private func categoryRow(_ category: ExerciseCategory) -> some View {
-        let members = exercises.filter { $0.category == category && !$0.isArchived }
-        let untrained = members.filter { stats.snapshot.exercises[$0.id]?.lastDate == nil }.count
-        var parts = ["\(members.count) 個動作"]
-        if let days = stats.snapshot.neglectedDays[category] {
-            parts.append("最久沒練：\(days) 天")
-        }
-        if untrained > 0 { parts.append("\(untrained) 個未練過") }
+        let count = exercises.filter { $0.category == category && !$0.isArchived }.count
         return VStack(alignment: .leading, spacing: 2) {
             Text(category.fullTitle).font(.body.weight(.semibold))
-            Text(parts.joined(separator: "・")).font(.footnote).foregroundStyle(Theme.textSecondary)
+            Text("\(count) 個動作").font(.footnote).foregroundStyle(Theme.textSecondary)
         }
         .padding(.vertical, 2)
     }

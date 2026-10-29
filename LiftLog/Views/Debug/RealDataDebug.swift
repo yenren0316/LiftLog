@@ -63,6 +63,21 @@ enum RealDataDebug {
             ] as [String: Any]
         }
 
+        // 「本週」卡（CHANGE_13 §2-2）：天數和組數、每一天的部位（今天之後為 null）、輪替膠囊、提醒
+        var dots: [String: Any] = [:]
+        for day in WeekCard.days(regions: snapshot.dayRegions, now: now, calendar: calendar) {
+            dots[day.date.formatted(dayFormat)] = day.region?.rawValue ?? NSNull()
+        }
+        var capsules: [String: Any] = [:]
+        for item in WeekCard.rotation(next: snapshot.nextPlan.dayType) {
+            capsules[item.dayType.rawValue] = switch item.mark {
+            case .done: "done"
+            case .next: "next"
+            case .upcoming: "upcoming"
+            }
+        }
+        let reminder: Any = snapshot.weekReminder.map { ["category": $0.category.rawValue, "days": $0.days] as [String: Any] } ?? NSNull()
+
         return [
             "thisWeek": period(status.thisWeek),
             "lastWeek": period(status.lastWeek),
@@ -75,7 +90,8 @@ enum RealDataDebug {
             "rotation": rotation,
             "nextDayType": snapshot.nextPlan.dayType.rawValue,
             "mainLifts": mainLifts,
-            "neglectedDays": Dictionary(uniqueKeysWithValues: snapshot.neglectedDays.map { ($0.key.rawValue, $0.value) }),
+            "weekCard": ["days": status.thisWeek.days, "sets": status.thisWeek.sets, "dots": dots, "rotation": capsules,
+                         "reminder": reminder] as [String: Any],
         ]
     }
 }

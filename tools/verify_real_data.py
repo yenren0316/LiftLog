@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CHANGE_11 §9：用備份 JSON 獨立驗算統計，和 App 的 -dumpStats 比對。
+"""CHANGE_11 §9、CHANGE_13 R1：用備份 JSON 獨立驗算統計，和 App 的 -dumpStats 比對。
 
 只依 SPEC.md 的文字規則自己算一次，不呼叫、不複製 App 的程式碼。
 備份含個人資料：所有輸出只能放在 tools/fixtures/ 底下（已在 .gitignore），終端機只印「一致／不一致」。
@@ -148,14 +148,45 @@ def week_start(day):
     return day - timedelta(days=day.weekday())
 
 
-def last_dates(data):
-    """每個動作最後一次（有完成組的已結束訓練）的日期"""
+def category_last_dates(data):
+    """CHANGE_13 §2-2：每個分類最近一次完成組的日期（任何動作，含封存）"""
     last = {}
     for s in data.sessions:  # 由新到舊
         for it in s["items"]:
-            if it["sets"] and it["exercise"]["id"] not in last:
-                last[it["exercise"]["id"]] = s["date"]
+            c = it["exercise"]["category"]
+            if it["sets"] and c not in last:
+                last[c] = s["date"]
     return last
+
+
+def session_region(s):
+    """SPEC「部位推算」：只看上肢和下肢分類的動作（有完成組的）；都沒有時是「有氧與其他」；沒有完成組的訓練不算"""
+    categories = [it["exercise"]["category"] for it in s["items"] if it["sets"]]
+    if not categories:
+        return None
+    lower = any(c in LOWER for c in categories)
+    upper = any(c in UPPER for c in categories)
+    return "full" if lower and upper else "lower" if lower else "upper" if upper else "cardio"
+
+
+def day_regions(data):
+    """同一天多次訓練合併：下肢＋上肢 = 全身，有氧不影響有重訓的日子"""
+    regions = {}
+    for s in data.sessions:
+        r = session_region(s)
+        if r is not None:
+            regions.setdefault(data.local_day(s["date"]), []).append(r)
+    merged = {}
+    for day, rs in regions.items():
+        lower = any(r in ("lower", "full") for r in rs)
+        upper = any(r in ("upper", "full") for r in rs)
+        merged[day] = "full" if lower and upper else "lower" if lower else "upper" if upper else "cardio"
+    return merged
+
+
+# CHANGE_13 §2-2：提醒只看下肢推、下肢拉和四個上肢分類，超過 14 天
+REMINDER_CATEGORIES = [c for c in CATEGORIES if c in LOWER or c in UPPER]
+STALE_DAYS = 14
 
 
 def rotation_pool(data, day_type):
@@ -275,17 +306,27 @@ def compute(data, now):
             "speed60Kg": round_half_away(value * 0.6 / step) * step if value is not None else None,
         }
 
-    # 動作庫各分類「最久沒練」：未封存、練過的動作裡最久沒練的那個
-    last = last_dates(data)
-    neglected = {}
-    for c in CATEGORIES:
-        dates = [last[e["id"]] for e in data.exercises.values()
-                 if e["category"] == c and not e["archived"] and e["id"] in last]
-        if dates:
-            neglected[c] = max(0, days_between(data.local_day(min(dates)), today))
+    # 「本週」卡（CHANGE_13 §2-2）：天數和組數、週一到週日每一天的部位（今天之後為 null）、輪替膠囊、提醒
+    week = period(data, this_start, tomorrow, days)
+    regions = day_regions(data)
+    monday = week_start(today)
+    dots = {}
+    for i in range(7):
+        d = monday + timedelta(days=i)
+        dots[d.isoformat()] = None if d > today else regions.get(d)
+    nxt = DAY_TYPES.index(next_day_type)
+    capsules = {dt: "done" if i < nxt else "next" if i == nxt else "upcoming" for i, dt in enumerate(DAY_TYPES)}
+    last = category_last_dates(data)
+    stale = [(max(0, days_between(data.local_day(last[c]), today)), -i, c)
+             for i, c in enumerate(REMINDER_CATEGORIES) if c in last]
+    stale = [x for x in stale if x[0] > STALE_DAYS]
+    reminder = None
+    if stale:
+        top = max(stale)
+        reminder = {"category": top[2], "days": top[0]}
 
     return {
-        "thisWeek": period(data, this_start, tomorrow, days),
+        "thisWeek": week,
         "lastWeek": period(data, last_start, last_end, days),
         "recent30": {"sets": recent_sets,
                      "push": sum(recent_sets[c] for c in PUSH), "pull": sum(recent_sets[c] for c in PULL),
@@ -294,7 +335,8 @@ def compute(data, now):
         "rotation": rotation,
         "nextDayType": next_day_type,
         "mainLifts": main_lifts,
-        "neglectedDays": neglected,
+        "weekCard": {"days": week["days"], "sets": week["sets"], "dots": dots, "rotation": capsules,
+                     "reminder": reminder},
     }
 
 
@@ -321,11 +363,13 @@ GROUPS = [
     ("thisWeek.days", "本週天數"), ("thisWeek.sets", "本週組數"), ("thisWeek.lower", "本週下肢組數"),
     ("thisWeek.upper", "本週上肢組數"), ("thisWeek.other", "本週其他組數"), ("thisWeek.cardioMinutes", "本週有氧分鐘"),
     ("lastWeek.", "上週同期"),
-    ("recent30.sets.", "近 30 天各分類組數"), ("recent30.push", "推拉比"), ("recent30.pull", "推拉比"),
+    ("recent30.sets.", "平衡卡 9 個分類的組數（近 30 天）"), ("recent30.push", "推拉比"), ("recent30.pull", "推拉比"),
     ("recent30.unilateralSessions", "單邊次數"), ("recent30.explosiveSessions", "爆發次數"),
     ("rotation.", "日型（上次日期、幾天前、上次主項、下次主項）"), ("nextDayType", "「下一次」的日型"),
     ("mainLifts.", "主動作的估算 1RM 與 60% 建議重量"),
-    ("neglectedDays.", "動作庫各分類「最久沒練」"),
+    ("weekCard.days", "本週卡的天數"), ("weekCard.sets", "本週卡的組數"),
+    ("weekCard.dots.", "本週卡每一天的部位顏色"), ("weekCard.rotation.", "本週卡的輪替膠囊"),
+    ("weekCard.reminder", "本週卡的提醒（分類和天數）"),
 ]
 
 

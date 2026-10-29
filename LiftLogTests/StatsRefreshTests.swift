@@ -63,13 +63,13 @@ struct StatsRefreshTests {
         // 上週同期是上週一到上週一（含當天），週日的訓練不在裡面
         #expect(cache.snapshot.trainingStatus.lastWeek.days == 0)
         #expect(TrainingStatus.daysAgo(try #require(row.lastDate), now: cache.snapshot.now, calendar: calendar) == 1)
-        #expect(cache.snapshot.neglectedDays[.kneeDominant] == 1)
+        #expect(Recency.daysSince(cache.snapshot.categoryLastDates[.kneeDominant], now: cache.snapshot.now, calendar: calendar) == 1)
 
         // App 開著時跨過午夜（NSCalendarDayChanged）：照樣重算
         let tuesday = date(11, 3, 0, 0)
         cache.refresh(.dayChanged, now: tuesday)
         #expect(cache.snapshot.now == tuesday)
-        #expect(cache.snapshot.neglectedDays[.kneeDominant] == 2)
+        #expect(Recency.daysSince(cache.snapshot.categoryLastDates[.kneeDominant], now: cache.snapshot.now, calendar: calendar) == 2)
     }
 
     @Test func fakeNowParsesWithAndWithoutTimeZone() {
