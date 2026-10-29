@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CHANGE_11 §9、CHANGE_13 R1、CHANGE_14 R1：用備份 JSON 獨立驗算統計，和 App 的 -dumpStats 比對。
+"""CHANGE_11 §9、CHANGE_13 R1、CHANGE_14 R1、CHANGE_15 R1：用備份 JSON 獨立驗算統計，和 App 的 -dumpStats 比對。
 
 只依 SPEC.md 的文字規則自己算一次，不呼叫、不複製 App 的程式碼。
 備份含個人資料：所有輸出只能放在 tools/fixtures/ 底下（已在 .gitignore），終端機只印「一致／不一致」。
@@ -56,7 +56,7 @@ class Data:
             self.exercises[e["id"]] = {
                 "id": e["id"], "name": e["name"], "category": category, "tags": set(e.get("tags", [])),
                 "archived": bool(e.get("isArchived", False)), "equipment": e.get("equipment"),
-                "me": e.get("meRotation"), "de": e.get("deRotation"),
+                "me": e.get("meRotation"), "de": e.get("deRotation"), "logType": e.get("logType", "weight"),
             }
         # SPEC「推導規則」：統計只算已結束的訓練、已完成的組；動作不存在的項目略過
         self.sessions = []
@@ -71,8 +71,8 @@ class Data:
                 sets = [st for st in sorted(it["sets"], key=lambda x: x.get("order", 0)) if st.get("isCompleted")]
                 items.append({"exercise": ex, "role": it.get("role"), "order": it.get("order", 0), "sets": sets})
             items.sort(key=lambda x: x["order"])
-            self.sessions.append({"date": parse_time(s["startedAt"]).astimezone(tz), "dayType": s.get("dayType"),
-                                  "items": items})
+            self.sessions.append({"id": s["id"], "date": parse_time(s["startedAt"]).astimezone(tz),
+                                  "dayType": s.get("dayType"), "items": items})
         # 由新到舊
         self.sessions.sort(key=lambda x: x["date"], reverse=True)
 
@@ -249,6 +249,34 @@ def estimated_1rm(data, exercise_id, now):
     return overall, overall is not None
 
 
+def best_1rm(sets):
+    """估算 1RM 最好的一組：Epley，只算 1～10 下、有重量的正式組和 MAX 組（已完成），大於 0；沒有可以計算的組時為 None"""
+    values = [epley(st["weightKg"], st["reps"]) for st in sets
+              if working(st) and st.get("weightKg") is not None and st.get("reps") is not None and 1 <= st["reps"] <= 10]
+    values = [v for v in values if v > 0]
+    return max(values) if values else None
+
+
+def new_records(data):
+    """CHANGE_15 §4：每一次（已結束的）訓練中刷新紀錄的動作：這次的估算 1RM 高於這次訓練開始之前、
+    這個動作所有紀錄最好的估算 1RM；以前沒有可以計算的紀錄不算、相等不算（1e-6 以內）；只有重量型的動作有估算 1RM"""
+    out = {}
+    for s in data.sessions:
+        ids = set()
+        for it in s["items"]:
+            ex = it["exercise"]
+            if ex["logType"] != "weight":
+                continue
+            best = best_1rm(it["sets"])
+            earlier = [st for o in data.sessions if o["date"] < s["date"]
+                       for oi in o["items"] if oi["exercise"]["id"] == ex["id"] for st in oi["sets"]]
+            before = best_1rm(earlier)
+            if best is not None and before is not None and best - before > 1e-6:
+                ids.add(ex["id"])
+        out[s["id"]] = sorted(ids)
+    return out
+
+
 def round_half_away(x):
     return math.floor(x + 0.5) if x >= 0 else -math.floor(-x + 0.5)
 
@@ -346,6 +374,7 @@ def compute(data, now, screen_width=402):
         "mainLifts": main_lifts,
         "weekCard": {"days": week["days"], "sets": week["sets"], "calendarWeeks": weeks, "calendar": calendar,
                      "rotation": capsules, "reminder": reminder},
+        "newRecords": new_records(data),
     }
 
 
@@ -380,6 +409,7 @@ GROUPS = [
     ("weekCard.calendarWeeks", "日曆的週數"), ("weekCard.calendar.", "日曆顯示的每一天的部位"),
     ("weekCard.rotation.", "本週卡的輪替膠囊"),
     ("weekCard.reminder", "本週卡的提醒（分類和天數）"),
+    ("newRecords.", "歷史上每一次訓練的新紀錄（動作）"),
 ]
 
 

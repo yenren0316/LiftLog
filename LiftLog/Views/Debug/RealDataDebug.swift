@@ -87,6 +87,13 @@ enum RealDataDebug {
         }
         let reminder: Any = snapshot.weekReminder.map { ["category": $0.category.rawValue, "days": $0.days] as [String: Any] } ?? NSNull()
 
+        // 新紀錄（CHANGE_15 §4）：每一次已結束的訓練，完成畫面和摘要頁的共用函式判斷為新紀錄的動作（id 排序）
+        var newRecords: [String: Any] = [:]
+        let ended = (try? context.fetch(FetchDescriptor<WorkoutSession>(predicate: #Predicate { $0.endedAt != nil }))) ?? []
+        for session in ended {
+            newRecords[session.id.uuidString] = NewRecords.find(in: session).map(\.exerciseID.uuidString).sorted()
+        }
+
         return [
             "thisWeek": period(status.thisWeek),
             "lastWeek": period(status.lastWeek),
@@ -101,6 +108,7 @@ enum RealDataDebug {
             "mainLifts": mainLifts,
             "weekCard": ["days": status.thisWeek.days, "sets": status.thisWeek.sets, "calendarWeeks": weeks.count,
                          "calendar": calendarDays, "rotation": capsules, "reminder": reminder] as [String: Any],
+            "newRecords": newRecords,
         ]
     }
 }

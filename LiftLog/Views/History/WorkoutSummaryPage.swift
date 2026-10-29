@@ -25,8 +25,9 @@ struct WorkoutSummaryPage: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 header
+                let records = Set(NewRecords.find(in: session).map(\.exerciseID))
                 ForEach(session.orderedItems.filter { !$0.completedSets.isEmpty }) { item in
-                    ExerciseLine(item: item, isNewRecord: isNewRecord(item), unit: unit)
+                    ExerciseLine(item: item, isNewRecord: item.exercise.map { records.contains($0.id) } ?? false, unit: unit)
                 }
                 if session.orderedItems.allSatisfy({ $0.completedSets.isEmpty }) {
                     Text("這次沒有完成的組").foregroundStyle(Theme.textSecondary)
@@ -124,18 +125,9 @@ struct WorkoutSummaryPage: View {
         let minutes = Int((end.timeIntervalSince(session.startedAt) / 60).rounded())
         return "\(clock(session.startedAt))–\(clock(end))・\(minutes) 分"
     }
-
-    /// 新紀錄：和這次訓練「之前」的紀錄比較
-    private func isNewRecord(_ item: SessionExercise) -> Bool {
-        guard let exercise = item.exercise else { return false }
-        let earlier = exercise.completedItems
-            .filter { ($0.session?.startedAt ?? .distantFuture) < session.startedAt }
-            .flatMap { $0.completedSets.map(\.values) }
-        return SetLogic.isNewRecord(session: item.completedSets.map(\.values), history: earlier, logType: exercise.logType)
-    }
 }
 
-/// 一個動作：名稱、角色、新紀錄、精簡紀錄（「60×5、65×3、70×1 (MAX)」）
+/// 一個動作：名稱、新紀錄的小獎盃（這次訓練刷新了估算 1RM，CHANGE_15 §4）、角色、精簡紀錄（「60×5、65×3、70×1 (MAX)」）
 private struct ExerciseLine: View {
     var item: SessionExercise
     var isNewRecord: Bool
@@ -145,11 +137,13 @@ private struct ExerciseLine: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
                 Text(item.exercise?.name ?? "").font(.headline)
-                RoleBadge(role: item.role)
                 if isNewRecord {
-                    Label("新紀錄", systemImage: "trophy.fill")
-                        .font(.caption.weight(.bold))
+                    Image(systemName: "trophy.fill")
+                        .font(.caption)
+                        .accessibilityLabel("新紀錄")
+                        .accessibilityIdentifier("newRecordTrophy")
                 }
+                RoleBadge(role: item.role)
             }
             Text(item.summary(unit: unit))
                 .font(.subheadline.monospacedDigit())

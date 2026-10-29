@@ -109,7 +109,8 @@ struct SetRow: View {
             .accessibilityIdentifier("\(fieldIdentifier)-check")
         }
         .modifier(Shake(animatableData: CGFloat(shakes)))
-        .sensoryFeedback(.success, trigger: set.isCompleted) { _, done in done }
+        // 打勾完成一組：輕的 impact，取消打勾不震（CHANGE_15 §4）
+        .sensoryFeedback(.impact(weight: .light), trigger: set.isCompleted) { _, done in done }
         .sensoryFeedback(.error, trigger: shakes)
     }
 

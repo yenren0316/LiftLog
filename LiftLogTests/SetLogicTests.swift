@@ -53,25 +53,6 @@ struct SetLogicTests {
         #expect(SetLogic.lastCompletedDate([SetValues(weightKg: 60, isCompleted: false)]) == nil)
     }
 
-    // MARK: 新紀錄
-
-    @Test func newRecordForWeight() {
-        let history = [s(60.8, 1, .max), s(58.5, 5)]
-        #expect(SetLogic.isNewRecord(session: [s(61, 1, .max)], history: history, logType: .weight))
-        #expect(!SetLogic.isNewRecord(session: [s(60.8, 3)], history: history, logType: .weight))
-        // 熱身組和未完成的組不算
-        #expect(!SetLogic.isNewRecord(session: [s(80, 1, .warmup), s(90, 1, done: false)], history: history, logType: .weight))
-        // 沒有歷史不算新紀錄
-        #expect(!SetLogic.isNewRecord(session: [s(61, 1)], history: [], logType: .weight))
-    }
-
-    @Test func newRecordForAssistedIsLowerAssistance() {
-        let history = [s(13.75, 5), s(12, 5)]
-        #expect(SetLogic.isNewRecord(session: [s(11.25, 5)], history: history, logType: .assisted))
-        #expect(!SetLogic.isNewRecord(session: [s(12, 5)], history: history, logType: .assisted))
-        #expect(SetLogic.isNewRecord(session: [s(0, 3)], history: history, logType: .assisted))
-    }
-
     // MARK: 顯示格式
 
     @Test func compactFormats() {

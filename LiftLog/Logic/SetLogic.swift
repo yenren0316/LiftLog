@@ -85,43 +85,11 @@ nonisolated enum SetLogic {
         case completeAll
     }
 
-    // MARK: 新紀錄與趨勢
-
-    /// 一組的成績（越大越好，assisted 例外）：
-    /// weight／assisted 用重量；bodyweight 用次數；timed 有負重用負重、沒有用秒數
-    static func metric(_ s: SetValues, logType: LogType, loaded: Bool) -> Double? {
-        switch logType {
-        case .weight, .assisted: s.weightKg
-        case .bodyweight: s.reps.map(Double.init)
-        case .timed: loaded ? s.weightKg : s.seconds
-        case .cardio: nil
-        }
-    }
+    // MARK: 紀錄
 
     /// 計算紀錄用的組：已完成的正式組或 MAX 組，不含熱身
     static func countsForRecord(_ s: SetValues) -> Bool {
         s.isCompleted && s.kind != .warmup
-    }
-
-    static func lowerIsBetter(_ logType: LogType) -> Bool {
-        logType == .assisted
-    }
-
-    /// 最佳值：weight 取最重，assisted 取輔助最少，bodyweight 取最多次，timed 取最重負重或最長秒數
-    static func best(_ sets: [SetValues], logType: LogType) -> Double? {
-        let counted = sets.filter(countsForRecord)
-        let loaded = counted.contains { $0.weightKg != nil }
-        let values = counted.compactMap { metric($0, logType: logType, loaded: loaded) }
-        return lowerIsBetter(logType) ? values.min() : values.max()
-    }
-
-    /// 新紀錄：這次的最佳值超越以往所有紀錄。沒有歷史紀錄時不算新紀錄。
-    static func isNewRecord(session: [SetValues], history: [SetValues], logType: LogType) -> Bool {
-        guard logType != .cardio,
-              let now = best(session, logType: logType),
-              let before = best(history, logType: logType)
-        else { return false }
-        return lowerIsBetter(logType) ? now < before : now > before
     }
 
     // MARK: 幾天前

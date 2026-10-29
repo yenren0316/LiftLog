@@ -37,6 +37,11 @@ nonisolated enum PersonalRecords {
         s.isCompleted && s.kind != .warmup && s.weightKg != nil && (1...10).contains(s.reps ?? 0)
     }
 
+    /// 這些組裡最好的估算 1RM（countsForEstimate 的組，大於 0）；沒有可以計算的組時為 nil。新紀錄用它（CHANGE_15 §4）
+    static func best1RM(_ sets: [SetValues]) -> Double? {
+        sets.filter(countsForEstimate).map { epley(weight: $0.weightKg!, reps: $0.reps!) }.filter { $0 > 0 }.max()
+    }
+
     /// 估算 1RM：最近 90 天的最大值；90 天內沒有就取全期（isAllTime = true）
     static func estimated1RM(_ sessions: [SessionSets], now: Date = .now,
                              calendar: Calendar = .current) -> (record: Record, isAllTime: Bool)? {

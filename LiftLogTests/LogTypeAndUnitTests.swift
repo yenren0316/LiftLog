@@ -20,16 +20,6 @@ struct LogTypeAndUnitTests {
         #expect(SetLogic.canComplete(SetValues(weightKg: 24, seconds: 60), logType: .timed, equipment: .dumbbell))
     }
 
-    @Test func bestForNewTypes() {
-        let pushUps = [done(SetValues(reps: 15)), done(SetValues(reps: 20)), done(SetValues(kind: .warmup, reps: 30))]
-        #expect(SetLogic.best(pushUps, logType: .bodyweight) == 20)
-        let hang = [done(SetValues(seconds: 45)), done(SetValues(seconds: 60))]
-        #expect(SetLogic.best(hang, logType: .timed) == 60)
-        let farmer = [done(SetValues(weightKg: 20, seconds: 60)), done(SetValues(weightKg: 24, seconds: 40))]
-        #expect(SetLogic.best(farmer, logType: .timed) == 24)
-        #expect(SetLogic.isNewRecord(session: [done(SetValues(reps: 21))], history: pushUps, logType: .bodyweight))
-    }
-
     @Test func formatsForNewTypes() {
         let pushUps = Array(repeating: done(SetValues(reps: 12)), count: 3)
         #expect(SetFormat.compact(pushUps, logType: .bodyweight) == "12 下 × 3 組")

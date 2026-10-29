@@ -15,23 +15,23 @@ struct WorkoutSummary: Identifiable {
     var title: String
     var duration: TimeInterval
     var lines: [Line]
+    /// 這次刷新紀錄的動作（CHANGE_15 §4，和摘要頁同一個 NewRecords.find）
+    var records: [NewRecords.Record]
 
-    /// 在 finish 之後呼叫：新紀錄比較的是這次以外的所有歷史
+    /// 在 finish 之後呼叫：新紀錄和這次訓練開始之前的紀錄比較
     @MainActor
     init(session: WorkoutSession, unit: WeightUnit) {
         title = session.title
         duration = (session.endedAt ?? .now).timeIntervalSince(session.startedAt)
+        records = NewRecords.find(in: session)
+        let recordIDs = Set(records.map(\.exerciseID))
         lines = session.orderedItems.compactMap { item in
             guard let exercise = item.exercise else { return nil }
-            let mine = item.completedSets.map(\.values)
-            let history = exercise.sessionItems
-                .filter { $0 !== item }
-                .flatMap { $0.completedSets.map(\.values) }
             return Line(
                 name: exercise.name,
-                completedSets: mine.count,
+                completedSets: item.completedSets.count,
                 summary: item.summary(unit: unit),
-                isNewRecord: SetLogic.isNewRecord(session: mine, history: history, logType: exercise.logType)
+                isNewRecord: recordIDs.contains(exercise.id)
             )
         }
     }
@@ -42,7 +42,10 @@ struct WorkoutSummaryView: View {
     var onClose: () -> Void
 
     @Environment(\.modelContext) private var context
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(WeightUnit.storageKey) private var unit: WeightUnit = .kg
+    /// 畫面出現時變成 true：完成訓練的 success 觸覺，有新紀錄時獎盃同時彈一次（CHANGE_15 §4）
+    @State private var appeared = false
     /// 選填的「今天體重」（CHANGE_07 D-2）
     @State private var weightText = ""
     @FocusState private var weightFocused: Bool
@@ -52,6 +55,10 @@ struct WorkoutSummaryView: View {
         ScrollViewReader { proxy in
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
+                if !summary.records.isEmpty {
+                    NewRecordsCard(records: summary.records, unit: unit, bounces: appeared && !reduceMotion)
+                }
+
                 VStack(alignment: .leading, spacing: 6) {
                     Image(systemName: "checkmark.seal.fill")
                         .font(.system(size: 48))
@@ -65,22 +72,6 @@ struct WorkoutSummaryView: View {
                     stat(String(summary.lines.reduce(0) { $0 + $1.completedSets }), "組")
                 }
                 .card(padding: 16)
-
-                let records = summary.lines.filter(\.isNewRecord)
-                if !records.isEmpty {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Label("新紀錄", systemImage: "trophy.fill")
-                            .font(.headline)
-                        ForEach(records) { line in
-                            HStack {
-                                Text(line.name).font(.body.weight(.semibold))
-                                Spacer()
-                                Text(line.summary).foregroundStyle(Theme.textSecondary)
-                            }
-                        }
-                    }
-                    .card()
-                }
 
                 VStack(alignment: .leading, spacing: 12) {
                     ForEach(summary.lines) { line in
@@ -129,6 +120,9 @@ struct WorkoutSummaryView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .screenBackground()
+        // 完成訓練：success（強度交給系統，系統關掉震動時不震）
+        .sensoryFeedback(.success, trigger: appeared) { _, shown in shown }
+        .onAppear { appeared = true }
         #if DEBUG
         // 開發用：-focusWeight YES 直接輸入今天體重（截鍵盤的「完成」用）
         .task {
@@ -172,5 +166,41 @@ struct WorkoutSummaryView: View {
             Text(title).font(.footnote).foregroundStyle(Theme.textSecondary)
         }
         .frame(maxWidth: .infinity)
+    }
+}
+
+/// 「新紀錄」區塊（完成畫面的最上方）：獎盃、每個刷新紀錄的動作、這次的估算 1RM、之前最好的估算 1RM。
+/// 獎盃在畫面出現時彈一次（.symbolEffect(.bounce)）；系統開啟「減少動態效果」時不播
+private struct NewRecordsCard: View {
+    var records: [NewRecords.Record]
+    var unit: WeightUnit
+    var bounces: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label {
+                Text("新紀錄").font(.title3.bold())
+            } icon: {
+                Image(systemName: "trophy.fill")
+                    .font(.title2)
+                    .symbolEffect(.bounce, options: .nonRepeating, value: bounces)
+            }
+            ForEach(records) { record in
+                HStack(alignment: .firstTextBaseline) {
+                    Text(record.name).font(.body.weight(.semibold))
+                    Spacer(minLength: 12)
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("估算 1RM \(unit.formatWithUnit(kg: record.estimated1RM))")
+                            .font(.body.weight(.semibold).monospacedDigit())
+                        Text("之前 \(unit.formatWithUnit(kg: record.previous1RM))")
+                            .font(.subheadline.monospacedDigit())
+                            .foregroundStyle(Theme.textSecondary)
+                    }
+                }
+            }
+        }
+        .card()
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("newRecords")
     }
 }
