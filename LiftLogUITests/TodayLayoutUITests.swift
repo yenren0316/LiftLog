@@ -21,7 +21,7 @@ final class TodayLayoutUITests: XCTestCase {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launchWithoutActiveWorkout(["-demoData", "YES", "-demoWorkout", "YES"])
-        // 示範訓練一開始是全螢幕：縮小回到「今天」
+        // 示範訓練一開始打開訓練畫面：縮小回到「今天」
         let collapse = app.buttons["縮小"].firstMatch
         XCTAssertTrue(collapse.waitForExistence(timeout: 15))
         try await Task.sleep(for: .seconds(1.5))

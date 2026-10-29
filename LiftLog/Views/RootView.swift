@@ -81,16 +81,16 @@ struct RootView: View {
             coordinator.showingSettings = false
             return
         }
-        let coverShown = coordinator.isExpanded && (active.first != nil || coordinator.summary != nil)
+        let workoutShown = coordinator.isExpanded && (active.first != nil || coordinator.summary != nil)
         switch link.destination(hasActiveWorkout: !active.isEmpty) {
         case .workout:
             coordinator.summary = nil
             coordinator.isExpanded = true
         case .plan:
-            closeWorkoutCover()
+            closeWorkout()
             coordinator.tab = .today
-            if coverShown {
-                // 等全螢幕畫面關掉再開 sheet
+            if workoutShown {
+                // 等訓練畫面的 sheet 關掉再開建立菜單的 sheet
                 Task {
                     try? await Task.sleep(for: .milliseconds(600))
                     launcher.requestPlan(context: context)
@@ -99,7 +99,7 @@ struct RootView: View {
                 launcher.requestPlan(context: context)
             }
         case .today:
-            closeWorkoutCover()
+            closeWorkout()
             coordinator.tab = .today
         }
     }
@@ -109,7 +109,7 @@ struct RootView: View {
         launcher.sheetDismissed()
     }
 
-    private func closeWorkoutCover() {
+    private func closeWorkout() {
         coordinator.isExpanded = false
         coordinator.summary = nil
     }
@@ -147,7 +147,10 @@ struct RootView: View {
         }
         .planEntryQuestion(launcher)
         .launchConfirmation(launcher, origin: .root, context: context)
-        .fullScreenCover(isPresented: Binding(
+        // 訓練畫面（CHANGE_15 §3）：系統的 sheet，只有全高。往下拖關閉＝縮小到附屬列的「訓練中」橫條，訓練繼續
+        // （和左上角的收合一樣，只是 isExpanded 變成 false）；內容捲到最上面時才會往下拖關閉，是系統的行為。
+        // 完成畫面不能往下拖關閉，要按「完成」（避免還沒存今天體重就關掉）
+        .sheet(isPresented: Binding(
             get: { coordinator.isExpanded && (active.first != nil || coordinator.summary != nil) },
             set: { coordinator.isExpanded = $0 }
         )) {
@@ -161,6 +164,8 @@ struct RootView: View {
                     WorkoutView(session: session)
                 }
             }
+            .presentationDetents([.large])
+            .interactiveDismissDisabled(coordinator.summary != nil)
             .environment(coordinator)
             .environment(launcher)
             .environment(restTimer)

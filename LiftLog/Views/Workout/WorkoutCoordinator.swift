@@ -28,14 +28,14 @@ enum AppTab: Hashable, CaseIterable {
     }
 }
 
-/// 管理畫面的呈現：目前的分頁、訓練中全螢幕／縮小橫條、完成摘要、歷程的導覽路徑（訓練摘要）、訓練狀態浮窗、設定。
+/// 管理畫面的呈現：目前的分頁、訓練畫面（sheet）／縮小橫條、完成畫面、歷程的導覽路徑（訓練摘要）、訓練狀態浮窗、設定。
 /// 開始訓練（包括衝突處理）在 WorkoutLauncher
 @Observable
 final class WorkoutCoordinator {
     var tab: AppTab = .today
-    /// 全螢幕顯示訓練中畫面
+    /// 打開訓練畫面（全高的 sheet，CHANGE_15 §3）；往下拖關閉或按收合時變成 false
     var isExpanded = false
-    /// 剛完成的訓練摘要；有值時全螢幕畫面顯示摘要
+    /// 剛完成的訓練摘要；有值時訓練畫面的 sheet 顯示完成畫面（不能往下拖關閉）
     var summary: WorkoutSummary?
     /// 完成時沒有任何已完成的組，整次訓練已刪除
     var showEmptyFinishNotice = false

@@ -1,8 +1,8 @@
 import XCTest
 
 /// CHANGE_12 §2：點附屬列的「訓練中」橫條打開訓練畫面，按左上角的收合回到附屬列。
-/// 系統的放大轉場在附屬列裡找不到來源（只會從畫面中間放大），照規格維持原本的 fullScreenCover，
-/// 這裡確認打開和收合的行為
+/// 系統的放大轉場在附屬列裡找不到來源（只會從畫面中間放大），沒有用；CHANGE_15 §3 起訓練畫面是全高的 sheet
+/// （往下拖縮小的測試在 WorkoutSheetUITests），這裡確認打開和收合的行為
 @MainActor
 final class WorkoutBarUITests: XCTestCase {
     func testBarOpensWorkoutAndCollapsesBack() async throws {
@@ -11,7 +11,7 @@ final class WorkoutBarUITests: XCTestCase {
         app.launchWithoutActiveWorkout(["-demoData", "YES", "-demoWorkout", "YES"])
         let collapse = app.buttons["縮小"].firstMatch
         XCTAssertTrue(collapse.waitForExistence(timeout: 15))
-        // 示範訓練一開始是全螢幕：等出現完再縮小
+        // 示範訓練一開始打開訓練畫面：等出現完再縮小
         try await Task.sleep(for: .seconds(1.5))
         collapse.tap()
         let bar = app.buttons["workoutMiniBar"].firstMatch

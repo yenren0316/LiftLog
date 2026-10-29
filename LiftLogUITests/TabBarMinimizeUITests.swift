@@ -11,7 +11,7 @@ final class TabBarMinimizeUITests: XCTestCase {
         app.launchWithoutActiveWorkout(["-demoData", "YES", "-startTab", "1", "-historySegment", "stats", "-demoWorkout", "YES"])
         let collapse = app.buttons["縮小"].firstMatch
         XCTAssertTrue(collapse.waitForExistence(timeout: 15))
-        // 等全螢幕的訓練畫面出現完再縮小
+        // 等訓練畫面出現完再縮小
         try await Task.sleep(for: .seconds(1.5))
         collapse.tap()
         let bar = app.buttons["workoutMiniBar"].firstMatch

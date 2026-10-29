@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-/// 訓練中畫面（全螢幕），可縮小成分頁列上方的橫條
+/// 訓練中畫面（CHANGE_15 §3 起是全高的 sheet），按左上角的收合或往下拖，縮小成分頁列附屬列的「訓練中」橫條
 struct WorkoutView: View {
     let session: WorkoutSession
 

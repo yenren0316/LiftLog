@@ -93,7 +93,7 @@ struct WorkoutEditor<Header: View, Footer: View>: View {
         .screenBackground()
         .task(id: openAddOnAppear) {
             guard openAddOnAppear else { return }
-            // 等全螢幕畫面出現後再開 sheet
+            // 等訓練畫面（或編輯畫面）出現後再開 sheet
             try? await Task.sleep(for: .milliseconds(500))
             addingExercise = true
             onAutoOpenedAdd()
@@ -103,7 +103,7 @@ struct WorkoutEditor<Header: View, Footer: View>: View {
         .task {
             let defaults = UserDefaults.standard
             guard defaults.bool(forKey: "openAddExercise") || defaults.bool(forKey: "openReplace") else { return }
-            // 等全螢幕畫面出現後再開 sheet
+            // 等訓練畫面（或編輯畫面）出現後再開 sheet
             try? await Task.sleep(for: .seconds(1))
             if defaults.bool(forKey: "openAddExercise") { addingExercise = true }
             if defaults.bool(forKey: "openReplace") { replacing = session.orderedItems.first }
