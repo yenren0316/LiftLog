@@ -52,6 +52,13 @@ struct WorkoutServiceTests {
                        session: session, bench: bench, pulldown: pulldown)
     }
 
+    /// 按即時動態的「完成這組」：intent 帶著即時動態顯示的下一組的 id（CHANGE_16 §1）
+    @discardableResult
+    private func pressComplete(_ f: Fixture) -> WorkoutService.CompleteResult {
+        let state = WorkoutActivityState.make(session: f.session, rest: nil, unit: .kg)
+        return f.service.completeSet(id: state.setID ?? "")
+    }
+
     // MARK: - 目前的組
 
     @Test func currentSetCrossesExercises() {
@@ -85,7 +92,7 @@ struct WorkoutServiceTests {
 
     @Test func completeUsesPrefillAndStartsRestByRole() throws {
         let f = try makeFixture()
-        #expect(f.service.completeCurrentSet())
+        #expect(pressComplete(f) == .completed)
         let first = f.session.orderedItems[0].orderedSets[0]
         #expect(first.isCompleted && first.completedAt != nil)
         #expect(first.weightKg == 60 && first.reps == 5)
@@ -95,7 +102,7 @@ struct WorkoutServiceTests {
         #expect(f.notifications.scheduled == [end])
 
         // 第二次完成第二組
-        #expect(f.service.completeCurrentSet())
+        #expect(pressComplete(f) == .completed)
         #expect(f.session.orderedItems[0].orderedSets[1].isCompleted)
         #expect(f.session.currentSet?.item.exercise === f.pulldown)
     }
@@ -103,14 +110,14 @@ struct WorkoutServiceTests {
     @Test func completeUsesTheExercisesOwnRestSeconds() throws {
         let f = try makeFixture()
         f.bench.restSeconds = 120
-        #expect(f.service.completeCurrentSet())
+        #expect(pressComplete(f) == .completed)
         #expect(f.service.restTimer.duration == 120)
     }
 
     @Test func completeRespectsTheAutoRestSetting() throws {
         let f = try makeFixture()
         f.defaults.set(false, forKey: WorkoutService.autoRestKey)
-        #expect(f.service.completeCurrentSet())
+        #expect(pressComplete(f) == .completed)
         #expect(!f.service.restTimer.isRunning)
         #expect(f.notifications.scheduled.isEmpty)
     }
@@ -119,7 +126,7 @@ struct WorkoutServiceTests {
         let f = try makeFixture()
         for set in f.session.orderedItems[0].orderedSets { set.isCompleted = true }
         // 滑輪下拉沒有上一次紀錄，也還沒輸入，無法直接完成
-        #expect(!f.service.completeCurrentSet())
+        #expect(pressComplete(f) == .cannotComplete)
         #expect(f.session.orderedItems[1].orderedSets.allSatisfy { !$0.isCompleted })
         #expect(!f.service.restTimer.isRunning)
     }
@@ -128,7 +135,7 @@ struct WorkoutServiceTests {
         let f = try makeFixture()
         let first = f.session.orderedItems[0].orderedSets[0]
         first.weightKg = 62.5
-        #expect(f.service.completeCurrentSet())
+        #expect(pressComplete(f) == .completed)
         // 有輸入用輸入，沒輸入的欄位用預填
         #expect(first.weightKg == 62.5 && first.reps == 5)
     }
@@ -168,15 +175,15 @@ struct WorkoutServiceTests {
         var state = WorkoutActivityState.make(session: f.session, rest: nil, unit: .kg)
         #expect(state.exerciseName == "臥推" && state.roleTitle == "推")
         #expect(state.setText == "第 1／2 組")
-        #expect(state.target == "60 kg × 5" && state.canComplete)
+        #expect(state.value == "60 kg × 5" && state.canComplete)
         #expect(state.completedSets == 0 && state.totalSets == 5)
         #expect(state.restInterval(isStale: false) == nil)
 
-        #expect(f.service.completeCurrentSet())
+        #expect(pressComplete(f) == .completed)
         let rest = try #require(f.service.restTimer.startDate.flatMap { s in f.service.restTimer.endDate.map { s...$0 } })
         state = WorkoutActivityState.make(session: f.session, rest: rest, unit: .lbs)
         #expect(state.setText == "第 2／2 組")
-        #expect(state.target == "132.5 lbs × 5")
+        #expect(state.value == "132.5 lbs × 5")
         #expect(state.completedSets == 1)
         #expect(state.restInterval(isStale: false) == rest)
         // 休息結束後系統標成過期，就不算休息中
@@ -188,15 +195,7 @@ struct WorkoutServiceTests {
         for set in f.session.orderedItems[0].orderedSets { set.isCompleted = true }
         let state = WorkoutActivityState.make(session: f.session, rest: nil, unit: .kg)
         #expect(state.exerciseName == "滑輪下拉" && state.setText == "第 1／3 組")
-        #expect(state.target == nil && !state.canComplete)
+        #expect(state.value == nil && !state.canComplete)
     }
 
-    @Test func targetText() {
-        let target = WorkoutActivityState.target
-        #expect(target(SetValues(weightKg: 19, reps: 5), .assisted, .kg) == "輔助 19 kg × 5")
-        #expect(target(SetValues(reps: 8), .bodyweight, .kg) == "8 下")
-        #expect(target(SetValues(seconds: 30), .timed, .kg) == "30 秒")
-        #expect(target(SetValues(incline: 12, speed: 5.5, minutes: 30), .cardio, .kg) == "坡度 12・速度 5.5・30 分鐘")
-        #expect(target(SetValues(), .weight, .kg) == nil)
-    }
 }

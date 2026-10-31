@@ -16,39 +16,18 @@ extension WorkoutActivityAttributes.ContentState {
             restStartDate: rest?.lowerBound, restEndDate: rest?.upperBound
         )
         if let current = session.currentSet, let exercise = current.item.exercise {
-            let placeholder = current.item.setHints().first { $0.set === current.set }?.placeholder
-            let values = SetLogic.resolved(entered: current.set.values, placeholder: placeholder)
+            // 打勾時會記錄的值：已填的值，沒填用灰字預填（和 WorkoutService.complete 同一份預填值）
+            let values = SetLogic.resolved(entered: current.set.values, placeholder: current.set.placeholder)
             state.exerciseName = exercise.name
             state.roleTitle = current.item.role.title
             state.roleSymbol = current.item.role.symbol
             state.setNumber = current.index + 1
             state.setCount = current.item.sets.count
-            state.target = target(values, logType: exercise.logType, unit: unit)
+            state.setID = current.set.id.uuidString
+            state.value = SetFormat.single(values, logType: exercise.logType, unit: unit)
             state.canComplete = SetLogic.canComplete(values, logType: exercise.logType, equipment: exercise.equipment)
         }
         return state
-    }
-
-    /// 這一組的目標：「60 kg × 5」「輔助 19 kg × 5」「8 下」「30 秒」「坡度 12・速度 5・30 分鐘」
-    static func target(_ v: SetValues, logType: LogType, unit: WeightUnit) -> String? {
-        let weight = v.weightKg.map { unit.formatWithUnit(kg: $0) }
-        let reps = v.reps.map { "\($0) 下" }
-        let parts: [String?]
-        switch logType {
-        case .weight:
-            parts = [weight.map { w in v.reps.map { "\(w) × \($0)" } ?? w } ?? reps]
-        case .assisted:
-            parts = [weight.map { w in v.reps.map { "輔助 \(w) × \($0)" } ?? "輔助 \(w)" } ?? reps]
-        case .bodyweight:
-            parts = [reps]
-        case .timed:
-            parts = [weight, v.seconds.map { "\(Units.number($0)) 秒" }]
-        case .cardio:
-            parts = [v.incline.map { "坡度 \(Units.number($0))" }, v.speed.map { "速度 \(Units.number($0))" },
-                     v.minutes.map { "\(Units.number($0)) 分鐘" }]
-        }
-        let text = parts.compactMap { $0 }.joined(separator: "・")
-        return text.isEmpty ? nil : text
     }
 }
 

@@ -16,7 +16,7 @@ struct WorkoutView: View {
     var body: some View {
         NavigationStack {
             WorkoutEditor(session: session, openAddOnAppear: coordinator.openAddOnExpand,
-                          onAutoOpenedAdd: { coordinator.openAddOnExpand = false }, onSetCompleted: setCompleted) {
+                          onAutoOpenedAdd: { coordinator.openAddOnExpand = false }) {
                 header
             } footer: {
                 // 最後一個動作下面的紅字按鈕（CHANGE_10 §0-3，取代右上角的 ••• 選單）
@@ -91,11 +91,6 @@ struct WorkoutView: View {
         } else {
             finish(.deleteIncomplete)
         }
-    }
-
-    /// 打勾後自動開始休息倒數（設定頁可關閉）；和即時動態的「完成這組」同一套邏輯
-    private func setCompleted(_ item: SessionExercise) {
-        WorkoutService.shared.startRest(after: item)
     }
 
     private func finish(_ choice: SetLogic.IncompleteChoice) {

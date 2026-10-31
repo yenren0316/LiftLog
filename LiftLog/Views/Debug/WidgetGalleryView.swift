@@ -2,7 +2,7 @@
 import SwiftUI
 
 /// 開發用：把小工具和即時動態的畫面（Shared 裡同一份程式碼）以系統的尺寸排出來截圖。
-/// 啟動參數 -widgetGallery small｜lock｜live｜island｜control
+/// 啟動參數 -widgetGallery small｜lock｜live｜liveStates｜island｜control
 struct WidgetGalleryView: View {
     var page: String
 
@@ -16,6 +16,8 @@ struct WidgetGalleryView: View {
                     lockPage
                 case "live":
                     livePage
+                case "liveStates":
+                    liveStatesPage
                 case "island":
                     islandPage
                 case "control":
@@ -80,12 +82,27 @@ struct WidgetGalleryView: View {
 
     // MARK: - 即時動態（動態島的黑色底和形狀是模擬的）
 
+    /// 預覽的「完成這組」是真的 intent 按鈕，但範例的組 id 不在資料庫裡，按了只會更新即時動態（CHANGE_16 §1 的防止重複）
     private var livePage: some View {
         VStack(alignment: .leading, spacing: 18) {
             caption("鎖定畫面・非休息中")
+            lockScreen(Self.benchState)
+            caption("鎖定畫面・非休息中（最長的名稱和值）")
             lockScreen(Self.activityState(resting: false))
             caption("鎖定畫面・休息中")
             lockScreen(Self.activityState(resting: true))
+        }
+    }
+
+    /// CHANGE_16 §1：沒有可以記錄的值、全部完成
+    private var liveStatesPage: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            caption("鎖定畫面・沒有可以記錄的值")
+            lockScreen(Self.needsInputState)
+            caption("鎖定畫面・全部完成")
+            lockScreen(Self.allDoneState)
+            caption("動態島・展開（沒有可以記錄的值）")
+            expanded(Self.needsInputState)
         }
     }
 
@@ -100,7 +117,7 @@ struct WidgetGalleryView: View {
                 minimal(Self.activityState(resting: true))
             }
             caption("動態島・展開（非休息中）")
-            expanded(Self.activityState(resting: false))
+            expanded(Self.benchState)
             caption("動態島・展開（休息中）")
             expanded(Self.activityState(resting: true))
         }
@@ -152,7 +169,7 @@ struct WidgetGalleryView: View {
                 }
                 WorkoutActivityBody(attributes: activityAttributes, state: state, isStale: false,
                                     middleHeight: LiveActivityLayout.islandMiddleHeight,
-                                    countdownSize: LiveActivityLayout.islandCountdownSize)
+                                    countdownSize: LiveActivityLayout.islandCountdownSize, valueFont: .title3)
             }
             .dynamicTypeSize(...DynamicTypeSize.large)
             .padding(.horizontal, 22)
@@ -213,10 +230,38 @@ struct WidgetGalleryView: View {
             title: "下肢速度與爆發・坐姿分腿壺鈴三點搬移", dayTypeTitle: DayType.deLower.title,
             startedAt: now.addingTimeInterval(-(3600 + 5 * 60 + 30)),
             exerciseName: "坐姿分腿壺鈴三點搬移", roleTitle: "核心", roleSymbol: Role.core.symbol,
-            setNumber: 2, setCount: 6, target: "60 kg × 5", canComplete: true,
+            setNumber: 12, setCount: 12, setID: "preview", value: "坡度 12.5・速度 5.5・30 分鐘", canComplete: true,
             completedSets: 6, totalSets: 15,
             restStartDate: resting ? now.addingTimeInterval(-35) : nil,
             restEndDate: resting ? now.addingTimeInterval(145) : nil
+        )
+    }
+
+    /// CHANGE_16 的例子：「下一組：臥推・第 3／8 組」「32.5 kg × 3」「完成這組」
+    private static var benchState: WorkoutActivityState {
+        WorkoutActivityState(
+            title: "上肢速度與爆發・臥推", dayTypeTitle: DayType.deUpper.title, startedAt: Date.now.addingTimeInterval(-(14 * 60 + 5)),
+            exerciseName: "臥推", roleTitle: Role.dynamicEffort.title, roleSymbol: Role.dynamicEffort.symbol,
+            setNumber: 3, setCount: 8, setID: "preview", value: "32.5 kg × 3", canComplete: true,
+            completedSets: 2, totalSets: 16
+        )
+    }
+
+    /// 第一次做的動作：沒填也沒有預填
+    private static var needsInputState: WorkoutActivityState {
+        WorkoutActivityState(
+            title: "上肢最大肌力・臥推", dayTypeTitle: DayType.meUpper.title, startedAt: Date.now.addingTimeInterval(-(38 * 60 + 12)),
+            exerciseName: "滑輪下拉", roleTitle: Role.pull.title, roleSymbol: Role.pull.symbol,
+            setNumber: 1, setCount: 3, setID: "preview", value: nil, canComplete: false,
+            completedSets: 8, totalSets: 14
+        )
+    }
+
+    private static var allDoneState: WorkoutActivityState {
+        WorkoutActivityState(
+            title: "下肢最大肌力・深蹲", dayTypeTitle: DayType.meLower.title, startedAt: Date.now.addingTimeInterval(-(52 * 60 + 40)),
+            setNumber: 0, setCount: 0, canComplete: false,
+            completedSets: 14, totalSets: 14
         )
     }
 

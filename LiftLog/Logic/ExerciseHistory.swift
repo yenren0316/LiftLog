@@ -140,8 +140,15 @@ extension SessionExercise {
     }
 }
 
+extension SetRecord {
+    /// 這一組的灰字預填值（和訓練畫面同一份 setHints）：打勾時沒輸入的欄位用它，即時動態也用它顯示要記錄的值
+    var placeholder: SetValues? {
+        sessionExercise?.setHints().first { $0.set === self }?.placeholder
+    }
+}
+
 extension WorkoutSession {
-    /// 目前的組：依動作順序，第一個還沒打勾的組；全部打勾時為 nil
+    /// 目前的組（即時動態的「下一組」）：依動作順序，第一個還沒打勾的組；全部打勾時為 nil
     var currentSet: (item: SessionExercise, set: SetRecord, index: Int)? {
         let items = orderedItems.filter { $0.exercise != nil }
         guard let position = SetLogic.currentSet(items.map { $0.orderedSets.map(\.isCompleted) }) else { return nil }

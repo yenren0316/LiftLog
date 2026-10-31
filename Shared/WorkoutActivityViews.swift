@@ -19,6 +19,9 @@ nonisolated enum LiveActivityLayout {
     static let spacing: CGFloat = 8
     /// 倒數數字的大小
     static let countdownSize: CGFloat = 34
+    /// 鎖定畫面第 1 列經過時間的最小寬度（放得下「1:05:30」）。小工具裡的計時文字會佔走剩下的全部寬度，
+    /// 所以名稱先排、經過時間保留這個寬度（CHANGE_16 的真機截圖發現名稱被擠掉）
+    static let elapsedMinWidth: CGFloat = 64
 
     static var lockScreenHeight: CGFloat {
         padding * 2 + headerHeight + spacing + middleHeight + spacing + buttonHeight
@@ -66,7 +69,8 @@ struct WorkoutActivityElapsedTime: View {
     }
 }
 
-/// 第 1 列：訓練名稱（小字），右側是經過時間；兩種狀態位置相同
+/// 第 1 列：訓練名稱（小字），右側是經過時間；每一種狀態位置相同。
+/// 名稱先排（太長時截斷名稱），經過時間至少保留放得下「1:05:30」的寬度
 struct WorkoutActivityHeader: View {
     var state: WorkoutActivityState
 
@@ -77,40 +81,84 @@ struct WorkoutActivityHeader: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .truncationMode(.tail)
+                .layoutPriority(1)
             Spacer(minLength: 8)
             WorkoutActivityElapsedTime(startedAt: state.startedAt, font: .subheadline)
-                .layoutPriority(1)
+                .frame(minWidth: LiveActivityLayout.elapsedMinWidth, alignment: .trailing)
         }
     }
 }
 
-/// 第 2～4 列：非休息時是動作與角色、「第 2／6 組・目標 60 kg × 5」、「完成這組」；
-/// 休息時是「休息」和下一組（左）、倒數（右）、進度條、「跳過休息」「+15 秒」。鎖定畫面和動態島展開共用
+/// 第 2～4 列（CHANGE_16 §1）：依 Phase 顯示
+/// - 下一組：「下一組：臥推・第 3／8 組」、要記錄的值（大字）、主要按鈕「完成這組」；沒有可以記錄的值時按鈕換成次要文字「打開 App 填寫」
+/// - 休息：「休息」和下一組（左）、倒數（右）、進度條、「跳過休息」「+15 秒」
+/// - 全部完成：「全部完成，打開 App 結束訓練」和完成組數，沒有按鈕
+/// 鎖定畫面和動態島展開共用；每一種狀態的總高度都一樣
 struct WorkoutActivityBody: View {
     var attributes: WorkoutActivityAttributes
     var state: WorkoutActivityState
     var isStale: Bool
     var middleHeight: CGFloat
     var countdownSize: CGFloat
+    /// 要記錄的值的字級：鎖定畫面 title2，動態島展開（中段矮一點）title3
+    var valueFont: Font = .title2
 
     private var accent: Color { Color(hex: attributes.accent) }
     private var done: Color { Color(hex: attributes.done) }
 
     var body: some View {
+        let phase = state.phase(isStale: isStale)
         VStack(alignment: .leading, spacing: LiveActivityLayout.spacing) {
-            Group {
-                if let rest = state.restInterval(isStale: isStale) {
-                    resting(rest)
-                } else {
-                    working
-                }
+            switch phase {
+            case .resting(let rest):
+                resting(rest)
+                    .frame(height: middleHeight, alignment: .top)
+                restButtons
+                    .frame(height: LiveActivityLayout.buttonHeight)
+            case .ready(let setID):
+                nextSet(recordable: true)
+                    .frame(height: middleHeight, alignment: .top)
+                completeButton(setID: setID)
+                    .frame(height: LiveActivityLayout.buttonHeight)
+            case .needsInput:
+                nextSet(recordable: false)
+                    .frame(height: middleHeight, alignment: .top)
+                Text(WorkoutActivityState.needsInputText)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: LiveActivityLayout.buttonHeight)
+            case .allDone, .noSets:
+                finished(allDone: phase == .allDone)
+                    .frame(height: middleHeight + LiveActivityLayout.spacing + LiveActivityLayout.buttonHeight)
             }
-            .frame(height: middleHeight, alignment: .top)
-            buttons
-                .frame(height: LiveActivityLayout.buttonHeight)
         }
         .lineLimit(1)
         .truncationMode(.tail)
+    }
+
+    /// 下一組和要記錄的值；值放不下時縮小，不截斷
+    private func nextSet(recordable: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            WorkoutActivityNextSetText(state: state)
+                .font(.subheadline.weight(.semibold).monospacedDigit())
+                .foregroundStyle(.secondary)
+            Text(state.value ?? "—")
+                .font(valueFont.bold().monospacedDigit())
+                .foregroundStyle(recordable ? .primary : .secondary)
+                .minimumScaleFactor(0.6)
+        }
+    }
+
+    private func completeButton(setID: String) -> some View {
+        Button(intent: CompleteSetIntent(setID: setID)) {
+            Label(WorkoutActivityState.completeTitle, systemImage: "checkmark")
+                .font(.headline)
+                .foregroundStyle(Palette.isLight(attributes.done) ? .black : .white)
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(done)
     }
 
     private func resting(_ rest: ClosedRange<Date>) -> some View {
@@ -118,11 +166,9 @@ struct WorkoutActivityBody: View {
             HStack(alignment: .center, spacing: 8) {
                 VStack(alignment: .leading, spacing: 2) {
                     Label("休息", systemImage: "timer").font(.headline).foregroundStyle(accent)
-                    if let name = state.exerciseName {
-                        Text("下一組：\(name)・\(state.setText)")
-                            .font(.caption.monospacedDigit())
-                            .foregroundStyle(.secondary)
-                    }
+                    WorkoutActivityNextSetText(state: state)
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 8)
                 Text(timerInterval: rest, countsDown: true)
@@ -140,66 +186,52 @@ struct WorkoutActivityBody: View {
         }
     }
 
-    @ViewBuilder
-    private var working: some View {
-        if let name = state.exerciseName {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    if let role = state.roleTitle {
-                        Label(role, systemImage: state.roleSymbol ?? "dumbbell.fill")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(accent)
-                            .fixedSize()
-                    }
-                    Text(name).font(.title3.bold())
-                }
-                Text("\(state.setText)・\(state.target.map { "目標 \($0)" } ?? "沒有預填值")")
-                    .font(.subheadline.monospacedDigit())
-                    .foregroundStyle(.secondary)
+    private var restButtons: some View {
+        HStack(spacing: 10) {
+            Button(intent: SkipRestIntent()) {
+                Label("跳過休息", systemImage: "forward.end.fill").frame(maxWidth: .infinity)
             }
-        } else {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("全部的組都完成了").font(.title3.bold())
-                Text("已完成 \(state.completedSets)／\(state.totalSets) 組")
-                    .font(.subheadline.monospacedDigit())
-                    .foregroundStyle(.secondary)
+            Button(intent: ExtendRestIntent()) {
+                Label("+15 秒", systemImage: "plus").frame(maxWidth: .infinity).monospacedDigit()
             }
         }
+        .font(.subheadline.weight(.semibold))
+        .buttonStyle(.bordered)
+        .tint(accent)
     }
 
-    @ViewBuilder
-    private var buttons: some View {
-        if state.restInterval(isStale: isStale) != nil {
-            HStack(spacing: 10) {
-                Button(intent: SkipRestIntent()) {
-                    Label("跳過休息", systemImage: "forward.end.fill").frame(maxWidth: .infinity)
-                }
-                Button(intent: ExtendRestIntent()) {
-                    Label("+15 秒", systemImage: "plus").frame(maxWidth: .infinity).monospacedDigit()
-                }
-            }
-            .font(.subheadline.weight(.semibold))
-            .buttonStyle(.bordered)
-            .tint(accent)
-        } else if state.hasCurrentSet, state.canComplete {
-            Button(intent: CompleteSetIntent()) {
-                Label("完成這組", systemImage: "checkmark")
+    /// 全部完成（或還沒有任何組）：沒有按鈕，點即時動態打開 App
+    private func finished(allDone: Bool) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: allDone ? "checkmark.circle.fill" : "plus.circle")
+                .font(.title2)
+                .foregroundStyle(allDone ? done : accent)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(allDone ? WorkoutActivityState.allDoneText : WorkoutActivityState.noSetsText)
                     .font(.headline)
-                    .foregroundStyle(Palette.isLight(attributes.done) ? .black : .white)
-                    .frame(maxWidth: .infinity)
+                    .minimumScaleFactor(0.8)
+                if allDone {
+                    Text("已完成 \(state.completedSets)／\(state.totalSets) 組")
+                        .font(.subheadline.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
             }
-            .buttonStyle(.borderedProminent)
-            .tint(done)
-        } else {
-            // 沒有預填值可用（例如第一次做的動作），或全部打勾了：在 App 裡輸入或完成
-            Link(destination: DeepLink.workout.url) {
-                Label(state.hasCurrentSet ? "打開 App 輸入這組" : "打開 App 完成訓練",
-                      systemImage: state.hasCurrentSet ? "square.and.pencil" : "flag.checkered")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(accent.opacity(0.18), in: .capsule)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    }
+}
+
+/// 「下一組：臥推・第 3／8 組」：名稱太長時只截斷名稱，組數一定完整
+struct WorkoutActivityNextSetText: View {
+    var state: WorkoutActivityState
+
+    var body: some View {
+        if let name = state.exerciseName {
+            HStack(spacing: 0) {
+                Text("下一組：\(name)").truncationMode(.tail)
+                Text("・\(state.setText)").fixedSize()
             }
-            .foregroundStyle(accent)
+            .lineLimit(1)
         }
     }
 }
@@ -216,7 +248,7 @@ struct WorkoutActivityCompactLeading: View {
     }
 }
 
-/// 動態島縮小時右邊：休息中顯示倒數，否則顯示「2/5」
+/// 動態島縮小時右邊：休息中顯示倒數，否則顯示「2/5」，全部完成時打勾；沒有按鈕（CHANGE_16 §1）
 struct WorkoutActivityCompactTrailing: View {
     var attributes: WorkoutActivityAttributes
     var state: WorkoutActivityState
@@ -224,17 +256,20 @@ struct WorkoutActivityCompactTrailing: View {
 
     var body: some View {
         Group {
-            if let rest = state.restInterval(isStale: isStale) {
+            switch state.phase(isStale: isStale) {
+            case .resting(let rest):
                 Text(timerInterval: rest, countsDown: true)
                     .monospacedDigit()
                     .multilineTextAlignment(.trailing)
                     .minimumScaleFactor(0.6)
                     .frame(maxWidth: 44)
                     .foregroundStyle(Color(hex: attributes.accent))
-            } else if state.hasCurrentSet {
+            case .ready, .needsInput:
                 Text("\(state.setNumber)/\(state.setCount)").monospacedDigit()
-            } else {
+            case .allDone:
                 Image(systemName: "checkmark").foregroundStyle(Color(hex: attributes.done))
+            case .noSets:
+                Text("—")
             }
         }
         .lineLimit(1)
@@ -242,7 +277,7 @@ struct WorkoutActivityCompactTrailing: View {
     }
 }
 
-/// 動態島最小（和其他即時動態並存時）：休息中顯示倒數，否則顯示啞鈴
+/// 動態島最小（和其他即時動態並存時）：休息中顯示倒數，否則顯示啞鈴；沒有按鈕
 struct WorkoutActivityMinimal: View {
     var attributes: WorkoutActivityAttributes
     var state: WorkoutActivityState
@@ -250,7 +285,7 @@ struct WorkoutActivityMinimal: View {
 
     var body: some View {
         Group {
-            if let rest = state.restInterval(isStale: isStale) {
+            if case .resting(let rest) = state.phase(isStale: isStale) {
                 Text(timerInterval: rest, countsDown: true)
                     .monospacedDigit()
                     .multilineTextAlignment(.center)

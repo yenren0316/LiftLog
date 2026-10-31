@@ -25,15 +25,37 @@ final class WorkoutService {
         restTimer.start(seconds: item.restSeconds)
     }
 
-    /// 「完成這組」：目前的組採用預填值打勾，效果和在 App 裡沒輸入數字直接按 ✓ 一樣，完成後開始休息。
-    /// 沒有進行中的訓練、全部打勾，或預填值不夠完成時回傳 false，不做任何改變
+    /// 打勾完成一組（CHANGE_16 §1）：訓練畫面和編輯訓練的 ✓、即時動態的「完成這組」都呼叫這個函式，沒有另外的完成邏輯。
+    /// 沒輸入的欄位用灰字預填值（和畫面上同一份 setHints）；必要欄位不齊時不改任何東西，回傳 false。
+    /// 進行中的訓練完成後還有下一組時開始休息倒數（設定頁可關閉）；最後一組完成時沒有下一組，不開始
     @discardableResult
-    func completeCurrentSet() -> Bool {
-        guard let session = WorkoutActions.activeSession(in: context), let current = session.currentSet else { return false }
-        let placeholder = current.item.setHints().first { $0.set === current.set }?.placeholder
-        guard WorkoutActions.complete(current.set, placeholder: placeholder, in: context) else { return false }
-        startRest(after: current.item)
+    func complete(_ set: SetRecord) -> Bool {
+        guard WorkoutActions.complete(set, placeholder: set.placeholder, in: context) else { return false }
+        if let item = set.sessionExercise, let session = item.session, session.isActive, session.currentSet != nil {
+            startRest(after: item)
+        }
         return true
+    }
+
+    /// 即時動態「完成這組」的結果
+    enum CompleteResult: Equatable {
+        case completed
+        /// 那一組已經完成（例如已經在 App 裡打勾，即時動態還沒更新）：不完成任何一組
+        case alreadyCompleted
+        /// 沒有進行中的訓練，或那一組已經不在這次訓練裡
+        case notFound
+        /// 沒有可以記錄的值（沒填，也沒有灰字預填）
+        case cannotComplete
+    }
+
+    /// 即時動態的「完成這組」（CHANGE_16 §1）：只處理 intent 帶來的那一組（即時動態顯示的下一組），
+    /// 用和 App 裡打勾同一個函式完成；那一組已經完成或不在了時不改任何資料
+    @discardableResult
+    func completeSet(id: String) -> CompleteResult {
+        guard let session = WorkoutActions.activeSession(in: context),
+              let set = session.items.flatMap(\.sets).first(where: { $0.id.uuidString == id }) else { return .notFound }
+        guard !set.isCompleted else { return .alreadyCompleted }
+        return complete(set) ? .completed : .cannotComplete
     }
 
     /// 「跳過休息」：清掉倒數，並取消休息結束的通知

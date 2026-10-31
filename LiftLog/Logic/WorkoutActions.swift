@@ -48,7 +48,7 @@ enum WorkoutActions {
     }
 
     /// 打勾：沒輸入的欄位用預填值；必要欄位不齊時不完成，回傳 false。
-    /// 訓練中畫面的 ✓、即時動態的「完成這組」和歷史訓練的 ✓ 都走這裡
+    /// 訓練中畫面的 ✓、即時動態的「完成這組」和歷史訓練的 ✓ 都經過 WorkoutService.complete 走這裡（CHANGE_16 §1）
     @discardableResult
     static func complete(_ set: SetRecord, placeholder: SetValues?, in context: ModelContext) -> Bool {
         guard apply(placeholder, toComplete: set, at: completionDate(in: set.sessionExercise?.session)) else { return false }

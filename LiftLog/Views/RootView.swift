@@ -21,7 +21,7 @@ struct RootView: View {
 
     var body: some View {
         #if DEBUG
-        // 開發用：-widgetGallery small｜lock｜live 顯示小工具和即時動態的預覽
+        // 開發用：-widgetGallery small｜lock｜live｜liveStates｜island｜control 顯示小工具和即時動態的預覽
         if let page = UserDefaults.standard.string(forKey: "widgetGallery") {
             WidgetGalleryView(page: page).preferredColorScheme(.dark)
         } else {
@@ -247,9 +247,11 @@ struct RootView: View {
             }
             // 開發用：-trainingStatus YES 打開「訓練狀態」浮窗（截圖用）
             if UserDefaults.standard.bool(forKey: "trainingStatus") { coordinator.showingTrainingStatus = true }
-            // 開發用：-discardActive YES 捨棄進行中的訓練，測試沒有訓練時的狀態
-            if UserDefaults.standard.bool(forKey: "discardActive"), let session = active.first {
-                WorkoutActions.discard(session, in: context)
+            // 開發用：-discardActive YES 捨棄進行中的訓練，測試沒有訓練時的狀態。
+            // 和訓練畫面的「捨棄訓練」一樣，休息倒數一起停掉（CHANGE_16：不然下一個測試的即時動態一開始就在休息）
+            if UserDefaults.standard.bool(forKey: "discardActive") {
+                RestTimer.shared.skip()
+                if let session = active.first { WorkoutActions.discard(session, in: context) }
             }
             // 開發用：-openSummary latest 切到歷程、推入最近一次訓練的摘要頁；-openSummary edit 直接進入編輯
             if let mode = UserDefaults.standard.string(forKey: "openSummary") {

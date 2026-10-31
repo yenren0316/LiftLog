@@ -10,9 +10,9 @@ final class SetDrafts {
 extension WorkoutEditor where Footer == EmptyView {
     /// 沒有 footer（編輯過去的訓練）
     init(session: WorkoutSession, openAddOnAppear: Bool = false, onAutoOpenedAdd: @escaping () -> Void = {},
-         onSetCompleted: @escaping (SessionExercise) -> Void = { _ in }, @ViewBuilder header: () -> Header) {
+         @ViewBuilder header: () -> Header) {
         self.init(session: session, openAddOnAppear: openAddOnAppear, onAutoOpenedAdd: onAutoOpenedAdd,
-                  onSetCompleted: onSetCompleted, header: header, footer: { EmptyView() })
+                  header: header, footer: { EmptyView() })
     }
 }
 
@@ -33,8 +33,6 @@ struct WorkoutEditor<Header: View, Footer: View>: View {
     /// 一出現就打開「新增動作」（自由選動作）；打開後呼叫 onAutoOpenedAdd
     var openAddOnAppear = false
     var onAutoOpenedAdd: () -> Void = {}
-    /// 打勾時通知（訓練中畫面用來開始休息計時）
-    var onSetCompleted: (SessionExercise) -> Void = { _ in }
     @ViewBuilder var header: Header
     @ViewBuilder var footer: Footer
 
@@ -195,7 +193,7 @@ struct WorkoutEditor<Header: View, Footer: View>: View {
                     focus: $focus,
                     allowsNegative: SetLogic.allowsNegativeLoad(logType: logType, equipment: exercise.equipment),
                     fieldIdentifier: "\(exercise.name)-\(row.number)",
-                    onToggle: { toggle(row, item: item, exercise: exercise) },
+                    onToggle: { toggle(row) },
                     onKind: { kind in
                         row.set.kind = kind
                         WorkoutActions.save(context)
@@ -268,7 +266,7 @@ struct WorkoutEditor<Header: View, Footer: View>: View {
 
     // MARK: - 動作
 
-    private func toggle(_ row: SetRowInfo, item: SessionExercise, exercise: Exercise) -> Bool {
+    private func toggle(_ row: SetRowInfo) -> Bool {
         let set = row.set
         if set.isCompleted {
             set.isCompleted = false
@@ -276,10 +274,10 @@ struct WorkoutEditor<Header: View, Footer: View>: View {
             WorkoutActions.save(context)
             return true
         }
-        guard WorkoutActions.complete(set, placeholder: row.placeholder, in: context) else { return false }
+        // 和即時動態的「完成這組」同一個函式（CHANGE_16 §1）：沿用灰字預填，進行中的訓練接著開始休息倒數
+        guard WorkoutService.shared.complete(set) else { return false }
         clearDrafts(set)
         if focus?.set == set.id { focus = nil }
-        onSetCompleted(item)
         return true
     }
 

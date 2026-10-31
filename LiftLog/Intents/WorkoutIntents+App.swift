@@ -4,7 +4,7 @@ import AppIntents
 
 extension CompleteSetIntent {
     nonisolated func perform() async throws -> some IntentResult {
-        await WorkoutIntentActions.completeSet()
+        await WorkoutIntentActions.completeSet(id: setID)
         return .result()
     }
 }
@@ -24,8 +24,9 @@ extension ExtendRestIntent {
 }
 
 enum WorkoutIntentActions {
-    static func completeSet() async {
-        WorkoutService.shared.completeCurrentSet()
+    /// 只完成這一組（和 App 裡打勾同一個函式）；已經完成、不在了或沒有值時不改資料。不管結果如何都更新即時動態
+    static func completeSet(id: String) async {
+        WorkoutService.shared.completeSet(id: id)
         await LiveActivityController.shared.sync()
     }
 

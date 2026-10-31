@@ -178,6 +178,28 @@ nonisolated enum SetFormat {
         }
     }
 
+    /// 一組會記錄的值（CHANGE_16 §1，即時動態的「下一組」）：欄位的順序和名稱跟訓練畫面一樣
+    /// （kg｜次、輔助 kg｜次、次｜負重、秒｜負重、坡度｜速度｜分鐘），重量的寫法和摘要（compact）同一個函式。
+    /// 「32.5 kg × 3」「-20 kg × 5」「輔助 19 kg × 5」「12 下」「+10 kg × 12」「45 秒」「+24 kg × 60 秒」
+    /// 「坡度 12・速度 5.5・30 分鐘」；有重量時次數寫「× 3」，沒有重量時「12 下」。沒有任何值時為 nil
+    static func single(_ v: SetValues, logType: LogType, unit: WeightUnit) -> String? {
+        if logType == .cardio {
+            let parts = [v.incline.map { "坡度 \(Units.number($0))" }, v.speed.map { "速度 \(Units.number($0))" },
+                         v.minutes.map { "\(Units.number($0)) 分鐘" }].compactMap { $0 }
+            return parts.isEmpty ? nil : parts.joined(separator: "・")
+        }
+        let weight = v.weightKg.map { weightText($0, logType: logType, unit: unit) }
+        let amount = logType == .timed
+            ? v.seconds.map { "\(Units.number($0)) 秒" }
+            : v.reps.map { weight == nil ? "\($0) 下" : String($0) }
+        switch (weight, amount) {
+        case let (w?, a?): return "\(w) × \(a)"
+        case let (w?, nil): return w
+        case let (nil, a?): return a
+        case (nil, nil): return nil
+        }
+    }
+
     private static func weightText(_ w: Double, logType: LogType, unit: WeightUnit) -> String {
         switch logType {
         case .assisted: w == 0 ? "自重" : "輔助 \(unit.formatWithUnit(kg: w))"

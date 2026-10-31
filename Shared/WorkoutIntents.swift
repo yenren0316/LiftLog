@@ -4,10 +4,24 @@ import AppIntents
 // 實際的 perform 在 App 的 Intents/WorkoutIntents+App.swift；小工具 target 只放空的實作
 // （LiftLogWidgets/WorkoutIntents+Widget.swift），讓按鈕可以引用這些型別。
 
-/// 完成這組：目前的組採用預填值，完成後依角色開始休息
-nonisolated struct CompleteSetIntent: LiveActivityIntent {
-    static let title: LocalizedStringResource = "完成這組"
-    static let isDiscoverable = false
+/// 完成這組（CHANGE_16 §1）：帶著即時動態顯示的那一組的 id，用和 App 裡打勾同一個函式完成（沿用灰字預填，
+/// 還有下一組時開始休息）。那一組已經完成（例如已經在 App 裡打勾、即時動態還沒更新）或不在了時，不完成任何一組，只更新即時動態。
+/// 鎖定畫面不用解鎖就能執行（authenticationPolicy 是系統的預設 alwaysAllowed，這裡寫明）。
+/// 有 @Parameter 的型別不能整個標 nonisolated（Swift 6 不允許 nonisolated 的 @Parameter 屬性），
+/// 改成協定的符合標 nonisolated，系統會用到的成員各自標 nonisolated
+struct CompleteSetIntent: nonisolated LiveActivityIntent {
+    nonisolated static let title: LocalizedStringResource = "完成這組"
+    nonisolated static let isDiscoverable = false
+    nonisolated static let authenticationPolicy: IntentAuthenticationPolicy = .alwaysAllowed
+
+    @Parameter(title: "組")
+    var setID: String
+
+    nonisolated init() {}
+
+    init(setID: String) {
+        self.setID = setID
+    }
 }
 
 /// 跳過休息：清掉倒數並取消休息結束的通知

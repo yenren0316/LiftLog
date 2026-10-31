@@ -106,6 +106,7 @@ struct SetRow: View {
                     .background(set.isCompleted ? Theme.done.opacity(0.18) : Theme.field, in: .rect(cornerRadius: 8))
             }
             .buttonStyle(.pressable(scale: 0.88))
+            .accessibilityValue(set.isCompleted ? "已完成" : "未完成")
             .accessibilityIdentifier("\(fieldIdentifier)-check")
         }
         .modifier(Shake(animatableData: CGFloat(shakes)))

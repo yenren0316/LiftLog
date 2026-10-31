@@ -33,7 +33,7 @@ struct WorkoutLiveActivity: Widget {
                 DynamicIslandExpandedRegion(.bottom) {
                     WorkoutActivityBody(attributes: context.attributes, state: context.state, isStale: context.isStale,
                                         middleHeight: LiveActivityLayout.islandMiddleHeight,
-                                        countdownSize: LiveActivityLayout.islandCountdownSize)
+                                        countdownSize: LiveActivityLayout.islandCountdownSize, valueFont: .title3)
                         .dynamicTypeSize(...DynamicTypeSize.large)
                 }
             } compactLeading: {
