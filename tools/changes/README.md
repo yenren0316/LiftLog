@@ -19,5 +19,6 @@
 | CHANGE_13 | `CHANGE_13.md` | 照錄 |
 | CHANGE_14 | `CHANGE_14.md` | 照錄 |
 | CHANGE_15 | `CHANGE_15.md` | 照錄 |
+| CHANGE_16 | `CHANGE_16.md` | 照錄 |
 
 CHANGE_01～05 現在只剩間接的紀錄：`SPEC.md` 開頭每份 CHANGE 的一行摘要、git log 的 commit 訊息（`git log --oneline` 裡的「CHANGE_0N phase…」）、`tools/STATUS.md` 第 1 節的進度表。CHANGE_02 的 phase 6、7 在 STATUS 標為「無法判斷」，就是因為沒有原文。如果還留著原文，放進這個資料夾，檔名用 `CHANGE_0N.md`。
