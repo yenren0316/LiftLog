@@ -233,7 +233,16 @@ enum WorkoutActions {
     }
 
     static func save(_ context: ModelContext) {
+        #if DEBUG
+        // 開發用（CHANGE_17 §2-2）：存檔失敗（例如鎖定時資料庫打不開）寫進診斷紀錄
+        do {
+            try context.save()
+        } catch {
+            IntentDiagnostics.record(source: "存檔", event: "失敗", detail: String(describing: error))
+        }
+        #else
         try? context.save()
+        #endif
     }
 
     private static func renumber(_ sets: [SetRecord]) {

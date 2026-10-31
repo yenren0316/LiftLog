@@ -33,6 +33,9 @@ struct SettingsView: View {
 
     @Environment(WorkoutCoordinator.self) private var coordinator
     @Environment(\.dismiss) private var dismiss
+    #if DEBUG
+    @State private var showsDiagnostics = false
+    #endif
 
     var body: some View {
         @Bindable var coordinator = coordinator
@@ -43,6 +46,14 @@ struct SettingsView: View {
                         Label(page.title, systemImage: page.systemImage).font(.body.weight(.semibold))
                     }
                 }
+                #if DEBUG
+                // 開發用（CHANGE_17 §2-2）：即時動態按鈕的 intent 執行紀錄
+                Section {
+                    TapListRow { showsDiagnostics = true } label: {
+                        Label("診斷紀錄", systemImage: "stethoscope").font(.body.weight(.semibold))
+                    }
+                }
+                #endif
             }
             .scrollContentBackground(.hidden)
             .screenBackground()
@@ -68,6 +79,13 @@ struct SettingsView: View {
                 .navigationTitle(page.title)
                 .navigationBarTitleDisplayMode(.inline)
             }
+            #if DEBUG
+            .navigationDestination(isPresented: $showsDiagnostics) {
+                IntentDiagnosticsView()
+                    .navigationTitle("診斷紀錄")
+                    .navigationBarTitleDisplayMode(.inline)
+            }
+            #endif
         }
     }
 }
