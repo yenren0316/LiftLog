@@ -1,6 +1,8 @@
 # LiftLog 現況報告（STATUS）
 
-> **CHANGE_16 未收斂：實機鎖定時，即時動態的『完成這組』『跳過休息』『+15 秒』都會要求解鎖**（CHANGE_17 調查與修正中）。
+> **CHANGE_16 未收斂：實機鎖定時，即時動態的『完成這組』『跳過休息』『+15 秒』都會要求解鎖**。
+>
+> CHANGE_17 查到原因在 iOS 27.2：系統執行按鈕的程序（chronod → BackgroundShortcutRunner）在呼叫 App 之前就向 SpringBoard 要求解鎖，App 的 perform 沒有被執行；App 明確宣告的 `alwaysAllowed` 被系統的互動政策（`requiresAuthenticationIfKeybagLocked`）蓋掉，沒有公開的 API 能改。依規格停在 §3，等使用者決定替代做法（`tools/CHANGE_17_REPORT.md` 第 5 節）。
 >
 > **CHANGE_07～15 的資訊架構與設計改版已收斂**：CHANGE_07～15 每一次的收斂標準都通過，CHANGE_15 的實機確認也全部通過。收斂時的版本打了 git tag `v1.1-ia`（`e3a8a77`）。
 >
@@ -11,21 +13,21 @@
 > 2. ~~**每週目標沒有進備份**：每週目標和「只有有氧的訓練也算」存在 UserDefaults，匯出的 JSON 沒有這兩個設定，重裝後要重新設定。（第 11 條）~~ **CHANGE_11 §8 已處理：備份 version 7 包含所有設定。**
 > 3. **平均值涵蓋一段沒畫出來的週**：訓練頻率卡只畫 12 條（含本週），平均用本週之前的 12 個週或月，最舊的那一段算進平均但沒有畫出來。（第 2 條）
 
-- 更新時間：2026-10-31，對應 CHANGE_16 完成後的 main。上一版是 CHANGE_15 完成、`v1.1-ia` 收斂時（`a68c6c2`）。
-- CHANGE_16（鎖定畫面不用解鎖就能完成一組）在 `v1.1-ia` 之後，結果在 `tools/CHANGE_16_REPORT.md`。
+- 更新時間：2026-11-01，對應 CHANGE_17 停在 §3 時的 main。上一版是 CHANGE_16 完成時。
+- CHANGE_16（鎖定畫面不用解鎖就能完成一組）和 CHANGE_17（鎖定時仍然要求解鎖的原因調查）在 `v1.1-ia` 之後，結果在 `tools/CHANGE_16_REPORT.md`、`tools/CHANGE_17_REPORT.md`。
 - CHANGE_10（實機回饋修正、首頁日曆改版、鍵盤收合與點擊提示統一）、CHANGE_11（改用 iOS 26 內建行為、跨日重算、清除舊程式、真實資料驗證）、CHANGE_12（系統的計時文字；放大轉場和系統大標題照規格停下來）、CHANGE_13（首頁兩張卡和系統大標題、設定移到右上角、顏色語意、動作庫精簡）、CHANGE_14（點點日曆回到本週卡、部位色改成系統藍橘、圖表上色、訓練摘要改成推入頁面、平衡卡的空狀態）和 CHANGE_15（標題和按鈕同一列、建立菜單一個畫面、訓練畫面往下拖縮小、觸覺與新紀錄）在 `v1.0-ia` 之後，完整結果在 `tools/CHANGE_10_REPORT.md`～`tools/CHANGE_15_REPORT.md`。
 - 對象：負責 review 和規劃、看不到程式碼的人。內容根據實際程式碼、建置、測試與模擬器截圖整理。
 - 平台：iOS 26、SwiftUI＋SwiftData，App 只給自己用，用免費 Apple ID 安裝。
-- 規模：App＋共用＋小工具約 12,750 行 Swift，單元測試約 5,000 行（273 個）、UI 測試約 1,400 行（44 個）。
+- 規模：App＋共用＋小工具約 13,050 行 Swift（其中 DEBUG 的診斷紀錄約 300 行），單元測試約 5,050 行（277 個）、UI 測試約 1,400 行（44 個）。
 - CHANGE_07 開始前的版本打了 git tag `before-change07`（`6f72de3`）。
-- 各次的完整驗收結果、自行決定的事項和實機確認清單在 `tools/CHANGE_07_REPORT.md`～`tools/CHANGE_16_REPORT.md`。
+- 各次的完整驗收結果、自行決定的事項和實機確認清單在 `tools/CHANGE_07_REPORT.md`～`tools/CHANGE_17_REPORT.md`。
 
 ---
 
 ## 1. 進度總覽
 
 ### 1-1. 文件來源
-- CHANGE_06～16 的原文在 `tools/changes/`（06～10 從對話紀錄還原，11～16 照錄）；CHANGE_01～05 的原文不在 repo 裡，也還原不了，重點整併在 `SPEC.md`（開頭有每份 CHANGE 的一行摘要）。專案的固定規則在根目錄的 `CLAUDE.md`。
+- CHANGE_06～17 的原文在 `tools/changes/`（06～10 從對話紀錄還原，11～17 照錄）；CHANGE_01～05 的原文不在 repo 裡，也還原不了，重點整併在 `SPEC.md`（開頭有每份 CHANGE 的一行摘要）。專案的固定規則在根目錄的 `CLAUDE.md`。
 - 本節依 commit 訊息的節號加上目前的 `SPEC.md` 對照判斷。
 
 ### 1-2. 各份 CHANGE 狀態
@@ -51,9 +53,15 @@
 | CHANGE_13 | §0 存原文、§2 首頁兩張卡（下一次、本週）和系統大標題、§1 設定移到右上角的 sheet（分頁剩三個）、§3 顏色語意（部位色、強調色、不用紅綠燈、對比度、訓練名稱、不只靠顏色）、§4 動作庫只顯示動作數 | 完成；本週卡的圓點、每個主題的部位色、中性色的圖表、摘要浮窗在 CHANGE_14 改掉 | G1、G2（269 個）、S1–S5、V1–V8、歷程穩定性、R1 都通過；沒有遇到「先停下來」。見報告 |
 | CHANGE_14 | §0 存原文、§2 部位色改成系統藍橘（六個主題共用）和 warning 加圖示、§1 點點日曆回到本週卡、§3 單一數列的圖表用強調色、§4 訓練摘要改成推入的頁面、§5 平衡卡的空狀態 | 完成；完成畫面的全螢幕和補登的兩步在 CHANGE_15 改掉 | G1、G2（281 個）、S1–S6、V1–V8、歷程穩定性、R1 都通過；沒有遇到「先停下來」（日曆用 14 pt 的格子：離分頁列 117.5 pt、離附屬列 83.5 pt）。見報告 |
 | CHANGE_15 | §0 存原文、§1 標題和右上角的按鈕同一列（inlineLarge）、§2 建立菜單合成一個畫面（補登也用它）、§3 訓練畫面改成可以往下拖縮小的 sheet、§4 觸覺（.sensoryFeedback）與新紀錄（估算 1RM） | 完成；實機確認全部通過；CHANGE_07～15 收斂（`v1.1-ia`） | G1、G2（302 個）、S1–S6、V1–V7、歷程穩定性、R1 都通過；第 1～3 節都沒有遇到「先停下來」（首頁多出 52 pt：離分頁列 169.5 pt、離附屬列 135.5 pt）。見報告 |
-| **CHANGE_16** | §0 存原文、§1 即時動態的「完成這組」（帶組的 id、和 App 裡打勾同一個函式、要記錄的值、打開 App 填寫、全部完成、防止重複） | **完成；待實機確認** | G1、G2（317 個）、S1、S2、V1–V4、歷程穩定性都通過；沒有遇到「先停下來」。模擬器上真的即時動態用 UI 測試按過（動態島展開、App 完全關掉、鎖定畫面）。驗收時修了鎖定畫面第 1 列的名稱被經過時間擠掉。見報告 |
+| **CHANGE_16** | §0 存原文、§1 即時動態的「完成這組」（帶組的 id、和 App 裡打勾同一個函式、要記錄的值、打開 App 填寫、全部完成、防止重複） | **未收斂：iOS 27.2 實機鎖定時要求解鎖（見 CHANGE_17）** | G1、G2（317 個）、S1、S2、V1–V4、歷程穩定性都通過；沒有遇到「先停下來」。模擬器上真的即時動態用 UI 測試按過（動態島展開、App 完全關掉、鎖定畫面）。驗收時修了鎖定畫面第 1 列的名稱被經過時間擠掉。見報告 |
+| **CHANGE_17** | §0 存原文、標註 CHANGE_16 未收斂；§2-1 靜態檢查；§2-2 DEBUG 診斷紀錄；§2-3 實機重現與系統日誌；§3 先停下來 | **調查完成；§3 依規格停下來，等使用者決定** | perform 沒有被執行，要求解鎖的是 iOS 27.2 的系統程序（App 明確宣告的 alwaysAllowed 被系統的互動政策蓋掉），沒有公開的 API 能改。G1、G2（321 個）、S1、S2 通過；D1～D3 未達成。見報告 |
 
 ### 1-3. 實作和文件不一樣的地方
+CHANGE_17（完整清單在 `tools/CHANGE_17_REPORT.md` 第 6 節）：
+- 診斷紀錄（DEBUG）放在 App Group 容器，小工具擴充的空 perform 也寫；另外記「App 啟動」「存檔失敗」。
+- `WorkoutIntentActions.completeSet` 回傳完成的結果，行為不變。
+- SPEC 11-5「鎖定畫面不用解鎖就能按」加了註記：iOS 27.2 實機上不成立。
+
 CHANGE_16（完整清單在 `tools/CHANGE_16_REPORT.md` 第 4 節）：
 - 最後一組（打勾之後沒有任何沒打勾的組）完成時不開始休息，App 裡和即時動態都一樣（同一個函式）；全部打勾時即時動態是「全部完成」，就算前一組的休息還在倒數。
 - 值的負號跟 App 裡一樣是系統數字格式的「-」（「-20 kg × 5」），沒有用規格例子的「−」；「第 3／8 組」用全形斜線。
@@ -136,8 +144,11 @@ CHANGE_07（完整清單在 `tools/CHANGE_07_REPORT.md` 第 2 節）：
 - 主項進步只列 90 天內有紀錄的主項，其他寫一行數量。
 - 摘要浮窗的時間固定 24 小時制。
 
-### 1-4. git log 摘要（共 133 筆，新 → 舊；不含這次的文件 commit）
+### 1-4. git log 摘要（共 136 筆，新 → 舊；不含這次的文件 commit）
 ```
+548da4c CHANGE_17 §2-2: DEBUG diagnostics log for the Live Activity intents
+d94b203 CHANGE_17 §0: save the prompt, mark CHANGE_16 as not converged
+b120546 CHANGE_16: report, SPEC and STATUS updates, verification screenshots
 aa63c46 CHANGE_16 §1: complete the next set from the Live Activity without unlocking
 97d9909 CHANGE_16 §0: save the prompt
 a68c6c2 STATUS: IA and design (CHANGE_07–15) converged, tagged v1.1-ia
@@ -369,7 +380,8 @@ tools/      parse_log.py、migration_review.py、pixel_compare.swift、unused_sc
 - Debug（含測試）、Release（模擬器）、Release（iphoneos，不簽署）的 clean build：**0 個 warning、0 個 error**。
 
 ### 5-2. 測試
-- **317 個全部通過，0 失敗**：單元測試 273（41 檔）、UI 測試 44（17 檔＋共用），iPhone 17 Pro 模擬器（Xcode 27.2），`-parallel-testing-enabled NO`。
+- **321 個全部通過，0 失敗**：單元測試 277（42 檔）、UI 測試 44（17 檔＋共用），iPhone 17 Pro 模擬器（Xcode 27.2），`-parallel-testing-enabled NO`。
+- CHANGE_17 新增：IntentDiagnosticsTests 4（只在 DEBUG：寫入後讀回、新的在前、拿不到的值是 nil、時間含毫秒和時區；只列最近 50 筆；檔案保護等級 none；清除後可以繼續寫）。CHANGE_16 的 UI 測試在模擬器上按真的即時動態，模擬器沒有密碼，測不到 iOS 27.2 實機鎖定時要求解鎖的情況（見 CHANGE_17 報告）。
 - CHANGE_16 新增：CompleteSetIntentTests 13（下一組依順序、跨動作；已填優先、沒填用預填、和 App 裡打勾的結果相同；顯示的值跟著輸入；沒有可以記錄的值不能完成；完成後開始休息、即時動態切到休息；關掉自動休息；最後一組顯示全部完成、不開始休息（App 裡打勾也一樣）；沒有任何組；防止重複（已完成、不在了）；intent 帶 id、不用解鎖；五種組的值的格式；每種組按完記錄的就是顯示的值）；UI 測試 LiveActivityUITests 3（模擬器上真的即時動態：動態島展開、App 完全關掉、鎖定畫面，按下後切到休息、打開 App 已同步）。WorkoutServiceTests 改用帶 id 的完成，格式測試搬到新檔（刪 1）。
 - CHANGE_15 新增：PlanMenuTests 4（照建議開始和舊的兩步建立的訓練完全相同：四個日型 × 1／2／3 × 跑步機；改日型全部重算、改動作數和跑步機保留換過的格子；換主項重建拉／推；候選的小字和處方一行）、NewRecordsTests 7（高於之前最好的才算、相等不算、以前沒有不算、熱身和超過 10 下不算、好幾個動作全部列出、只有重量型、只和之前的訓練比）、SessionTimeEditTests（補登的預設時間）、WorkoutLauncherTests（從建立菜單的畫面補登）；UI 測試 TitleBarUITests 4（四個第 1 層的標題和按鈕同一列、捲動後回到原位）、PlanSheetUITests 4（兩下開始、換一格只換那一格、換日型、補登用同一個畫面）、WorkoutSheetUITests 2（往下拖縮小到橫條、完成畫面拖不掉）、NewRecordUITests（完成畫面的新紀錄區塊、摘要頁的獎盃）。刪掉舊的新紀錄測試 3 個（SetLogicTests 2、LogTypeAndUnitTests 1）；PlanTests 的預覽測試改名。
 - CHANGE_14 新增：TodayCardsTests 的點點日曆 6 個（欄數依寬度且至少 12 週、最右邊一欄是本週、今天和之後的外框、月份標在第一個週一、跨月跨年、每一格和 dayRegions 一致；取代 7 個圓點的 2 個）、ThemeTests（部位色是共用的系統色、六個主題相同、色相差 60 度、對比度 3:1；取代和強調色差 40 度的測試）、ChartEmphasisTests 2（單一數列用強調色、長條選取時其他變淡、恢復）、BalanceCardTests 2（還沒有紀錄、0 沒練）；UI 測試 SummaryPageUITests 3（紀錄推入摘要頁和返回、編輯和刪除、動作詳情的歷史推入同一頁）、TrainingStatusUITests 改成輪替列點了沒有反應、ChartSelectionUITests 的有氧選取 2 秒後恢復。WorkoutLauncherTests、SessionTimeEditTests、TrainingCountTests 跟著改。
@@ -468,7 +480,8 @@ tools/      parse_log.py、migration_review.py、pixel_compare.swift、unused_sc
 - 過大的檔案：`Backup.swift` 493、`PlanBuilder.swift` 440、`WorkoutEditor.swift` 435 行。
 
 ### 5-4. 要在實機確認的事
-- `tools/CHANGE_16_REPORT.md` 第 6 節：有密碼的手機鎖定時按「完成這組」不用解鎖就生效、按完切到休息、打開 App 後同步、App 從切換器滑掉之後按鈕還能不能用、顯示、重複按。
+- `tools/CHANGE_17_REPORT.md` 第 8 節：用另一個有即時動態按鈕的第三方 App 比較鎖定時會不會要求解鎖；看著手機（Face ID 通過）按「完成這組」那一組有沒有完成；診斷紀錄頁。
+- `tools/CHANGE_16_REPORT.md` 第 6 節：**第 1 項不成立（iOS 27.2 實機鎖定時要求解鎖，CHANGE_17）**；有密碼的手機鎖定時按「完成這組」不用解鎖就生效、按完切到休息、打開 App 後同步、App 從切換器滑掉之後按鈕還能不能用、顯示、重複按。
 - `tools/CHANGE_15_REPORT.md` 第 7 節：標題列的樣子、建立菜單的操作手感（換日型、換候選的 Menu、動作數和跑步機）、往下拖縮小的手感、各種觸覺的強弱、新紀錄的動畫。**全部通過（CHANGE_15 實機確認）。**
 - `tools/CHANGE_14_REPORT.md` 第 8 節：橘藍在健身房的燈光下好不好分辨、日曆格子的大小好不好讀、推入頁面和滑動返回的手感、圖表的顏色會不會太搶眼，以及 warning 的圖示、刪除後返回、補登的流程。
 - `tools/CHANGE_13_REPORT.md` 第 7 節：齒輪按鈕的位置和手感、首頁兩張卡的感覺、顏色在實際光線下是否好分辨（部位色、強調色、warning；不以顏色區分）、改成中性色的圖表、訓練畫面的名稱顏色、平衡卡、動作庫第 1 層、設定開著時的小工具和控制項。
