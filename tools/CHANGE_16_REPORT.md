@@ -65,7 +65,7 @@ G2 要求的新測試（`LiftLogTests/CompleteSetIntentTests.swift`，資料是�
 
 規格的條件是「LiveActivityIntent 在免費開發者帳號上不能用，或沒辦法在不解鎖的狀態下執行」。查的方式和結果：
 - **免費帳號**：LiveActivityIntent 不需要任何付費的 capability（不用推播；即時動態由 App 在本機用 ActivityKit 更新）。CHANGE_05 起「跳過休息」「+15 秒」就是同一套 LiveActivityIntent，一直用免費帳號簽署安裝；CHANGE_08 的實機確認第 4 項在手機的鎖定畫面按過「跳過休息」「+15 秒」。這次的「完成這組」只是多帶一個參數（`@Parameter var setID`），簽署和權限都沒有變。
-- **不用解鎖**（**模擬器沒有設定密碼，無法驗證；實機上不成立，見 CHANGE_17**）：
+- **不用解鎖**（**模擬器沒有設定密碼，無法驗證；實機上不成立，見 CHANGE_17**。**結論（CHANGE_17 收斂）：這是 Apple 對第三方即時動態的設計，鎖定的裝置上按鈕要使用者驗證並解鎖才會執行，App 的 `authenticationPolicy` 改不了；Face ID 通過時不用輸入密碼、那一組直接完成。和免費開發者帳號無關。證據見 `tools/CHANGE_17_REPORT.md` 第 1、10 節**）：
   - App Intents 的 `authenticationPolicy` 預設是 `.alwaysAllowed`（Xcode 27.2 SDK 的 `AppIntents.swiftinterface`；另外兩個是 `.requiresAuthentication`、`.requiresLocalDeviceAuthentication`）；`CompleteSetIntent` 把它寫明。
   - intent 要寫的資料：SwiftData 的資料庫和 UserDefaults 都沒有設定資料保護等級（entitlements 沒有 `com.apple.developer.default-data-protection`），用系統預設的「第一次解鎖之後」（`completeUntilFirstUserAuthentication`），手機開機解鎖過一次之後，鎖定時也能讀寫。
   - 模擬器：鎖定畫面上按「完成這組」不解鎖就完成了那一組並切到休息（`testCompleteSetOnTheLockScreen`）。模擬器沒有密碼，所以「有密碼的手機鎖定時」只能在實機確認（第 6 節第 1 項）。

@@ -1,4 +1,4 @@
-# CHANGE_17 鎖定畫面的按鈕仍然要求解鎖：根本原因調查報告
+# CHANGE_17 鎖定畫面的按鈕仍然要求解鎖：最終報告
 
 - 日期：2026-11-01
 - 範圍：
@@ -6,14 +6,17 @@
   - §2-1：靜態檢查。
   - §2-2：DEBUG 診斷紀錄。
   - §2-3：實機重現一次，收集診斷紀錄和手機的系統日誌。
-  - **§3 依規格「先停下來」**：原因在 iOS 本身，App 的程式沒有被呼叫，也沒有公開的 API 可以改變（第 2、5 節）。所以 §3 沒有修改任何行為，D1～D3 沒有驗證，等使用者決定替代做法。
+  - **§3 依規格「先停下來」**：原因在 iOS 本身，App 的程式沒有被呼叫，也沒有公開的 API 可以改變（第 1、5 節）。所以 §3 沒有修改任何行為，等使用者決定替代做法。
+  - **收斂（第 10 節）**：使用者實測 Face ID 通過就能完成、時鐘的對照；查證 Apple 文件；使用者決定維持現狀。用診斷紀錄確認 Face ID 通過那一次的 perform 執行而且成功。CHANGE_16、17 收斂，打 tag `v1.2-ia`。
 - 結果摘要：
   - **按下按鈕後，`perform` 完全沒有被執行。**
   - 要求解鎖的是 iOS 負責執行即時動態按鈕的系統程序：chronod 叫起的 `BackgroundShortcutRunner`（WorkflowKit）。它在聯絡 App 之前，就先向 SpringBoard 要求解鎖；使用者取消後，這個動作以錯誤結束。
   - App 對這個 intent 的宣告系統都收到了：
     - 「完成這組」明確宣告 `alwaysAllowed`。
     - 只在背景執行，不打開 App。
-  - 但手機上 iOS 27.2 的 chronod 對這次互動套用了「裝置鎖定時要驗證」的互動政策，把 App 的宣告蓋掉了。
+  - 但系統對這次互動套用了「裝置鎖定時要驗證」的互動政策，把 App 的宣告蓋掉了。
+  - **這是 Apple 對第三方 App 的設計**：WidgetKit 的官方文件「Adding interactivity to widgets and Live Activities」寫明，鎖定的裝置上按鈕和開關不會作用，使用者驗證並解鎖之前系統不會執行動作。和免費開發者帳號、開發版簽署無關（第 10 節）。
+  - **使用者的決定**：維持現狀，接受「鎖定時按即時動態的按鈕需要 Face ID 通過」。實測 Face ID 通過時不用輸入密碼、也不用再按一次，那一組直接完成並切到休息倒數。
 - 驗證環境：
   - Xcode 27.2（27B52，iphoneos27.2 SDK）。
   - 實機：iPhone 17，**iOS 27.2（24B119）**，有密碼；裝的是加了診斷紀錄的 Debug 版，覆蓋安裝、沒有刪除 App。
@@ -22,9 +25,10 @@
 - 文件：
   - `tools/changes/CHANGE_17.md`（原文）
   - `tools/changes/README.md`
-  - `tools/STATUS.md`（最上面的註記、進度表）
-  - `tools/CHANGE_16_REPORT.md`（第 2 節的粗體註記）
-  - `SPEC.md`（開頭摘要；11-5 即時動態按鈕「不用解鎖」的註記；13 開發用參數）
+  - `tools/STATUS.md`（最上面改成 CHANGE_07～17 已收斂和已知限制、之後重測的時機、進度表）
+  - `tools/CHANGE_16_REPORT.md`（第 2 節的粗體註記，指向這份報告的結論）
+  - `SPEC.md`（開頭摘要；11-5 即時動態按鈕的已知限制；13 開發用參數）
+  - `CLAUDE.md`（tag 列表加上 `v1.2-ia`）
   - 這份報告
 - 隱私：診斷紀錄、系統日誌、實驗輸出都只在 `tools/fixtures/change17/`（已在 .gitignore），沒有 commit。以下引用的日誌已經去掉裝置名稱、UDID、Team ID 和本機路徑；時間是這次測試的時間，不是訓練紀錄。
 
@@ -44,23 +48,23 @@
 3. **App 的宣告系統有收到，但被蓋掉了。**
    - 系統讀到的 metadata 是：「完成這組」明確指定 `alwaysAllowed`（`isAuthPolExplicit: true`）、`openAppWhenRun: false`、`supportedModes: 1`（只在背景）。
    - 小工具送出的 LNAction 也帶著 `explicitAuthenticationPolicy: 0`，也就是明確的 alwaysAllowed。
-   - 照 runner 的規則（1-3 第 1 點），這樣的 metadata 不會要求解鎖。所以要求解鎖的指示一定來自呼叫它的 chronod，也就是「這次互動要驗證」。
-4. **手機的 iOS 27.2 會把即時動態的互動標成「鎖定時要驗證」。**
+   - 照 runner 的規則（1-4 第 1 點），這樣的 metadata 不會要求解鎖。所以要求解鎖的指示一定來自呼叫它的 chronod，也就是「這次互動要驗證」。
+4. **系統把即時動態的互動標成「鎖定時要驗證」。**（這是 Apple 的設計，見第 10 節）
    - 手機 27.2 的 ChronoCore（chronod 的主體）依互動的 `InteractionAuthenticationPolicy` 決定傳給 runner 的值。有三種：
      - `requiresAuthenticationIfKeybagLocked`（鎖定時要驗證）
      - `followsActionDefinedPolicyIfExplicitlySet`（照 intent 明確指定的）
      - `alwaysAllowed`
-   - 27.2 的這段程式有把值設成「要驗證」的分支；iOS 27.1 模擬器裡同一個函式只會給「照 metadata」或「不用驗證」。
+   - 27.2 的這段程式有把值設成「要驗證」的分支；iOS 27.1 模擬器裡同一個函式只會給「照 metadata」或「不用驗證」。模擬器沒有密碼，裝置不會鎖定，這個差異不影響結論。
    - 這個互動政策由系統的即時動態畫面（WidgetRenderer 的 `handleInteraction(_:authenticationPolicy:action:)`、`keybagLockPolicy`）決定。iOS 27.2 SDK 的 AppIntents、WidgetKit、ActivityKit、SwiftUI 都沒有可以設定它的公開 API。
 5. 模擬器測不到：
    - 模擬器沒有密碼，裝置不會「鎖定」，就算要求解鎖也會直接通過。
    - CHANGE_16 的 UI 測試用的是 iOS 26.5 模擬器，runner 直接進入 SessionKit、叫起 App 執行（1-2 的對照）。
 
-**還不知道的事**：什麼條件讓系統對 LiftLog 的即時動態選了「鎖定時要驗證」。可能是：
-- iOS 27.2 對所有第三方即時動態按鈕都這樣；
-- 和某個條件有關，例如免費開發者帳號、開發版簽署。
-
-日誌裡相關的值都是 `<private>`；系統程序在 SIP 下也不能用 lldb 掛上去，沒辦法再往下確認。不管是哪一種，App 這邊都沒有可以改的設定或 API。這符合規格「iOS 本身的限制，先停下來」的條件（第 5 節）。
+**查證結果**（收斂時取代原本的「還不知道的事」，細節在第 10 節）：
+- Apple 官方文件「Adding interactivity to widgets and Live Activities」（WidgetKit）的開頭寫明：「On a locked device, buttons and toggles are inactive and the system doesn’t perform actions unless a person authenticates and unlocks their device.」所以這是 Apple 對第三方 App 的設計，不是免費開發者帳號或開發版簽署造成的；改用付費帳號也不會改變。
+- 其他正式上架的 App 也一樣，例如 Sonos 的即時動態要先用 Face ID 或密碼解鎖才能操作。
+- 時鐘是第一方 App，不受這個限制：使用者實測鎖定時按時鐘計時器的暫停，不會要求解鎖。
+- 符合規格「iOS 本身的限制，先停下來」的條件（第 5 節）。
 
 ### 1-2. 證據：診斷紀錄（手機，`tools/fixtures/change17/intent-log_repro1.jsonl`）
 這是安裝後到重現結束的全部紀錄，只有兩筆，都是 App 啟動：
@@ -187,7 +191,7 @@ DEBUG 版這次多了 `UIApplication.shared.isProtectedDataAvailable`、`applica
 | 診斷紀錄（CHANGE_17，DEBUG） | 群組容器 `Library/Diagnostics/intent-log.jsonl` | `.none`（資料夾和檔案） |
 
 - 資料保護不是原因：系統在呼叫 App 之前就要求解鎖，App 根本沒有機會讀寫資料。
-- 手機上的實測值：perform 沒有執行，所以「開始」那一筆記錄的各檔案保護等級在手機上沒有記到。
+- 手機上的實測值：重現那一次 perform 沒有執行，沒有記到。收斂前 Face ID 通過的那一次（第 10-4 節）記到了：資料庫、資料庫 wal、UserDefaults、App Group 都是 `CompleteUntilFirstUserAuthentication`，診斷紀錄是 `None`，和上表一致。
 - 模擬器沒有資料保護，讀出來是「未設定」。
 
 ---
@@ -225,9 +229,9 @@ DEBUG 版這次多了 `UIApplication.shared.isProtectedDataAvailable`、`applica
 |---|---|---|
 | G1 Debug、Release 0 error 0 warning | **通過** | clean build 三種：Debug（含測試 target，`build-for-testing`）、Release 模擬器、Release 實機（`CODE_SIGNING_ALLOWED=NO`），`grep -c 'error:'`、`grep -c 'warning:'` 都是 0。實機用的 Debug 版（`-allowProvisioningUpdates`）也是 0／0。Release 的 App 和小工具執行檔裡找不到 `LiftLogDiag`（0 處），診斷紀錄沒有編進 Release。 |
 | G2 全部測試通過 | **通過** | 乾淨安裝後跑全部測試：**321 個全部通過**（CHANGE_16 的 317 個，加上 `IntentDiagnosticsTests` 4 個）。這次沒有改到邏輯，沒有修正可以測。 |
-| D1 鎖定時三個按鈕都不會要求解鎖 | **未達成（停在 §3）** | 重現時「完成這組」要求解鎖。原因在 iOS，見第 1、5 節。 |
-| D2 診斷紀錄顯示三個 intent 都執行且成功 | **未達成** | 手機上沒有任何一筆「開始」：perform 沒有被執行。模擬器上「完成這組」執行而且成功（對照組）。 |
-| D3 解鎖打開 App 後已經同步 | **未達成** | 使用者回報「打開後沒有打勾」，和 perform 沒有執行一致。 |
+| D1 鎖定時三個按鈕都不會要求解鎖 | **受限於 iOS 對第三方即時動態的設計：需要 Face ID 通過，不需要輸入密碼** | Face ID 認不到臉時會要求解鎖，原因見第 1、10 節。使用者實測看著手機按「完成這組」：Face ID 在背景通過，不用輸入密碼、也不用再按一次。使用者決定接受這個限制。 |
+| D2 診斷紀錄顯示三個 intent 都執行且成功 | **「完成這組」「跳過休息」通過；「+15 秒」這次沒有紀錄** | Face ID 通過那一次的手機診斷紀錄（第 10-4 節）：「完成這組」有「開始」和「成功」（結果 `completed`），「跳過休息」也有「開始」和「成功」（結果「已跳過」）；兩次都在 App 的程序裡、背景執行，受保護的資料可用。「+15 秒」這次沒有按到，沒有紀錄。Face ID 認不到臉、取消解鎖的那一次（第 1-2 節）沒有任何「開始」。 |
+| D3 解鎖打開 App 後已經同步 | **通過（依診斷紀錄）** | Face ID 通過那一次：perform 在 App 的程序裡用和訓練畫面同一個函式完成那一組（`completed`），結束時休息倒數已經開始；訓練畫面讀的是同一個資料庫和休息計時器。使用者回報那一組直接完成、即時動態切到休息倒數。取消解鎖的那一次使用者回報「打開後沒有打勾」，和 perform 沒有執行一致。 |
 | S1 診斷紀錄的程式全部在 `#if DEBUG` 裡 | **通過** | 腳本掃描所有 Swift 檔：41 處提到 `IntentDiagnostics`，唯一不在 `#if DEBUG` 區塊裡的是一行註解；4 個新檔案整個包在 `#if DEBUG`／`#endif`。CLAUDE.md 的 UserDefaults 字面 key 檢查：38 處，全部在 `#if DEBUG` 裡。 |
 | S2 診斷紀錄、系統日誌、所有輸出都在 `tools/fixtures/`，沒有 commit | **通過** | `git status` 只有使用者自己的 pbxproj 簽署設定；`git log --all -- tools/fixtures` 是 0 個 commit；`git ls-files tools/fixtures` 是 0。輸出在 `tools/fixtures/change17/`：診斷紀錄 2 份、logarchive、篩選後的文字檔、裝置資訊。 |
 
@@ -241,11 +245,9 @@ DEBUG 版這次多了 `UIApplication.shared.isProtectedDataAvailable`、`applica
   - 系統在呼叫 App 之前就要求解鎖，App 的程式沒有機會執行。
   - App 已經做了能做的宣告：明確 alwaysAllowed、只在背景、不打開 App。系統也收到了。
   - 手機 iOS 27.2 的 chronod 對這次互動套用了「鎖定時要驗證」，沒有公開的 API 能改。
-- **還不能區分的兩種情況**：
-  - (a) iOS 27.2 對所有第三方即時動態按鈕都這樣；
-  - (b) 和免費開發者帳號、開發版簽署這類條件有關。
-  - 不管哪一種，App 的程式都沒辦法讓它不用解鎖。
-- **可行的替代做法**（沒有實作，等使用者決定）：
+- **查證結果**（收斂時取代原本的「還不能區分的兩種情況」）：是 Apple 對第三方即時動態的設計，官方文件寫明鎖定時按鈕不會作用，要使用者驗證並解鎖；和免費開發者帳號、開發版簽署無關，改用付費帳號也一樣。正式上架的 App（例如 Sonos）也一樣；時鐘是第一方 App，不受限制。細節在第 10 節。
+- **使用者的決定**：維持現狀（替代做法 2），接受「鎖定時按即時動態的按鈕需要 Face ID 通過」。
+- **停下來時列的替代做法**（沒有實作）：
   1. **先分辨是 (a) 還是 (b)，不改程式**（建議先做）：在手機上找另一個有即時動態按鈕的第三方 App，鎖定、讓 Face ID 認不到臉時按它的按鈕。
      - 也要求解鎖：是 iOS 27.2 的行為。
      - 不要求：和 LiftLog 的簽署方式有關。免費帳號沒辦法改，要付費開發者帳號（TestFlight 或 Ad Hoc 簽署）才能比較。
@@ -254,6 +256,7 @@ DEBUG 版這次多了 `UIApplication.shared.isProtectedDataAvailable`、`applica
   4. 不建議：
      - 把 intent 改宣告成其他系統協定（例如 `AudioPlaybackIntent`）來繞過。這改變了設計和語意，而且在 27.2 上不確定有效。
      - 改用控制中心的控制項。ChronoCore 對控制項走同一套互動政策，預期一樣要解鎖。
+  5. 收斂時考慮過、**使用者決定不做**的替代做法：通知上的按鈕（`UNNotificationAction` 不加 `.authenticationRequired`）、側邊的動作按鈕、假裝成媒體播放器（用系統的「正在播放」控制）。
 
 ---
 
@@ -278,34 +281,80 @@ DEBUG 版這次多了 `UIApplication.shared.isProtectedDataAvailable`、`applica
 7. 試過用 lldb 掛上模擬器的系統程序看實際的值，SIP 不允許（`Not allowed to attach to process`），沒有關掉 SIP。
 
 **程式**
-8. 診斷紀錄（DEBUG）保留，不刪：iOS 更新後或改簽署方式後，照 2-3 的步驟重測時直接用。Release 版沒有任何差別。
+8. 診斷紀錄（DEBUG）保留，不刪：iOS 更新時，照 2-3 的步驟重測直接用。Release 版沒有任何差別。
 9. `WorkoutIntentActions.completeSet` 改成回傳結果（`@discardableResult`），讓診斷紀錄寫得出是 `completed` 還是其他；行為不變。
 10. §3 沒有修改任何行為。CompleteSetIntent 的 `authenticationPolicy = .alwaysAllowed` 照舊；「跳過休息」「+15 秒」也沒有補上明確宣告，因為已經證實明確宣告也沒有用（第 1 節）。
-11. 這一輪停在 §3：
-    - 報告和文件都 commit 在本機，**還沒有推上 GitHub**，§6 的更新簽署也還沒做，等使用者決定之後一起做。
-    - 手機上現在是診斷版，簽署到期日照舊。
+11. 停在 §3 時，報告和文件只 commit 在本機；使用者決定之後，連同收斂的 commit 一起推上 GitHub，再更新簽署並安裝到手機。
+12. 收斂的 tag 依 CLAUDE.md 的命名接著 `v1.1-ia` 取名 `v1.2-ia`（CHANGE_07～17 收斂），打在最後的文件 commit 上。
+13. 第 10 節引用的 Apple 文件那一句，從 developer.apple.com 的文件內容取得原文。Sonos 的例子是使用者查到的，照錄。
 
 ---
 
 ## 7. 未解決的事項
 - **沒有觸發規則 3**（沒有任何修正嘗試）。
-- **D1～D3 未達成**：原因在 iOS 27.2（第 1、5 節），等使用者決定替代做法。
-- 還不能區分「iOS 27.2 對所有第三方即時動態按鈕都要求驗證」和「和免費帳號、開發版簽署有關」（第 5 節替代做法 1）。
-- WidgetRenderer 依什麼條件決定即時動態的 `keybagLockPolicy`／互動政策，沒有查到：系統框架的程式碼大多是去掉符號的 Swift，日誌值是 `<private>`，而且 SIP 不允許 lldb 掛上系統程序。
-- 「App 從切換器滑掉之後按鈕還能不能用」等 CHANGE_16 第 6 節的其他實機項目，等鎖定的問題有結論後一起確認。
+- **已知限制（不修）**：鎖定時按即時動態的按鈕需要 Face ID 通過，Face ID 看不到時需要輸入密碼。這是 Apple 對第三方即時動態的設計，App 無法改變；使用者決定接受。
+- 「+15 秒」在 Face ID 通過時的手機診斷紀錄這次沒有按到，沒有紀錄（同一套機制，「完成這組」「跳過休息」都成功）。
+- 之後重測的時機：iOS 更新時，照 §2-3 的步驟和 DEBUG 的診斷紀錄重測一次。
+- 「App 從切換器滑掉之後按鈕還能不能用」等 CHANGE_16 第 6 節的其他實機項目，沒有另外確認。
 
 ---
 
-## 8. 實機確認清單（使用者決定之後）
-1. （替代做法 1）用另一個有即時動態按鈕的第三方 App，在鎖定、Face ID 認不到臉時按按鈕，看會不會要求解鎖。
-2. （替代做法 2）LiftLog 鎖定時看著手機按「完成這組」：Face ID 通過後那一組有沒有完成、即時動態有沒有切到休息，還是要再按一次。
-3. 診斷紀錄：設定 → 最下面「診斷紀錄」看得到這次的「完成這組・開始／成功」。
+## 8. 實機確認清單
+1. ~~（替代做法 1）另一個有即時動態按鈕的 App~~ **已確認**：時鐘的計時器（第一方 App）鎖定時按暫停不會要求解鎖；第三方 App 依 Apple 的設計需要解鎖（第 10 節）。
+2. ~~（替代做法 2）看著手機按「完成這組」~~ **已確認**：Face ID 在背景通過，那一組直接完成、即時動態切到休息倒數，不用輸入密碼、也不用再按一次。
+3. ~~診斷紀錄~~ **已確認**：手機上有那一次的「完成這組」開始和成功（第 10-4 節）。
+4. 之後 iOS 更新時，照 §2-3 的步驟和診斷紀錄重測一次。
 
 ---
 
 ## 9. commit 列表
 ```
+aa558d8 CHANGE_17 §2-3/§3: root cause is iOS 27.2, stop and ask
 548da4c CHANGE_17 §2-2: DEBUG diagnostics log for the Live Activity intents
 d94b203 CHANGE_17 §0: save the prompt, mark CHANGE_16 as not converged
 ```
-加上這份報告和文件的 commit（§2-3 調查結果、§3 先停下來）。
+加上收斂的文件 commit（第 10 節、SPEC、STATUS、CHANGE_16 報告的註記、CLAUDE.md 的 tag），tag `v1.2-ia` 打在這個 commit 上。
+
+---
+
+## 10. 使用者的實測、查證結果與決定（收斂）
+
+### 10-1. 使用者的實測
+- **替代做法 2（Face ID）**：鎖定時看著手機按「完成這組」，Face ID 在背景通過後，那一組直接完成、即時動態切到休息倒數。不用輸入密碼，也不用再按一次。
+- **替代做法 1（對照）**：用 iPhone 內建的「時鐘」開計時器，鎖定、讓 Face ID 認不到時，按即時動態的暫停按鈕不會要求解鎖，直接暫停。
+
+### 10-2. 查證結果
+取代第 1-1 節原本的「還不知道的事」和第 5 節原本的「還不能區分的兩種情況」。
+- Apple 官方文件「Adding interactivity to widgets and Live Activities」（WidgetKit）的開頭寫明：
+  > On a locked device, buttons and toggles are inactive and the system doesn’t perform actions unless a person authenticates and unlocks their device.
+
+  所以這是 Apple 對第三方 App 的設計，不是免費開發者帳號或開發版簽署造成的；改用付費帳號也不會改變。第 1 節看到的系統行為（在呼叫 App 之前先要求解鎖，蓋掉 intent 的 `alwaysAllowed`）就是這個設計的實作。
+- 其他正式上架的 App 也一樣，例如 Sonos 的即時動態要先用 Face ID 或密碼解鎖才能操作。
+- 時鐘是第一方 App，不受這個限制，所以 10-1 替代做法 1 的結果和這個結論一致。
+- Spotify 鎖定時可以切歌，是因為它用的是系統的「正在播放」媒體控制（`MPNowPlayingInfoCenter`、`MPRemoteCommandCenter`），和即時動態是不同的機制。
+- 考慮過、但**使用者決定不做**的替代做法：
+  - 通知上的按鈕（`UNNotificationAction` 不加 `.authenticationRequired`）；
+  - 側邊的動作按鈕；
+  - 假裝成媒體播放器。
+
+### 10-3. 使用者的決定
+維持現狀，接受「鎖定時按即時動態的按鈕需要 Face ID 通過」這個限制。不再追查，不改用其他協定，不加通知按鈕。
+
+- 已知限制：鎖定時按即時動態的按鈕需要 Face ID 通過，Face ID 看不到時需要輸入密碼。這是 Apple 對第三方即時動態的設計，App 無法改變。寫進 SPEC 11-5 和 STATUS。
+- 之後重測的時機：iOS 更新時，照 §2-3 的步驟和 DEBUG 的診斷紀錄重測一次。
+- DEBUG 的診斷紀錄保留。
+
+### 10-4. 診斷紀錄：Face ID 通過那一次
+- 用 `xcrun devicectl device copy from --domain-type appGroupDataContainer` 取出，放在 `tools/fixtures/change17/intent-log_faceid.jsonl`，沒有 commit。
+- 只寫有沒有、結果是什麼，不寫訓練的數值。
+
+| 紀錄 | 有沒有 | 結果 | 執行的程序和狀態 |
+|---|---|---|---|
+| 「完成這組」開始 | 有 | — | App 的程序（`com.aaronhou.LiftLog`）、背景（`background`）、受保護的資料可用（Face ID 已通過）；即時動態 1 個、active；開始前沒有在休息 |
+| 「完成這組」成功 | 有（開始後約 0.1 秒） | `completed`；結束時即時動態還在、休息倒數已經開始 | 同上 |
+| 「跳過休息」開始、成功 | 有 | 「已跳過」；結束時沒有在休息 | 同上 |
+| 「+15 秒」 | 沒有 | 這次沒有按到 | — |
+| 小工具擴充的空 perform | 沒有 | 系統照 Apple 文件在 App 的程序執行 | — |
+
+- 「開始」那一筆記到的檔案保護等級：資料庫、資料庫 wal、UserDefaults、App Group 都是 `CompleteUntilFirstUserAuthentication`；診斷紀錄是 `None`（第 2-1-5 節）。
+- 結果：D2（「完成這組」「跳過休息」）、D3 通過，見第 4 節。

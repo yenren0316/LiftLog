@@ -16,7 +16,7 @@
 > - CHANGE_15：標題和右上角的按鈕放在同一列（`.inlineLarge`，首頁多出 52 pt）；建立菜單合成一個畫面（日型的 Menu、動作數和跑步機、每一格點一下用 Menu 換候選，「開始」→「開始訓練」兩下就開始；補登也用這個畫面）；訓練畫面改成全高的 sheet，往下拖縮小到「訓練中」橫條、完成畫面不能往下拖；觸覺一律 `.sensoryFeedback`；新紀錄改成估算 1RM 高於這次訓練之前最好的（共用的 `NewRecords`），完成畫面最上方的「新紀錄」區塊和摘要頁的小獎盃。
 > - CHANGE_14：點點日曆回到「本週」卡（最右邊一欄是本週，取代 7 個圓點）；部位色改成六個主題共用的系統藍（下肢）和系統橘（上肢）；warning 色的地方都加上圖示或文字；單一數列的圖表改用強調色、長條選取時其他的變淡；訓練摘要從浮窗改成推入的頁面（訓練狀態的輪替列不能點了）；平衡卡完全沒有紀錄時只寫「還沒有紀錄」。
 > - CHANGE_16：鎖定畫面和動態島展開時不用解鎖就能完成下一組：即時動態顯示「下一組：臥推・第 3／8 組」和這一組會記錄的值（「32.5 kg × 3」），主要按鈕「完成這組」帶著那一組的 id，和 App 裡打勾同一個函式（`WorkoutService.complete`，沿用灰字預填、還有下一組時開始休息）；那一組已經完成時不完成任何一組；沒有可以記錄的值時「打開 App 填寫」，全部完成時「全部完成，打開 App 結束訓練」；最後一組打勾後不再開始休息。
-> - CHANGE_17：調查鎖定畫面的即時動態按鈕仍然要求解鎖。原因在 iOS 27.2：系統在呼叫 App 之前就要求解鎖（App 的 perform 沒有被執行，App 明確宣告的 `alwaysAllowed` 被系統的互動政策蓋掉），沒有公開的 API 能改，依規格停下來等決定；DEBUG 版加上 intent 的診斷紀錄（設定最下面「診斷紀錄」）。
+> - CHANGE_17：查明鎖定畫面的即時動態按鈕要求解鎖的原因：這是 Apple 對第三方即時動態的設計（鎖定的裝置上按鈕不會作用，要使用者驗證並解鎖），系統在呼叫 App 之前就要求驗證，App 的 `authenticationPolicy` 改不了。使用者決定接受：Face ID 通過就能直接完成，看不到臉時要輸入密碼。DEBUG 版加上 intent 的診斷紀錄（設定最下面「診斷紀錄」），iOS 更新時用它重測。
 >
 > 以本文件為準。
 
@@ -553,7 +553,7 @@ CHANGE_04 刪除了 15 個從沒練過的動作（前抱式深蹲、分腿蹲、
   - minimal：休息中倒數，否則啞鈴圖示。
   - expanded：和鎖定畫面一樣的資訊層級和狀態（包括「完成這組」）：左右區域是日型簡稱（小字，例如「DE 上肢」；沒有日型的訓練顯示「訓練」，CHANGE_11 §6，`ContentState.dayTypeTitle`／`islandTitle`；不再顯示完整的訓練名稱，鎖定畫面照舊是訓練名稱）和經過時間，下方是第 2～4 列（中段 46 pt、倒數 28 pt、要記錄的值 title3），共約 140 pt，不會被裁切；字級最大到 large。縮小和最小的內容一樣限制字級、一行，倒數放不下時縮小。
   - 經過時間（`WorkoutActivityElapsedTime`，CHANGE_10 §0-4）：一定完整顯示，包括「1:05:30」。等寬數字、一行，不設寬度上限，空間不夠時先縮小（最小 80%），還是放不下時 `.dynamicIsland(verticalPlacement: .belowIfTooWide)` 讓系統移到下一行。以前固定 64 pt，計時文字會預留最長格式的寬度，超過 1 小時就被裁掉。模擬器上實測：1:05:30 和 24:30 都被系統放到下一行、靠右、完整。鎖定畫面的經過時間用同一個元件。
-- 按鈕的 LiveActivityIntent（`CompleteSetIntent`、`SkipRestIntent`、`ExtendRestIntent`）宣告在 Shared，由系統在 App 的程序裡執行（App 在背景時直接執行；App 完全關掉時系統把 App 帶起來執行）；實際動作在 App 的 `Intents/WorkoutIntents+App.swift`，小工具 target 只有空的實作。App 的宣告是鎖定畫面不用解鎖就能按（`authenticationPolicy` 是系統的預設 `.alwaysAllowed`，`CompleteSetIntent` 寫明）。**（CHANGE_17）iOS 27.2 的實機上不成立**：有密碼、鎖定時，系統執行按鈕的程序（chronod → BackgroundShortcutRunner）在呼叫 App 之前就要求解鎖，perform 沒有被執行；App 這邊沒有公開的 API 能改，見 `tools/CHANGE_17_REPORT.md`。
+- 按鈕的 LiveActivityIntent（`CompleteSetIntent`、`SkipRestIntent`、`ExtendRestIntent`）宣告在 Shared，由系統在 App 的程序裡執行（App 在背景時直接執行；App 完全關掉時系統把 App 帶起來執行）；實際動作在 App 的 `Intents/WorkoutIntents+App.swift`，小工具 target 只有空的實作。App 的宣告是鎖定畫面不用解鎖就能按（`authenticationPolicy` 是系統的預設 `.alwaysAllowed`，`CompleteSetIntent` 寫明）。**已知限制（CHANGE_17）**：鎖定時按即時動態的按鈕需要 Face ID 通過，Face ID 看不到時需要輸入密碼。這是 Apple 對第三方即時動態的設計（WidgetKit 文件「Adding interactivity to widgets and Live Activities」：鎖定的裝置上按鈕和開關不會作用，使用者驗證並解鎖之前系統不會執行動作）：系統執行按鈕的程序（chronod → BackgroundShortcutRunner）在呼叫 App 之前就要求驗證，App 的 `authenticationPolicy` 改不了。Face ID 在背景通過時不用輸入密碼、也不用再按一次，那一組直接完成並切到休息倒數。第一方的時鐘不受這個限制；Spotify 鎖定時能切歌用的是系統的「正在播放」媒體控制，不是即時動態。證據見 `tools/CHANGE_17_REPORT.md`。之後重測的時機：iOS 更新時，照 CHANGE_17 §2-3 的步驟和 DEBUG 的診斷紀錄重測一次。
   - 完成這組（CHANGE_16 §1）：`CompleteSetIntent(setID:)` 帶著即時動態顯示的那一組的 id（`@Parameter`；有參數的 intent 不能整個型別標 nonisolated，改成 `nonisolated LiveActivityIntent` 的符合）。`WorkoutService.completeSet(id:)` 找到這次訓練裡的那一組，用和 App 裡打勾同一個函式 `WorkoutService.complete` 完成（沿用灰字預填；還有下一組時依角色開始休息，設定關閉自動休息時不開始；最後一組不開始）。那一組已經完成（例如已經在 App 裡打勾、即時動態還沒更新）、已經不在這次訓練裡、或沒有可以記錄的值時，不改任何資料（`CompleteResult.alreadyCompleted`／`notFound`／`cannotComplete`）。不管結果如何都重新同步即時動態，所以按下後切到休息（或全部完成），重複按到的舊按鈕只會更新畫面。
   - 跳過休息：清掉倒數並取消休息結束的本機通知。
   - +15 秒：休息結束時間延後 15 秒並重新排程通知。
