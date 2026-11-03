@@ -98,17 +98,28 @@ nonisolated struct Prescription: Equatable, Sendable {
     var restSeconds: Int
     /// DE 速度主項固定的組數和次數：上一次紀錄的組數不適用，預填的次數用這個
     var fixedReps: Int?
+    /// ME 主項的熟悉日（CHANGE_18 §3）
+    var isFamiliarization = false
 
     /// DE 主項沒有「爆」標籤的就是速度主項（同一個槓鈴動作用速度做）
     static func isSpeed(role: Role, tags: [ExerciseTag]) -> Bool {
         role == .dynamicEffort && !tags.contains(.explosive)
     }
 
-    static func of(role: Role, name: String, tags: [ExerciseTag]) -> Prescription {
+    /// 熟悉日（CHANGE_18 §3）：ME 主項是新動作——這個動作在任何訓練、任何角色都沒有完成組——時，不衝 3RM（早安式 5RM）。
+    /// logs 是這個動作在這次之前的紀錄（建立菜單和「下一次」卡：已結束的訓練；訓練畫面：這次訓練開始之前的），
+    /// 所以完成這次訓練之後，下一輪就恢復正常的處方。全 App 只有這一個判斷（SlotAdvice.make 呼叫）
+    static func isFamiliarization(role: Role, logs: [ExerciseLog]) -> Bool {
+        role == .maxEffort && !logs.contains { $0.sets.contains(where: \.isCompleted) }
+    }
+
+    /// familiarization：熟悉日（isFamiliarization 的結果），只影響 ME 主項的處方文字
+    static func of(role: Role, name: String, tags: [ExerciseTag], familiarization: Bool = false) -> Prescription {
         switch role {
         case .maxEffort:
-            return Prescription(volume: "逐步加重到當天 \(maxEffortRM(name))RM", rest: "充分休息", tip: "設好安全槓", setCount: 5,
-                                restSeconds: 180)
+            let volume = familiarization ? "熟悉日：逐步加到順手的 5 下，不衝極限" : "逐步加重到當天 \(maxEffortRM(name))RM"
+            return Prescription(volume: volume, rest: "充分休息", tip: "設好安全槓", setCount: 5, restSeconds: 180,
+                                isFamiliarization: familiarization)
         case .dynamicEffort where isSpeed(role: role, tags: tags):
             let (sets, reps) = speedVolume(name)
             return Prescription(volume: "\(sets) 組 × \(reps) 下", rest: "休息 45–60 秒", setCount: sets, restSeconds: 60,

@@ -430,7 +430,7 @@ nonisolated struct Rotation {
 
 // MARK: - 建議重量
 
-/// 某一格選定動作的建議：重量、參數、提示（建立菜單的每一格和訓練中畫面共用）
+/// 某一格選定動作的建議：重量、參數、提示（建立菜單的每一格、「下一次」卡的主項和訓練中畫面共用）
 nonisolated struct SlotAdvice: Equatable, Sendable {
     var prescription: Prescription
     /// 「建議 32.5 kg（60%）」「上次 60 kg」「用能做得很快的重量」
@@ -443,7 +443,9 @@ nonisolated struct SlotAdvice: Equatable, Sendable {
     /// 進位用設定頁的值。step 為 nil 時讀設定
     static func make(role: Role, exercise: PlanExercise, logs: [ExerciseLog], unit: WeightUnit,
                      step: Double? = nil, now: Date = .now) -> SlotAdvice {
-        let prescription = Prescription.of(role: role, name: exercise.name, tags: exercise.tags)
+        // ME 主項是新動作時是熟悉日（CHANGE_18 §3）：建立菜單、「下一次」卡、訓練畫面的處方都從這裡來
+        let prescription = Prescription.of(role: role, name: exercise.name, tags: exercise.tags,
+                                           familiarization: Prescription.isFamiliarization(role: role, logs: logs))
         if Prescription.isSpeed(role: role, tags: exercise.tags) {
             let sessions = logs.map { SessionSets(sessionID: UUID(), date: $0.date, sets: $0.sets) }
             let step = step ?? RoundingSteps.step(equipment: exercise.equipment, unit: unit)

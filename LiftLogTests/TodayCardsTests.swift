@@ -69,10 +69,12 @@ struct TodayCardsTests {
 
     @Test func mainLineForMaxEffortDynamicEffortAndNoCandidate() {
         let now = date(10, 26, 9)
-        // ME：做到 3RM；早安式 5RM
-        #expect(NextCard.mainLine(dayType: .meLower, main: squat, logs: [], unit: .kg, now: now).text == "主項：深蹲・做到 3RM")
-        let morning = NextCard.mainLine(dayType: .meLower, main: goodMorning, logs: [], unit: .kg, now: now)
+        // ME：做到 3RM；早安式 5RM（有完成組的動作；沒有完成組是熟悉日，CHANGE_18 §3，見 FamiliarizationTests）
+        let done = [ExerciseLog(date: date(10, 20), role: .maxEffort, sets: [set(100, 3)])]
+        #expect(NextCard.mainLine(dayType: .meLower, main: squat, logs: done, unit: .kg, now: now).text == "主項：深蹲・做到 3RM")
+        let morning = NextCard.mainLine(dayType: .meLower, main: goodMorning, logs: done, unit: .kg, now: now)
         #expect(morning.text == "主項：槓鈴早安式・做到 5RM" && !morning.detailIsSuggestion)
+        #expect(NextCard.mainLine(dayType: .meLower, main: goodMorning, logs: [], unit: .kg, now: now).text == "主項：槓鈴早安式・熟悉日")
         // DE 速度主項沒有可以計算的紀錄：只有名稱
         #expect(NextCard.mainLine(dayType: .deLower, main: squat, logs: [], unit: .kg, step: 2.5, now: now).text == "主項：深蹲（速度）")
         // DE（爆）：只有名稱

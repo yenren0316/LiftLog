@@ -13,11 +13,11 @@ nonisolated enum NextCard {
         var startedAt: Date
     }
 
-    /// 主項一行：「主項：臥推（速度）・建議 32.5 kg」「主項：深蹲・做到 3RM」「主項：—」
+    /// 主項一行：「主項：臥推（速度）・建議 32.5 kg」「主項：深蹲・做到 3RM」「主項：槓鈴早安式・熟悉日」「主項：—」
     struct MainLine: Equatable, Sendable {
         /// 主項的名稱，DE 速度主項加「（速度）」；沒有候選時為 nil
         var name: String?
-        /// 「建議 32.5 kg」「做到 3RM」
+        /// 「建議 32.5 kg」「做到 3RM」「熟悉日」
         var detail: String?
         /// detail 是建議重量（強調色，CHANGE_13 §3）；「做到 3RM」不是
         var detailIsSuggestion = false
@@ -45,12 +45,14 @@ nonisolated enum NextCard {
     }
 
     /// DE 速度主項的建議重量和建立菜單同一個函式（SlotAdvice，強度換算表 60%）；沒有可以計算的紀錄時只寫名稱。
-    /// ME 寫「做到 3RM」（早安式 5RM）；DE（爆）只寫名稱
+    /// ME 寫「做到 3RM」（早安式 5RM），新動作是「熟悉日」（CHANGE_18 §3，和建立菜單同一個 SlotAdvice）；DE（爆）只寫名稱
     static func mainLine(dayType: DayType, main: PlanExercise?, logs: [ExerciseLog], unit: WeightUnit,
                          step: Double? = nil, now: Date) -> MainLine {
         guard let main else { return MainLine() }
         if dayType.isMaxEffort {
-            return MainLine(name: main.name, detail: "做到 \(Prescription.maxEffortRM(main.name))RM")
+            let advice = SlotAdvice.make(role: .maxEffort, exercise: main, logs: logs, unit: unit, step: step, now: now)
+            return MainLine(name: main.name, detail: advice.prescription.isFamiliarization
+                            ? "熟悉日" : "做到 \(Prescription.maxEffortRM(main.name))RM")
         }
         guard Prescription.isSpeed(role: .dynamicEffort, tags: main.tags) else { return MainLine(name: main.name) }
         let advice = SlotAdvice.make(role: .dynamicEffort, exercise: main, logs: logs, unit: unit, step: step, now: now)
