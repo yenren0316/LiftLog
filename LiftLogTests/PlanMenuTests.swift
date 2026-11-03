@@ -13,7 +13,8 @@ struct PlanMenuTests {
         var history: PlanHistory
         var now: Date
         func exercise(_ name: String) -> Exercise { exercises.first { $0.name == name }! }
-        var snapshot: [PlanExercise] { exercises.map { PlanExercise($0) } }
+        /// 和建立菜單的畫面一樣：最近一次完成組的時間用 PlanHistory.withLastDates 填
+        var snapshot: [PlanExercise] { history.withLastDates(exercises.map { PlanExercise($0) }) }
     }
 
     /// seed（兩年多的舊紀錄，沒有日型）加上動作庫 v2 的輪替，再加四次有日型、有完成組的訓練：

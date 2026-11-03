@@ -76,8 +76,10 @@ struct PlanSheet: View {
                 start = backfill.start
                 end = backfill.end
             }
-            menu = PlanMenu(answers: answers, exercises: allExercises.map { PlanExercise($0) },
-                            history: PlanHistory(sessions: endedSessions))
+            // 「現在」和最近一次完成組的時間跟「下一次」卡同一套（AppClock、PlanHistory.withLastDates）
+            let history = PlanHistory(sessions: endedSessions)
+            menu = PlanMenu(answers: answers, exercises: history.withLastDates(allExercises.map { PlanExercise($0) }),
+                            history: history, now: AppClock.now)
         }
     }
 

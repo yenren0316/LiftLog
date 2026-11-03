@@ -11,7 +11,7 @@ extension Exercise {
 
     /// 「幾天前」只計算已完成的組
     var lastCompletedDate: Date? {
-        SetLogic.lastCompletedDate(sessionItems.flatMap { $0.sets.map(\.values) })
+        sessionItems.compactMap { SetLogic.lastCompletedDate($0.sets.map(\.values), sessionDate: $0.session?.startedAt) }.max()
     }
 
     /// 「上一次」（CHANGE_10 §0-6）：最近一次「已結束」訓練中的這個動作。指定 session（進行中或正在編輯的那次）時，

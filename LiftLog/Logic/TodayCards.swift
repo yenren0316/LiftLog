@@ -54,7 +54,7 @@ nonisolated enum NextCard {
         }
         guard Prescription.isSpeed(role: .dynamicEffort, tags: main.tags) else { return MainLine(name: main.name) }
         let advice = SlotAdvice.make(role: .dynamicEffort, exercise: main, logs: logs, unit: unit, step: step, now: now)
-        return MainLine(name: "\(main.name)（速度）",
+        return MainLine(name: Rotation.displayName(main, slot: .dynamicEffort),
                         detail: advice.speedWeightKg.map { "建議 \(unit.formatWithUnit(kg: $0))" },
                         detailIsSuggestion: advice.speedWeightKg != nil)
     }

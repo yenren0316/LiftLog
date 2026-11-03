@@ -94,9 +94,10 @@ nonisolated enum SetLogic {
 
     // MARK: 幾天前
 
-    /// 只計算已完成的組
-    static func lastCompletedDate(_ sets: [SetValues]) -> Date? {
-        sets.filter(\.isCompleted).compactMap(\.completedAt).max()
+    /// 最近一次完成組的時間：只計算已完成的組。全 App 只有這一個定義（CHANGE_18 S2：48 小時規則和「最久沒做」）；
+    /// 沒有完成時間的已完成組（理論上只有很舊的資料）用那次訓練的時間 sessionDate
+    static func lastCompletedDate(_ sets: [SetValues], sessionDate: Date? = nil) -> Date? {
+        sets.filter(\.isCompleted).compactMap { $0.completedAt ?? sessionDate }.max()
     }
 }
 

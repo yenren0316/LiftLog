@@ -19,7 +19,7 @@ nonisolated enum RecentWindow {
 /// 畫面要用的統計，存檔時算一次（StatsCache），畫面只讀（CHANGE_07 B-1）
 nonisolated struct StatsSnapshot: Sendable {
     struct ExerciseStat: Sendable, Equatable {
-        /// 最後一次（已結束的訓練）的日期
+        /// 最近一次完成組的時間（已結束的訓練；PlanHistory.lastCompletedDates，和建立菜單的「最久沒做」同一個來源）
         var lastDate: Date?
         /// 有完成組的訓練次數
         var sessionCount = 0
@@ -64,6 +64,8 @@ nonisolated struct StatsSnapshot: Sendable {
     /// 主項格的第一個建議和它的歷次紀錄：「下一次」卡的主項和建議重量（和建立菜單同一個 SlotAdvice）
     var suggestedMain: PlanExercise?
     var suggestedMainLogs: [ExerciseLog] = []
+    /// 下一個「滿 48 小時」的時間（CHANGE_18 §2）：到了之後主項的建議可能會變，StatsCache 在這個時間重算；沒有為 nil
+    var recoveryBoundary: Date?
     var mainLifts: [UUID: MainLiftTrend] = [:]
     var balance = Balance()
     /// 近 12 週每週跑步機的分鐘數，由舊到新
@@ -104,8 +106,8 @@ nonisolated struct StatsSnapshot: Sendable {
             }
             for item in session.items where item.sets.contains(where: \.isCompleted) {
                 var stat = snapshot.exercises[item.exerciseID] ?? ExerciseStat()
-                if stat.lastDate == nil {
-                    stat.lastDate = session.date
+                if stat.sessionCount == 0 {
+                    stat.lastDate = history.lastCompletedDates[item.exerciseID]
                     stat.lastSets = item.sets
                 }
                 stat.sessionCount += 1
@@ -130,12 +132,9 @@ nonisolated struct StatsSnapshot: Sendable {
             explosiveSessions: recent.sessionCount(within: now) { $0.tags.contains(.explosive) }
         )
 
-        // 下一次：建立菜單的預設答案和主項格的第一個建議
-        let planExercises = exercises.map { e in
-            var e = e
-            e.lastDate = snapshot.exercises[e.id]?.lastDate
-            return e
-        }
+        // 下一次：建立菜單的預設答案和主項格的第一個建議（最近一次完成組的時間和建立菜單同一個函式填）
+        let planExercises = history.withLastDates(exercises)
+        snapshot.recoveryBoundary = Recovery.nextBoundary(history.lastCompletedDates.values, now: now)
         snapshot.nextPlan = PlanDefaults.answers(history)
         snapshot.suggestedMain = PlanRanking.suggestedMain(for: snapshot.nextPlan.dayType, exercises: planExercises,
                                                            history: history, now: now)
@@ -188,7 +187,8 @@ nonisolated struct StatsSnapshot: Sendable {
 }
 
 /// 統計快取：App 啟動時和每次存檔後（合併成一次）重新計算，畫面只讀 snapshot。
-/// 日期改變時也重算（CHANGE_11 §2）：回到前景而且日期不同、App 開著時跨過午夜、時區或系統時間改變
+/// 日期改變時也重算（CHANGE_11 §2）：回到前景而且日期不同、App 開著時跨過午夜、時區或系統時間改變。
+/// 某個動作滿 48 小時的時間到了也重算（CHANGE_18 §2：「下一次」卡的主項才會和建立菜單一樣）：App 開著時排一次，回到前景時檢查
 @Observable
 final class StatsCache {
     static let shared = StatsCache()
@@ -201,6 +201,7 @@ final class StatsCache {
     @ObservationIgnored private var context: ModelContext?
     @ObservationIgnored private var observers: [NSObjectProtocol] = []
     @ObservationIgnored private var pending: Task<Void, Never>?
+    @ObservationIgnored private var boundary: Task<Void, Never>?
 
     private var calendar: Calendar { fixedCalendar ?? .current }
 
@@ -228,7 +229,8 @@ final class StatsCache {
     /// 日期可能改變時呼叫：依 StatsRefresh 的規則決定要不要重算
     func refresh(_ trigger: StatsRefresh.Trigger, now: Date = AppClock.now) {
         guard context != nil,
-              StatsRefresh.needsRecompute(trigger, computedAt: computedAt, now: now, calendar: calendar) else { return }
+              StatsRefresh.needsRecompute(trigger, computedAt: computedAt, validUntil: snapshot.recoveryBoundary,
+                                          now: now, calendar: calendar) else { return }
         recompute(now: now)
     }
 
@@ -247,8 +249,21 @@ final class StatsCache {
         let exercises = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
         computedAt = now
         snapshot = StatsSnapshot.make(history: PlanHistory(sessions: sessions),
-                                      exercises: exercises.map { PlanExercise(snapshotOf: $0) },
+                                      exercises: exercises.map { PlanExercise($0) },
                                       now: now, calendar: calendar,
                                       cardioOnlyCounts: UserDefaults.standard.bool(forKey: WeeklyGoal.cardioOnlyCountsKey))
+        scheduleBoundary(now: now)
+    }
+
+    /// 下一個滿 48 小時的時間到了就重算（App 在背景時睡著，回到前景時 refresh 也會檢查）
+    private func scheduleBoundary(now: Date) {
+        boundary?.cancel()
+        guard let date = snapshot.recoveryBoundary else { return }
+        let delay = date.timeIntervalSince(now)
+        boundary = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(delay))
+            guard !Task.isCancelled else { return }
+            self?.recompute()
+        }
     }
 }

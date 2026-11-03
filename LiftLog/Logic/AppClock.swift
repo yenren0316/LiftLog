@@ -35,9 +35,12 @@ nonisolated enum StatsRefresh {
         case timeChanged
     }
 
-    /// computedAt：上次計算的時間（快照的「現在」）；還沒算過一律重算
-    static func needsRecompute(_ trigger: Trigger, computedAt: Date?, now: Date, calendar: Calendar) -> Bool {
+    /// computedAt：上次計算的時間（快照的「現在」）；還沒算過一律重算。
+    /// validUntil：快照裡某個動作滿 48 小時的時間（CHANGE_18 §2，StatsSnapshot.recoveryBoundary），過了就重算
+    static func needsRecompute(_ trigger: Trigger, computedAt: Date?, validUntil: Date? = nil, now: Date,
+                               calendar: Calendar) -> Bool {
         guard let computedAt else { return true }
+        if let validUntil, now >= validUntil { return true }
         switch trigger {
         case .foreground: return !calendar.isDate(computedAt, inSameDayAs: now)
         case .dayChanged, .timeChanged: return true

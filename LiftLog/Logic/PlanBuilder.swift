@@ -31,9 +31,29 @@ nonisolated struct PlanHistory: Sendable {
 
     /// 由新到舊
     let sessions: [Session]
+    /// 每個動作最近一次完成組的時間（CHANGE_18 §2，SetLogic.lastCompletedDate）：不分角色、日型。
+    /// 48 小時規則和「最久沒做」都從這裡來（withLastDates 填進 PlanExercise.lastDate）
+    let lastCompletedDates: [UUID: Date]
 
     init(_ sessions: [Session]) {
         self.sessions = sessions.sorted { $0.date > $1.date }
+        var last: [UUID: Date] = [:]
+        for session in sessions {
+            for item in session.items {
+                guard let date = SetLogic.lastCompletedDate(item.sets, sessionDate: session.date) else { continue }
+                last[item.exerciseID] = max(last[item.exerciseID] ?? date, date)
+            }
+        }
+        lastCompletedDates = last
+    }
+
+    /// 候選動作的 lastDate 一律從這裡填（建立菜單、換動作、統計快照的「下一次」）
+    func withLastDates(_ exercises: [PlanExercise]) -> [PlanExercise] {
+        exercises.map { exercise in
+            var exercise = exercise
+            exercise.lastDate = lastCompletedDates[exercise.id]
+            return exercise
+        }
     }
 
     /// 近 30 天的起點（RecentWindow：含今天共 30 個日曆日）
@@ -89,6 +109,7 @@ nonisolated struct PlanExercise: Sendable, Identifiable, Equatable {
     var category: ExerciseCategory
     var tags: [ExerciseTag]
     var isArchived = false
+    /// 最近一次完成組的時間（PlanHistory.withLastDates）：48 小時規則和「最久沒做」共用
     var lastDate: Date?
     var meRotation: Int?
     var deRotation: Int?
@@ -203,12 +224,15 @@ nonisolated enum PlanRanking {
                    history: history, now: now).items.first?.exercise
     }
 
-    /// 某一格的候選：已經選在其他格的動作（excluding）不列入；main 是這次選的主項（下肢輔助依它排序）
+    /// 某一格的候選：已經選在其他格的動作（excluding）不列入；main 是這次選的主項（下肢輔助依它排序）。
+    /// exercises 的 lastDate 要先用 PlanHistory.withLastDates 填好（48 小時規則和「最久沒做」都看它）
     static func candidates(for slot: Slot, dayType: DayType?, exercises: [PlanExercise], history: PlanHistory,
                            excluding: Set<UUID> = [], main: PlanExercise? = nil, now: Date = .now) -> RankedCandidates {
         let pool = exercises.filter { !$0.isArchived && !excluding.contains($0.id) }
         func ranked(_ list: [PlanExercise], reason: (PlanExercise) -> String?) -> RankedCandidates {
-            let items = list.map { PlanCandidate(exercise: $0, daysSince: Recency.daysSince($0.lastDate, now: now)) }
+            // 48 小時內練過的排到最後（CHANGE_18 §2）；全部都在 48 小時內時照原本的順序
+            let items = Recovery.deferringRecent(list, now: now)
+                .map { PlanCandidate(exercise: $0, daysSince: Recency.daysSince($0.lastDate, now: now)) }
             guard let first = items.first else { return RankedCandidates(items: [], reason: nil) }
             return RankedCandidates(items: items, reason: reason(first.exercise) ?? stalenessReason(first))
         }
@@ -216,8 +240,8 @@ nonisolated enum PlanRanking {
         switch slot {
         case .maxEffort, .dynamicEffort:
             guard let dayType else { return ranked(sortedByStaleness(pool.filter { $0.has(.main) })) { _ in nil } }
-            let rotation = Rotation(slot: slot, dayType: dayType, exercises: pool, history: history)
-            return ranked(rotation.order) { _ in rotation.reason }
+            let suggestion = Rotation(slot: slot, dayType: dayType, exercises: pool, history: history).suggestion(now: now)
+            return ranked(suggestion.order) { _ in suggestion.reason }
 
         case .lowerAssist:
             let list = pool.filter { $0.category.isLower && !$0.has(.main) && !$0.has(.explosive) }
@@ -339,14 +363,17 @@ nonisolated enum PlanRanking {
 
 // MARK: - 主項輪替
 
-/// 每個日型各自的主項輪替：從上次主項的下一個開始照順序排，上次用的排最後；沒有紀錄時從 1 開始
+/// 每個日型各自的主項輪替：從上次主項的下一個開始照順序排，上次用的排最後；沒有紀錄時從 1 開始。
+/// 上次主項是實際用的那一個（手動換過、被 48 小時規則跳過時也一樣），所以下一次從它往下接
 nonisolated struct Rotation {
+    let slot: Slot
     /// 輪替表，依順序
     let table: [PlanExercise]
     /// 同日型最近一次訓練的主項（不在輪替表裡時為 nil）
     let last: PlanExercise?
 
     init(slot: Slot, dayType: DayType, exercises: [PlanExercise], history: PlanHistory) {
+        self.slot = slot
         let order: (PlanExercise) -> Int? = { slot == .maxEffort ? $0.meRotation : $0.deRotation }
         table = exercises
             .filter { order($0) != nil && (dayType.isLower ? $0.category.isLower : !$0.category.isLower) }
@@ -373,6 +400,31 @@ nonisolated struct Rotation {
     var reason: String {
         guard let last else { return "輪替從第 1 個開始" }
         return "輪替的下一個（上次：\(last.name)）"
+    }
+
+    /// 主項的建議（CHANGE_18 §2，「下一次」卡、建立菜單、訓練狀態都經過這裡）：照輪替的順序，
+    /// 輪到的在 48 小時內有完成組就跳過、改用下一個，下一個也是就再往下；全部都在 48 小時內時，
+    /// 最近一次完成組離現在最久的排第一。跳過時原因寫「臥推（速度）昨天練過，換下一個」
+    func suggestion(now: Date, calendar: Calendar = .current) -> (order: [PlanExercise], reason: String) {
+        let order = self.order
+        guard !order.isEmpty else { return (order, reason) }
+        guard let index = order.firstIndex(where: { !Recovery.isRecent($0.lastDate, now: now) }) else {
+            let oldest = order.enumerated()
+                .sorted { ($0.element.lastDate ?? .distantPast, $0.offset) < ($1.element.lastDate ?? .distantPast, $1.offset) }
+                .map(\.element)
+            return (oldest, "都在 \(Recovery.hours) 小時內練過，選最久沒練的")
+        }
+        let skipped = order[..<index]
+        guard !skipped.isEmpty else { return (Recovery.deferringRecent(order, now: now), reason) }
+        let parts = skipped.map { exercise in
+            "\(Self.displayName(exercise, slot: slot))\(exercise.lastDate.map { Recovery.whenText($0, now: now, calendar: calendar) } ?? "")練過"
+        }
+        return (Recovery.deferringRecent(order, now: now), parts.joined(separator: "、") + "，換下一個")
+    }
+
+    /// 主項的名稱：DE 速度主項加「（速度）」（同一個槓鈴動作，「下一次」卡和建議原因都用）
+    static func displayName(_ exercise: PlanExercise, slot: Slot) -> String {
+        Prescription.isSpeed(role: slot.role, tags: exercise.tags) ? "\(exercise.name)（速度）" : exercise.name
     }
 }
 
@@ -430,13 +482,8 @@ nonisolated extension PlanHistory {
 }
 
 nonisolated extension PlanExercise {
+    /// 不含最近一次完成組的時間：候選要用時由 PlanHistory.withLastDates 填（CHANGE_18 S2，只有一個來源）
     init(_ exercise: Exercise) {
-        self.init(snapshotOf: exercise)
-        lastDate = exercise.lastCompletedDate
-    }
-
-    /// 不算最後日期（StatsCache 自己從訓練紀錄算，比逐一攤平每個動作的組快）
-    init(snapshotOf exercise: Exercise) {
         self.init(id: exercise.id, name: exercise.name, category: exercise.category, tags: exercise.tags,
                   isArchived: exercise.isArchived, lastDate: nil,
                   meRotation: exercise.meRotation, deRotation: exercise.deRotation, logType: exercise.logType,
