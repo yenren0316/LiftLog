@@ -148,6 +148,7 @@
   - 收起鍵盤：`dismissKeyboard()`、`KeyboardDismissOnTap`。不要在鍵盤上方加「完成」。
   - 訓練次數：`TrainingCount.days`；開始訓練：`WorkoutLauncher`。
   - 建立菜單：狀態在 `PlanMenu`，預設值、格子、建議、候選只用 `PlanDefaults`、`PlanRanking`、`SlotAdvice`，不另寫計算。
+    - 候選的最近一次完成組（`lastDate`）只用 `PlanHistory.withLastDates` 填；48 小時規則只用 `Recovery.isRecent`；熟悉日只用 `Prescription.isFamiliarization`（經過 `SlotAdvice.make`）（CHANGE_18）。
   - 新紀錄：`NewRecords.find`（估算 1RM 高於這次訓練之前最好的，`PersonalRecords.best1RM`）；完成畫面和摘要頁都呼叫它。
   - 觸覺：一律 `.sensoryFeedback`，強度交給系統，不直接呼叫 `UIFeedbackGenerator`（CHANGE_15 §4）。
   - 統計：存檔時在 `StatsCache` 算好，畫面只讀。

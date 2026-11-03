@@ -1,5 +1,7 @@
 # LiftLog 現況報告（STATUS）
 
+> **CHANGE_18 完成**（在 `v1.2-ia` 之後）：主項的 48 小時規則、新動作第一次當 ME 主項是熟悉日、動作數的預設依日型（ME 2 個、DE 3 個）、DE 日的第三格是核心。收斂標準全部通過，結果在 `tools/CHANGE_18_REPORT.md`；實機確認清單在報告第 6 節。
+>
 > **CHANGE_07～17 已收斂**：CHANGE_16（即時動態的「完成這組」）和 CHANGE_17（鎖定時要求解鎖的原因調查）在使用者決定接受下面的已知限制後收斂，收斂時的版本打了 git tag `v1.2-ia`（CHANGE_17 收斂的文件 commit）。
 >
 > CHANGE_16、17 已收斂。已知限制：鎖定時按即時動態的按鈕需要 Face ID 通過，Face ID 看不到時需要輸入密碼。這是 Apple 對第三方即時動態的設計，App 無法改變，證據見 CHANGE_17_REPORT.md。
@@ -15,21 +17,22 @@
 > 2. ~~**每週目標沒有進備份**：每週目標和「只有有氧的訓練也算」存在 UserDefaults，匯出的 JSON 沒有這兩個設定，重裝後要重新設定。（第 11 條）~~ **CHANGE_11 §8 已處理：備份 version 7 包含所有設定。**
 > 3. **平均值涵蓋一段沒畫出來的週**：訓練頻率卡只畫 12 條（含本週），平均用本週之前的 12 個週或月，最舊的那一段算進平均但沒有畫出來。（第 2 條）
 
-- 更新時間：2026-11-01，對應 CHANGE_17 收斂（`v1.2-ia`）的 main。上一版是 CHANGE_17 停在 §3 時。
+- 更新時間：2026-11-03，對應 CHANGE_18 完成的 main。上一版是 CHANGE_17 收斂（`v1.2-ia`）時。
+- CHANGE_18（48 小時規則、熟悉日、動作數預設與 DE 日的核心）在 `v1.2-ia` 之後，結果在 `tools/CHANGE_18_REPORT.md`。
 - CHANGE_16（鎖定畫面不用解鎖就能完成一組）和 CHANGE_17（鎖定時仍然要求解鎖的原因調查與收斂）在 `v1.1-ia` 之後、`v1.2-ia` 收斂，結果在 `tools/CHANGE_16_REPORT.md`、`tools/CHANGE_17_REPORT.md`。
 - CHANGE_10（實機回饋修正、首頁日曆改版、鍵盤收合與點擊提示統一）、CHANGE_11（改用 iOS 26 內建行為、跨日重算、清除舊程式、真實資料驗證）、CHANGE_12（系統的計時文字；放大轉場和系統大標題照規格停下來）、CHANGE_13（首頁兩張卡和系統大標題、設定移到右上角、顏色語意、動作庫精簡）、CHANGE_14（點點日曆回到本週卡、部位色改成系統藍橘、圖表上色、訓練摘要改成推入頁面、平衡卡的空狀態）和 CHANGE_15（標題和按鈕同一列、建立菜單一個畫面、訓練畫面往下拖縮小、觸覺與新紀錄）在 `v1.0-ia` 之後，完整結果在 `tools/CHANGE_10_REPORT.md`～`tools/CHANGE_15_REPORT.md`。
 - 對象：負責 review 和規劃、看不到程式碼的人。內容根據實際程式碼、建置、測試與模擬器截圖整理。
 - 平台：iOS 26、SwiftUI＋SwiftData，App 只給自己用，用免費 Apple ID 安裝。
-- 規模：App＋共用＋小工具約 13,050 行 Swift（其中 DEBUG 的診斷紀錄約 300 行），單元測試約 5,050 行（277 個）、UI 測試約 1,400 行（44 個）。
+- 規模：App＋共用＋小工具約 13,200 行 Swift（其中 DEBUG 的診斷紀錄約 300 行），單元測試約 5,600 行（299 個）、UI 測試約 1,500 行（46 個）。
 - CHANGE_07 開始前的版本打了 git tag `before-change07`（`6f72de3`）。
-- 各次的完整驗收結果、自行決定的事項和實機確認清單在 `tools/CHANGE_07_REPORT.md`～`tools/CHANGE_17_REPORT.md`。
+- 各次的完整驗收結果、自行決定的事項和實機確認清單在 `tools/CHANGE_07_REPORT.md`～`tools/CHANGE_18_REPORT.md`。
 
 ---
 
 ## 1. 進度總覽
 
 ### 1-1. 文件來源
-- CHANGE_06～17 的原文在 `tools/changes/`（06～10 從對話紀錄還原，11～17 照錄）；CHANGE_01～05 的原文不在 repo 裡，也還原不了，重點整併在 `SPEC.md`（開頭有每份 CHANGE 的一行摘要）。專案的固定規則在根目錄的 `CLAUDE.md`。
+- CHANGE_06～18 的原文在 `tools/changes/`（06～10 從對話紀錄還原，11～18 照錄）；CHANGE_01～05 的原文不在 repo 裡，也還原不了，重點整併在 `SPEC.md`（開頭有每份 CHANGE 的一行摘要）。專案的固定規則在根目錄的 `CLAUDE.md`。
 - 本節依 commit 訊息的節號加上目前的 `SPEC.md` 對照判斷。
 
 ### 1-2. 各份 CHANGE 狀態
@@ -56,9 +59,18 @@
 | CHANGE_14 | §0 存原文、§2 部位色改成系統藍橘（六個主題共用）和 warning 加圖示、§1 點點日曆回到本週卡、§3 單一數列的圖表用強調色、§4 訓練摘要改成推入的頁面、§5 平衡卡的空狀態 | 完成；完成畫面的全螢幕和補登的兩步在 CHANGE_15 改掉 | G1、G2（281 個）、S1–S6、V1–V8、歷程穩定性、R1 都通過；沒有遇到「先停下來」（日曆用 14 pt 的格子：離分頁列 117.5 pt、離附屬列 83.5 pt）。見報告 |
 | CHANGE_15 | §0 存原文、§1 標題和右上角的按鈕同一列（inlineLarge）、§2 建立菜單合成一個畫面（補登也用它）、§3 訓練畫面改成可以往下拖縮小的 sheet、§4 觸覺（.sensoryFeedback）與新紀錄（估算 1RM） | 完成；實機確認全部通過；CHANGE_07～15 收斂（`v1.1-ia`） | G1、G2（302 個）、S1–S6、V1–V7、歷程穩定性、R1 都通過；第 1～3 節都沒有遇到「先停下來」（首頁多出 52 pt：離分頁列 169.5 pt、離附屬列 135.5 pt）。見報告 |
 | **CHANGE_16** | §0 存原文、§1 即時動態的「完成這組」（帶組的 id、和 App 裡打勾同一個函式、要記錄的值、打開 App 填寫、全部完成、防止重複） | **完成；收斂（`v1.2-ia`）。已知限制：鎖定時要 Face ID 通過（CHANGE_17）** | G1、G2（317 個）、S1、S2、V1–V4、歷程穩定性都通過；沒有遇到「先停下來」。模擬器上真的即時動態用 UI 測試按過（動態島展開、App 完全關掉、鎖定畫面）。驗收時修了鎖定畫面第 1 列的名稱被經過時間擠掉。見報告 |
-| **CHANGE_17** | §0 存原文、標註 CHANGE_16 未收斂；§2-1 靜態檢查；§2-2 DEBUG 診斷紀錄；§2-3 實機重現與系統日誌；§3 先停下來；收斂（使用者的實測、查證、決定） | **完成；收斂（`v1.2-ia`）** | 要求解鎖是 Apple 對第三方即時動態的設計（鎖定時按鈕要使用者驗證並解鎖），系統在呼叫 App 之前就要求驗證，App 改不了；使用者決定接受（Face ID 通過就直接完成）。G1、G2（321 個）、S1、S2 通過；D1 受限於 iOS 的設計（需要 Face ID 通過，不需要輸入密碼），D2「完成這組」「跳過休息」通過（「+15 秒」這次沒有紀錄），D3 通過。見報告 |
+| CHANGE_17 | §0 存原文、標註 CHANGE_16 未收斂；§2-1 靜態檢查；§2-2 DEBUG 診斷紀錄；§2-3 實機重現與系統日誌；§3 先停下來；收斂（使用者的實測、查證、決定） | 完成；收斂（`v1.2-ia`） | 要求解鎖是 Apple 對第三方即時動態的設計（鎖定時按鈕要使用者驗證並解鎖），系統在呼叫 App 之前就要求驗證，App 改不了；使用者決定接受（Face ID 通過就直接完成）。G1、G2（321 個）、S1、S2 通過；D1 受限於 iOS 的設計（需要 Face ID 通過，不需要輸入密碼），D2「完成這組」「跳過休息」通過（「+15 秒」這次沒有紀錄），D3 通過。見報告 |
+| **CHANGE_18** | §0 存原文、§2 主項的 48 小時規則（其他格子排到最後）、§3 新動作的熟悉日、§4 動作數預設依日型和 DE 日的核心、§5 四處同步 | **完成** | G1、G2（345 個）、S1、S2、V1–V4、歷程穩定性、R1 都通過；沒有觸發規則 3。R1 另外用加了一次自由訓練的備份副本驗證跳過的分支。見報告 |
 
 ### 1-3. 實作和文件不一樣的地方
+CHANGE_18（完整清單在 `tools/CHANGE_18_REPORT.md` 第 4 節）：
+- 其他格子的 48 小時「排除」是排到最後、不從候選刪掉（手動還能選）；全部都在 48 小時內時就是原本的排序。
+- 被跳過的主項排在候選最後；全部都在 48 小時內時原因寫「都在 48 小時內練過，選最久沒練的」；跳過兩個以上時原因列出每一個。
+- 「最近一次完成組的時間」改成組的完成時間（以前「下一次」卡和動作庫用訓練的開始時間），只看已結束的訓練；統計快照在某個動作滿 48 小時的時間重算；建立菜單和換動作的「現在」用 `AppClock.now`。
+- 熟悉日只換處方文字，組數、休息、安全提示照舊；訓練中打勾後還是熟悉日，下一輪才恢復；訓練狀態浮窗只寫名稱。
+- 換日型時動作數換成那個日型的預設，這個畫面裡手動改過就保留。
+- 示範資料改成昨天早上 ME 上肢、昨天晚上 DE 上肢（V1～V4 的截圖用）。
+
 CHANGE_17（完整清單在 `tools/CHANGE_17_REPORT.md` 第 6 節）：
 - 診斷紀錄（DEBUG）放在 App Group 容器，小工具擴充的空 perform 也寫；另外記「App 啟動」「存檔失敗」。
 - `WorkoutIntentActions.completeSet` 回傳完成的結果，行為不變。
@@ -146,8 +158,14 @@ CHANGE_07（完整清單在 `tools/CHANGE_07_REPORT.md` 第 2 節）：
 - 主項進步只列 90 天內有紀錄的主項，其他寫一行數量。
 - 摘要浮窗的時間固定 24 小時制。
 
-### 1-4. git log 摘要（共 137 筆，新 → 舊；不含這次的文件 commit）
+### 1-4. git log 摘要（共 143 筆，新 → 舊；不含這次的文件 commit）
 ```
+0e8d08d CHANGE_18 §5: the four places agree; demo data and R1 for the new rules
+22bc614 CHANGE_18 §4: exercise count by day type; core is the third slot on DE days
+ba24ad6 CHANGE_18 §3: a familiarization day for a new ME main
+c436eda CHANGE_18 §2: the 48-hour rule for the main lift and the other slots
+c80952c CHANGE_18 §0: save the prompt
+67d02be CHANGE_17: converge - Apple's design for third-party Live Activities
 aa558d8 CHANGE_17 §2-3/§3: root cause is iOS 27.2, stop and ask
 548da4c CHANGE_17 §2-2: DEBUG diagnostics log for the Live Activity intents
 d94b203 CHANGE_17 §0: save the prompt, mark CHANGE_16 as not converged
@@ -245,13 +263,14 @@ b946bc3 CHANGE_07: report, SPEC and STATUS updates, final screenshots
 
 **2-2. 今天**（`Views/Today/TodayView.swift`、`Logic/TodayCards.swift`）
 - CHANGE_13 §2：系統的大標題「今天」、右上角齒輪（設定）、兩張卡，一個畫面放得下。CHANGE_15 §1 起標題和齒輪同一列：沒有訓練時本週卡底部離分頁列 169.5 pt、有附屬列時 135.5 pt（CHANGE_14 是 117.5、83.5 pt，`TodayLayoutUITests`）。沒有第 2 層。
-- 「下一次」卡：日型、主項一行（DE 速度「主項：臥推（速度）・建議 32.5 kg」，建議重量和建立菜單同一個 `SlotAdvice`；ME「做到 3RM」；沒有候選「主項：—」）、「3 個動作・跑步機 30 分鐘」、全寬的「開始」→ 建立菜單（WorkoutLauncher）。訓練中時改成「進行中」、名稱、經過時間、「繼續」→ 訓練畫面。
+- 「下一次」卡：日型、主項一行（DE 速度「主項：臥推（速度）・建議 32.5 kg」，建議重量和建立菜單同一個 `SlotAdvice`；ME「做到 3RM」，新動作「主項：槓鈴早安式・熟悉日」（CHANGE_18 §3）；沒有候選「主項：—」；主項套用 48 小時規則，CHANGE_18 §2）、「3 個動作・跑步機 30 分鐘」（動作數依日型：ME 2、DE 3，CHANGE_18 §4）、全寬的「開始」→ 建立菜單（WorkoutLauncher）。訓練中時改成「進行中」、名稱、經過時間、「繼續」→ 訓練畫面。
 - 「本週」卡：「N 天・N 組」（訓練狀態的本週）、點點日曆（CHANGE_14 §1：每一欄一週、最右邊一欄是本週，iPhone 17 Pro 20 週；依部位上色，下肢系統藍、上肢系統橘；今天外面一圈白框；本週之後只有外框；月份標在每個月第一個週一）和圖例（「不以顏色區分」時圖例加字）、輪替四個膠囊（練過的勾勾、「下一次」外框）、超過 14 天沒練的分類提醒（warning 加圖示）。整張卡打開「訓練狀態」浮窗（`TrainingStatusSheet`：本週、上週同期、四列輪替（CHANGE_14 起只顯示資訊、不能點）；下肢和上肢前面有部位色圓點）。
 - CHANGE_13 刪掉：訓練日曆卡、近 30 天卡（組數搬到歷程的平衡卡）、分類待練清單、`ScreenHeader`。
-- 空資料：「ME 下肢」「主項：—」「3 個動作」、本週 0 天 0 組、日曆全是沒練的格子、膠囊沒有勾勾；訓練狀態每列「還沒練過」。
+- 空資料：「ME 下肢」「主項：—」「2 個動作」、本週 0 天 0 組、日曆全是沒練的格子、膠囊沒有勾勾；訓練狀態每列「還沒練過」。
 
 **2-3. 建立菜單**（`Views/Plan/PlanSheet.swift`、`Logic/PlanMenu.swift`，sheet；CHANGE_15 §2 起一個畫面）
-- 大字的日型＋「換日型」的 Menu（其他三個）；動作數 1／2／3 的分段和「跑步機 30 分鐘」的開關；每一格一列（角色、建議的動作、原因、處方「8 組 × 3 下・建議 32.5 kg（60%）」、安全提示），點一格是系統的 Menu（前 5 個候選，每個下面一行小字：建議的原因或幾天前，目前選的打勾）；最後是「不照建議，自由選動作」；最下面固定「開始訓練」。「開始」→「開始訓練」兩下就開始。改日型全部重算，改動作數、跑步機保留手動換過、還在的格子。左上角系統的關閉，也可以往下拖關閉。
+- 大字的日型＋「換日型」的 Menu（其他三個）；動作數 1／2／3 的分段（預設 ME 2、DE 3，換日型時跟著換、手動改過就保留，CHANGE_18 §4）和「跑步機 30 分鐘」的開關；每一格一列（角色、建議的動作、原因、處方「8 組 × 3 下・建議 32.5 kg（60%）」、安全提示），點一格是系統的 Menu（前 5 個候選，每個下面一行小字：建議的原因或幾天前，目前選的打勾）；最後是「不照建議，自由選動作」；最下面固定「開始訓練」。「開始」→「開始訓練」兩下就開始。改日型全部重算，改動作數、跑步機保留手動換過、還在的格子。左上角系統的關閉，也可以往下拖關閉。
+- CHANGE_18：第三格 DE 日（上肢、下肢）是核心、ME 下肢核心、ME 上肢補強；主項輪到的在 48 小時內練過就換下一個（原因「臥推（速度）昨天練過，換下一個」），其他格子把 48 小時內練過的排到最後（`Logic/Recovery.swift`）；ME 主項是新動作時處方是熟悉日。
 - 補登（歷程 ⋯）也是這個畫面：最上面多一張日期、開始、結束時間的卡片，按鈕「補登這次訓練」。
 - 有進行中的訓練時：進來前先問「繼續目前訓練／建立新菜單」，按開始時才確認結束舊訓練。
 
@@ -329,7 +348,7 @@ LiftLogApp → RootView（TabView，固定深色）
 LiftLog/                     App target
   LiftLogApp.swift           進入點                                              18
   Models/   Models.swift、Enums.swift                                         381
-  Logic/    32 檔（CHANGE_16 沒有新檔：完成一組在 WorkoutService，值的格式在 SetLogic 的 SetFormat.single）：建立菜單（PlanBuilder、一個畫面的狀態 PlanMenu）、角色、訓練操作、新紀錄（NewRecords）、統計快取與重算時機、App 的「現在」、資料遷移、體重、時間編輯、部位與訓練頻率、訓練次數與每週目標、訓練狀態、今天的兩張卡和點點日曆（TodayCards）、平衡卡的內容等  3,820
+  Logic/    33 檔（CHANGE_18 加了 Recovery：48 小時規則）：建立菜單（PlanBuilder、一個畫面的狀態 PlanMenu）、角色、訓練操作、新紀錄（NewRecords）、統計快取與重算時機、App 的「現在」、資料遷移、體重、時間編輯、部位與訓練頻率、訓練次數與每週目標、訓練狀態、今天的兩張卡和點點日曆（TodayCards）、平衡卡的內容等  3,945
   Data/     Backup.swift（備份、seed 匯入、動作庫補充、說明匯入）、SettingsSnapshot.swift（備份裡的設定）、seed.json、ExerciseGuides.json  564＋JSON
   Theme/    Components.swift（共用元件、Metrics、按鈕和按壓樣式）、KeyboardDismiss.swift（收起鍵盤）、
             ChartSelection.swift（圖表的選取手勢和顏色 ChartEmphasis）、RegionStyle.swift（部位顏色、斜紋、圖例、部位的字、標籤）  565
@@ -338,10 +357,10 @@ LiftLog/                     App target
             Detail 627、Settings 510、Log 100、Debug 579（只在 DEBUG，含真實資料驗證）
 Shared/     App 和小工具共用：主題（含共用的部位色 BodyPart）、日型、部位、快照、深層連結、待處理連結、RelativeDay、即時動態（CHANGE_16 的狀態 Phase）、intent  1,027
 LiftLogWidgets/  小工具 target：小工具、即時動態、控制項                           156
-LiftLogTests/    41 檔，Swift Testing                                         4,985
-LiftLogUITests/  17 檔＋共用，XCUITest（CHANGE_10）                             1,405
+LiftLogTests/    45 檔，Swift Testing                                         5,620
+LiftLogUITests/  18 檔＋共用，XCUITest（CHANGE_10）                             1,503
 tools/      parse_log.py、migration_review.py、pixel_compare.swift、unused_scan.py（沒有引用的程式）、verify_real_data.py（真實資料驗算）、
-            icon 產生器、截圖（screens/final、change08～change16）；fixtures/（真實備份和驗證輸出，在 .gitignore，不 commit）
+            icon 產生器、截圖（screens/final、change08～change18）；fixtures/（真實備份和驗證輸出，在 .gitignore，不 commit）
 ```
 
 ### 4-2. 資料模型（SwiftData，`LiftLog4.store`，沒有改結構以外的東西）
@@ -365,7 +384,7 @@ tools/      parse_log.py、migration_review.py、pixel_compare.swift、unused_sc
 - `TrainingCount`／`WeeklyGoal`（`Logic/WeeklyGoal.swift`，CHANGE_09）：全 App 唯一的訓練次數規則（週一開始、以天為單位、只算有完成組的已結束訓練、只有有氧的處理）和每週目標（預設值；CHANGE_10 拿掉了達標和連續週數）。`TrainingStatus`（`Logic/TrainingStatus.swift`，CHANGE_10）：訓練狀態浮窗的本週、上週同期、輪替，全部呼叫共用函式。
 - `DataMigrations`／`AutoBackup`：啟動時的遷移與遷移前備份；`DataMigrations.restore` 是匯入和還原的唯一入口（還原後補做沒套用的遷移）。
 - `RestTimer.shared`、`WorkoutService.shared`、`WorkoutActions`、`DeepLinkRouter.shared`、`SnapshotWriter.shared`、`LiveActivityController.shared`：同 CHANGE_06。CHANGE_16：`WorkoutService.complete(_:)` 是唯一的完成一組（App 裡的 ✓ 和即時動態都呼叫，預填值是 `SetRecord.placeholder`，還有下一組時開始休息），`completeSet(id:)` 是即時動態用的入口（那一組已經完成或不在了時不改資料）。
-- 純邏輯（可單元測試）：PlanBuilder、PlanMenu（CHANGE_15：建立菜單一個畫面的狀態）、NewRecords（CHANGE_15：新紀錄）、Roles、SetLogic（含 SessionTitle）、SessionTimeEdit、BodyWeightLog、RelativeDay、ExerciseStats、Recency、LibrarySort、StatsRefresh、AppClock、SettingsSnapshot、DayRegion、TrainingFrequency、TrainingCount、WeeklyGoal、TrainingStatus、NextCard／WeekCard（CHANGE_13；CHANGE_14 起 WeekCard 含點點日曆）、BalanceCardContent（CHANGE_14）、IntensityTable、ProvisioningProfile。
+- 純邏輯（可單元測試）：PlanBuilder、PlanMenu（CHANGE_15：建立菜單一個畫面的狀態）、Recovery（CHANGE_18：48 小時規則）、NewRecords（CHANGE_15：新紀錄）、Roles、SetLogic（含 SessionTitle）、SessionTimeEdit、BodyWeightLog、RelativeDay、ExerciseStats、Recency、LibrarySort、StatsRefresh、AppClock、SettingsSnapshot、DayRegion、TrainingFrequency、TrainingCount、WeeklyGoal、TrainingStatus、NextCard／WeekCard（CHANGE_13；CHANGE_14 起 WeekCard 含點點日曆）、BalanceCardContent（CHANGE_14）、IntensityTable、ProvisioningProfile。
 
 ### 4-4. 共用元件
 - `Theme/Components.swift`：`.card()`、ThinBar、Chip、AccentChip（CHANGE_15 從建立菜單搬過來）、`Metrics`、PrimaryButton／PrimaryButtonLabel、FilterCapsule、ElapsedTimeText（CHANGE_12 起是系統的計時文字）、`.pressable`（小按鈕）、`TapSurfaceStyle`（`.tapCard`／`.tapRow`／`.tapListRow`）和 `TapListRow`（CHANGE_10：可以點的卡片和列）。`.hidesTabBarOnScroll()` 在 CHANGE_11 刪掉（分頁列交給系統）；`ScreenHeader` 在 CHANGE_13 刪掉（「今天」改用系統的大標題）。
@@ -383,7 +402,8 @@ tools/      parse_log.py、migration_review.py、pixel_compare.swift、unused_sc
 - Debug（含測試）、Release（模擬器）、Release（iphoneos，不簽署）的 clean build：**0 個 warning、0 個 error**。
 
 ### 5-2. 測試
-- **321 個全部通過，0 失敗**：單元測試 277（42 檔）、UI 測試 44（17 檔＋共用），iPhone 17 Pro 模擬器（Xcode 27.2），`-parallel-testing-enabled NO`。
+- **345 個全部通過，0 失敗**：單元測試 299（45 檔）、UI 測試 46（18 檔＋共用），iPhone 17 Pro 模擬器（Xcode 27.2），`-parallel-testing-enabled NO`。
+- CHANGE_18 新增：RecoveryTests 12（47／49／剛好 48 小時、日曆日和實際時間、今天／昨天／N 小時前；跳過輪到的主項、連續跳過兩個、全部都在 48 小時內選最久的；速度版和一般版、不同日型、不同角色、自由選動作都算；跳過後從實際用的往下接；其他格子排到最後、全部都在 48 小時內時不變；最近一次完成組的時間只有一個來源；快照在滿 48 小時的時間重算）、FamiliarizationTests 5（熟悉日的處方和「下一次」卡、任何角色的完成組恢復正常、早安式、只有 ME 主項、訓練畫面在完成之前都是熟悉日）、PlanSyncTests 4（四個日型：「下一次」卡、建立菜單、訓練狀態、訓練畫面的主項、處方、動作數一致）、PlanMenuTests 1（動作數跟著日型、手動改過就保留）；UI 測試 PlanRulesUITests 2（V1～V4）。PlanTests、PlanMenuTests、TodayCardsTests、WidgetSnapshotTests 跟著改（動作數依日型、DE 上肢第三格核心、沒有紀錄的 ME 主項是熟悉日；清單在 CHANGE_18 報告第 3 節）。
 - CHANGE_17 新增：IntentDiagnosticsTests 4（只在 DEBUG：寫入後讀回、新的在前、拿不到的值是 nil、時間含毫秒和時區；只列最近 50 筆；檔案保護等級 none；清除後可以繼續寫）。CHANGE_16 的 UI 測試在模擬器上按真的即時動態，模擬器沒有密碼，測不到實機鎖定時要求驗證的情況（Apple 對第三方即時動態的設計，見 CHANGE_17 報告）。
 - CHANGE_16 新增：CompleteSetIntentTests 13（下一組依順序、跨動作；已填優先、沒填用預填、和 App 裡打勾的結果相同；顯示的值跟著輸入；沒有可以記錄的值不能完成；完成後開始休息、即時動態切到休息；關掉自動休息；最後一組顯示全部完成、不開始休息（App 裡打勾也一樣）；沒有任何組；防止重複（已完成、不在了）；intent 帶 id、不用解鎖；五種組的值的格式；每種組按完記錄的就是顯示的值）；UI 測試 LiveActivityUITests 3（模擬器上真的即時動態：動態島展開、App 完全關掉、鎖定畫面，按下後切到休息、打開 App 已同步）。WorkoutServiceTests 改用帶 id 的完成，格式測試搬到新檔（刪 1）。
 - CHANGE_15 新增：PlanMenuTests 4（照建議開始和舊的兩步建立的訓練完全相同：四個日型 × 1／2／3 × 跑步機；改日型全部重算、改動作數和跑步機保留換過的格子；換主項重建拉／推；候選的小字和處方一行）、NewRecordsTests 7（高於之前最好的才算、相等不算、以前沒有不算、熱身和超過 10 下不算、好幾個動作全部列出、只有重量型、只和之前的訓練比）、SessionTimeEditTests（補登的預設時間）、WorkoutLauncherTests（從建立菜單的畫面補登）；UI 測試 TitleBarUITests 4（四個第 1 層的標題和按鈕同一列、捲動後回到原位）、PlanSheetUITests 4（兩下開始、換一格只換那一格、換日型、補登用同一個畫面）、WorkoutSheetUITests 2（往下拖縮小到橫條、完成畫面拖不掉）、NewRecordUITests（完成畫面的新紀錄區塊、摘要頁的獎盃）。刪掉舊的新紀錄測試 3 個（SetLogicTests 2、LogTypeAndUnitTests 1）；PlanTests 的預覽測試改名。
@@ -398,6 +418,12 @@ tools/      parse_log.py、migration_review.py、pixel_compare.swift、unused_sc
 - 畫面用 DEBUG 啟動參數配合 `simctl io screenshot` 驗證（`tools/screens/final/`、`change08/`、`change09/`、`change10/`），需要手勢的畫面用 UI 測試的截圖；歷程捲到底部的穩定性用 `tools/pixel_compare.swift` 比對連拍的像素。
 
 ### 5-3. 上一版的問題現在的狀態
+**已修（CHANGE_18）**
+- DE 上肢輪到臥推（速度），但臥推昨天才在別的訓練做過 → 48 小時規則，改建議借力推舉並寫出原因；其他格子也避開 48 小時內練過的。
+- 第一次當 ME 主項的新動作也寫「做到 3RM」→ 熟悉日。
+- 動作數沿用上一次（做了一次 1 個動作，之後都預設 1 個）→ ME 日 2 個、DE 日 3 個。
+- 「最近一次完成組的時間」有兩份（「下一次」卡用訓練的開始時間、建立菜單用組的完成時間）→ 一個來源；「下一次」卡的快照可能比建立菜單舊 → 滿 48 小時的時間重算，建立菜單用同一個「現在」。
+
 **已修（CHANGE_16）**
 - 即時動態的「完成這組」完成的是「目前的組」，按到還沒更新的舊按鈕會多完成下一組 → intent 帶著組的 id，那一組已經完成時不改資料。
 - App 裡的 ✓ 和即時動態各走一條路（✓ 由畫面開始休息、按鈕另外寫一次）→ 同一個函式 `WorkoutService.complete`。
@@ -483,6 +509,7 @@ tools/      parse_log.py、migration_review.py、pixel_compare.swift、unused_sc
 - 過大的檔案：`Backup.swift` 493、`PlanBuilder.swift` 440、`WorkoutEditor.swift` 435 行。
 
 ### 5-4. 要在實機確認的事
+- `tools/CHANGE_18_REPORT.md` 第 6 節：用真實資料時四個日型的下次主項和熟悉日合不合理；48 小時規則（主項和其他格子、原因的文字）；滿 48 小時後「下一次」卡換主項；熟悉日的處方和下一輪恢復；動作數預設和換日型。
 - `tools/CHANGE_17_REPORT.md` 第 8 節：**全部確認（CHANGE_17 收斂）**：時鐘（第一方）鎖定時不用解鎖；看著手機按「完成這組」Face ID 在背景通過、那一組直接完成；診斷紀錄有那一次的開始和成功。之後 iOS 更新時照 §2-3 重測。
 - `tools/CHANGE_16_REPORT.md` 第 6 節：**第 1 項受限於 Apple 對第三方即時動態的設計：需要 Face ID 通過（CHANGE_17）**；有密碼的手機鎖定時按「完成這組」不用解鎖就生效、按完切到休息、打開 App 後同步、App 從切換器滑掉之後按鈕還能不能用、顯示、重複按。
 - `tools/CHANGE_15_REPORT.md` 第 7 節：標題列的樣子、建立菜單的操作手感（換日型、換候選的 Menu、動作數和跑步機）、往下拖縮小的手感、各種觸覺的強弱、新紀錄的動畫。**全部通過（CHANGE_15 實機確認）。**
@@ -498,6 +525,7 @@ tools/      parse_log.py、migration_review.py、pixel_compare.swift、unused_sc
 ---
 
 ## 6. 畫面截圖
+- `tools/screens/change18/`：CHANGE_18 的驗收截圖（V1 主項被 48 小時規則跳過的原因、V2 熟悉日的「下一次」卡和建立菜單、V3 DE 日 3 個動作和第三格核心、V4 訓練畫面熟悉日的說明列、訓練狀態、歷程穩定性連拍、空資料）。索引在 CHANGE_18 報告第 7 節。都是乾淨安裝＋示範資料，沒有真實資料。
 - `tools/screens/change16/`：CHANGE_16 的驗收截圖（V1 鎖定畫面的預覽和模擬器上真的鎖定畫面、V2 動態島的預覽和真的動態島、V3／V4 沒有可以記錄的值和全部完成、打開 App 後同步的訓練畫面、歷程穩定性連拍、空資料）。索引在 CHANGE_16 報告第 7 節。都是乾淨安裝＋示範資料，沒有真實資料。
 - `tools/screens/change15/`：CHANGE_15 的驗收截圖（V1 四個第 1 層的標題列、V2 首頁兩種狀態、V3 建立菜單四個日型、V4 候選的 Menu、V5 補登用的建立菜單、V6 訓練畫面往下拖到一半（錄影的格）、V7 完成畫面的新紀錄和摘要頁的獎盃、歷程穩定性連拍、空資料）。索引在 CHANGE_15 報告第 8 節。都是乾淨安裝＋示範資料，沒有真實資料。
 - `tools/screens/change14/`：CHANGE_14 的驗收截圖（V1 首頁的點點日曆、V2 有進行中的訓練、V3 六個主題的首頁、V4 歷程統計的圖表和有氧選取時變淡、V5 動作詳情的折線圖選取、V6 訓練摘要頁最上面和最底、V7 空資料的平衡卡、V8 不以顏色區分、歷程穩定性連拍、空資料的首頁和動作庫）。索引在 CHANGE_14 報告第 9 節。都是乾淨安裝＋示範資料，沒有真實資料。

@@ -22,7 +22,7 @@ G2 要求的新測試：
 |---|---|---|
 | 「下一次」卡：沒有訓練 | `TodayCardsTests.nextCardWithoutAWorkoutShowsThePlanDefaults`：預設答案的日型、「1 個動作・跑步機 30 分鐘」、DE 速度主項的建議重量等於建立菜單的 `SlotAdvice.make`；`snapshotKeepsTheSuggestedMainAndItsLogs`：卡片的主項就是建立菜單主項格預設選的那一個，連同它的紀錄 | 通過 |
 | 「下一次」卡：有進行中的訓練 | `nextCardWithAnActiveWorkoutShowsThatWorkout`：有進行中的訓練時內容是這次的訓練，不是下一次的建議；UI 測試 `TodayLayoutUITests.testTodayFitsOneScreenWithAnActiveWorkout`：卡片寫「進行中」「繼續」、沒有「主項」，點了打開訓練畫面 | 通過 |
-| DE、ME、沒有主項三種主項寫法 | `nextCardWithoutAWorkout…`（DE「主項：臥推（速度）・建議 57.5 kg」）、`mainLineForMaxEffortDynamicEffortAndNoCandidate`（ME「主項：深蹲・做到 3RM」、早安式「做到 5RM」、DE 速度沒有紀錄「主項：深蹲（速度）」、DE（爆）「主項：壺鈴擺盪」、沒有候選「主項：—」、不加跑步機「2 個動作」） | 通過 |
+| DE、ME、沒有主項三種主項寫法 | `nextCardWithoutAWorkout…`（DE「主項：臥推（速度）・建議 57.5 kg」）、`mainLineForMaxEffortDynamicEffortAndNoCandidate`（ME「主項：深蹲・做到 3RM」、早安式「做到 5RM」、DE 速度沒有紀錄「主項：深蹲（速度）」、DE（爆）「主項：壺鈴擺盪」、沒有候選「主項：—」、不加跑步機「2 個動作」） | 通過 | **（CHANGE_18 §3：沒有完成組的 ME 主項改成「熟悉日」，這個測試的 ME 寫法改用有完成組的紀錄；§4：「N 個動作」改成依日型的預設。）**
 | 本週圓點：依部位上色、只有有氧時是中性灰、今天有外框 | `dotsAreColoredByRegionAndTodayIsMarked`：7 天是週一到週日、依部位、只有有氧的日子是有氧與其他、上週日的訓練不算、只有今天是「今天」、之後的日子是空的；六個主題的下肢、上肢、全身（兩色）、有氧與其他（中性）用的 token；「不以顏色區分」的字。`StatsCacheTests`、`TrainingRegionTests`：快照裡每天的部位（同一天下肢＋上肢是全身、沒打勾的那天沒有顏色） | 通過 | **（CHANGE_14 §1：7 個圓點換成點點日曆，這兩個圓點的測試換成日曆的測試。）**
 | 週一和週日的邊界 | `mondayAndSundayBoundaries`：週一 0 點時第一個是今天、其他都是之後；前一天週日屬於上一週。週日晚上最後一個是今天、沒有之後的日子；下一個週一不在這週。`TrainingCountTests.weeksStartOnMonday` 也改成用本週卡的圓點 | 通過 |
 | 輪替膠囊：「下一次」分別是四個日型 | `rotationMarksForEachNextDayType`：ME 下肢 → 四個都沒有勾勾；ME 上肢 → 1 個勾勾；DE 下肢 → 2 個；DE 上肢 → 3 個；「下一次」只有一個、後面的不加標記 | 通過 |
