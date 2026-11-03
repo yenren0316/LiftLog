@@ -104,7 +104,7 @@
   3. `git update-index --cacheinfo` 放進 index。
   4. 工作區的檔案也套用同樣的修改。
 - repo 是公開的（`yenren0316/LiftLog`）。推上去之前檢查沒有個人資訊，例如 email、名字、Team ID、本機路徑。訓練紀錄可以公開。
-- tag：`before-change07`（`6f72de3`）、`v1.0-ia`（`f4ba90c`，CHANGE_07～09 收斂）、`v1.1-ia`（`e3a8a77`，CHANGE_07～15 的資訊架構與設計改版收斂，CHANGE_15 實機確認通過後）、`v1.2-ia`（CHANGE_07～17 收斂，CHANGE_17 收斂的文件 commit；已知限制：鎖定時按即時動態的按鈕需要 Face ID 通過）。
+- tag：`before-change07`（`6f72de3`）、`v1.0-ia`（`f4ba90c`，CHANGE_07～09 收斂）、`v1.1-ia`（`e3a8a77`，CHANGE_07～15 的資訊架構與設計改版收斂，CHANGE_15 實機確認通過後）、`v1.2-ia`（CHANGE_07～17 收斂，CHANGE_17 收斂的文件 commit；已知限制：鎖定時按即時動態的按鈕需要 Face ID 通過）、`v1.3-ia`（`fa908f8`，CHANGE_07～18 收斂，CHANGE_18 的報告 commit，CHANGE_18 實機確認通過後）。
 
 ## 每一份 CHANGE 的最後一步：更新簽署並安裝到 iPhone
 
