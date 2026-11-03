@@ -88,7 +88,7 @@ struct PlanTests {
     @Test func scenario1NoHistory() {
         let history = PlanHistory([])
         let answers = PlanDefaults.answers(history)
-        #expect(answers == PlanAnswers(dayType: .meLower, count: PlanDefaults.countWithoutHistory, cardio: false))
+        #expect(answers == PlanAnswers(dayType: .meLower, count: 2, cardio: false))
         let main = candidates(.maxEffort, .meLower, history: history)
         #expect(names(main).first == "深蹲")
         #expect(main.reason == "輪替從第 1 個開始")
@@ -151,12 +151,12 @@ struct PlanTests {
         let row = all.first { $0.name == "爆發划船" }!
         let states = PlanRanking.resolve(answers: answers, picks: [.dynamicEffort: row.id], exercises: all,
                                          history: PlanHistory([]), now: now)
-        #expect(states.map(\.slot) == [.dynamicEffort, .push, .accessory, .cardio])
+        #expect(states.map(\.slot) == [.dynamicEffort, .push, .core, .cardio])
         #expect(Set(names(states[1].candidates)) == ["啞鈴臥推", "啞鈴上斜臥推", "地板啞鈴臥推", "坐姿啞鈴肩推", "雙槓撐"])
         // 改回臥推：即時變回「拉」
         let bench = PlanRanking.resolve(answers: answers, picks: [:], exercises: all, history: PlanHistory([]), now: now)
         #expect(bench[0].selected?.name == "臥推")
-        #expect(bench.map(\.slot) == [.dynamicEffort, .pull, .accessory, .cardio])
+        #expect(bench.map(\.slot) == [.dynamicEffort, .pull, .core, .cardio])
     }
 
     @Test func scenario8SpeedSquatIsSixtyPercentOfEstimatedMax() {
@@ -230,23 +230,36 @@ struct PlanTests {
         }
         #expect(slots(.meLower, 1) == [.maxEffort])
         #expect(slots(.deLower, 2) == [.dynamicEffort, .lowerAssist])
-        #expect(slots(.meLower, 3, cardio: true) == [.maxEffort, .lowerAssist, .core, .cardio])
         #expect(slots(.meUpper, 2) == [.maxEffort, .pull])
-        #expect(slots(.deUpper, 3) == [.dynamicEffort, .pull, .accessory])
+        // 第三格（CHANGE_18 §4）：DE 上肢、DE 下肢都是核心；ME 下肢是核心、ME 上肢是補強
+        #expect(slots(.deUpper, 3) == [.dynamicEffort, .pull, .core])
+        #expect(slots(.deLower, 3) == [.dynamicEffort, .lowerAssist, .core])
+        #expect(slots(.meLower, 3, cardio: true) == [.maxEffort, .lowerAssist, .core, .cardio])
+        #expect(slots(.meUpper, 3) == [.maxEffort, .pull, .accessory])
         #expect(Slot.slots(for: PlanAnswers(dayType: .deUpper, count: 2, cardio: false), mainCategory: .horizontalPull)
                 == [.dynamicEffort, .push])
+        #expect(Slot.slots(for: PlanAnswers(dayType: .deUpper, count: 3, cardio: false), mainCategory: .horizontalPull)
+                == [.dynamicEffort, .push, .core])
     }
 
-    @Test func countAndCardioDefaultsFromLastSession() {
+    /// CHANGE_18 §4：動作數的預設依日型（ME 日 2 個、DE 日 3 個），不再沿用上一次；跑步機照舊和上一次訓練一樣
+    @Test func countDefaultsByDayTypeAndCardioFromLastSession() {
+        #expect(DayType.allCases.map(PlanDefaults.count(for:)) == [2, 2, 3, 3])
+        // 上次 ME 上肢做了 3 個動作＋跑步機 → DE 下肢：3 個、跑步機
         let history = PlanHistory([
             session(1, .meUpper, [item("臥推", .maxEffort), item("滑輪下拉", .pull), item("面拉", .accessory), item("跑步機", .cardio)]),
             session(4, .meLower, [item("深蹲", .maxEffort)]),
         ])
-        let answers = PlanDefaults.answers(history)
-        #expect(answers == PlanAnswers(dayType: .deLower, count: 3, cardio: true))  // 有氧不算在動作數
-        // 上次只做有氧：動作數看上一次重訓，跑步機看上一次訓練
+        #expect(PlanDefaults.answers(history) == PlanAnswers(dayType: .deLower, count: 3, cardio: true))
+        // 上次 DE 上肢只做 1 個動作 → ME 下肢：還是 2 個（不看上次）、沒有跑步機
+        let one = PlanHistory([session(1, .deUpper, [item("臥推", .dynamicEffort)])])
+        #expect(PlanDefaults.answers(one) == PlanAnswers(dayType: .meLower, count: 2, cardio: false))
+        // 上次 ME 下肢做 3 個 → ME 上肢還是 2 個
+        let three = PlanHistory([session(1, .meLower, [item("深蹲", .maxEffort), item("單腳 RDL", .lowerAssist), item("腹前推", .core)])])
+        #expect(PlanDefaults.answers(three) == PlanAnswers(dayType: .meUpper, count: 2, cardio: false))
+        // 上次只做有氧：跑步機看上一次訓練，日型看上一次有日型的訓練
         let cardioLast = PlanHistory([session(0, nil, [item("跑步機", .cardio)]), session(4, .meLower, [item("深蹲", .maxEffort)])])
-        #expect(PlanDefaults.answers(cardioLast) == PlanAnswers(dayType: .meUpper, count: 1, cardio: true))
+        #expect(PlanDefaults.answers(cardioLast) == PlanAnswers(dayType: .meUpper, count: 2, cardio: true))
     }
 
     @Test func stalestFirstWithNewAndReasons() {

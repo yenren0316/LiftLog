@@ -2,7 +2,7 @@ import Foundation
 
 /// 建立菜單（CHANGE_15 §2：一個畫面）的狀態：三個答案和手動換過的格子。
 /// 預設值、格子、建議和候選都是原本的函式（PlanDefaults、Slot.slots、PlanRanking.resolve），這裡只管什麼時候保留手動換過的格子：
-/// - 改日型：全部格子重新計算
+/// - 改日型：全部格子重新計算；動作數換成那個日型的預設（CHANGE_18 §4），這個畫面裡手動改過動作數時保留
 /// - 改動作數、跑步機，或換了某一格（主項換成拉的動作時「拉」會變成「推」）：手動換過、而且還在的格子保留，其他重新計算
 nonisolated struct PlanMenu: Sendable {
     let exercises: [PlanExercise]
@@ -11,6 +11,8 @@ nonisolated struct PlanMenu: Sendable {
     private(set) var answers: PlanAnswers
     /// 手動換過的格子（格子 → 動作 id）
     private(set) var picks: [Slot: UUID] = [:]
+    /// 這個畫面裡手動改過動作數
+    private(set) var isCountManual = false
 
     /// answers 為 nil 時用預設答案（和「下一次」卡相同）
     init(answers: PlanAnswers? = nil, exercises: [PlanExercise], history: PlanHistory, now: Date = .now) {
@@ -28,11 +30,13 @@ nonisolated struct PlanMenu: Sendable {
     mutating func setDayType(_ dayType: DayType) {
         guard dayType != answers.dayType else { return }
         answers.dayType = dayType
+        if !isCountManual { answers.count = PlanDefaults.count(for: dayType) }
         picks = [:]
     }
 
     mutating func setCount(_ count: Int) {
         answers.count = count
+        isCountManual = true
         keepPicksInCurrentSlots()
     }
 

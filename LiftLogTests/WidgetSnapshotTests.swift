@@ -26,9 +26,9 @@ struct WidgetSnapshotTests {
         #expect(snapshot.lastSessionDate == nil && snapshot.lastRegion == nil)
         #expect(snapshot.daysSinceLast(at: date(25), calendar: calendar) == nil)
         #expect(snapshot.lastSummary(calendar: calendar) == nil)
-        // 沒有紀錄時的建議：ME 下肢、3 個動作、不做跑步機
+        // 沒有紀錄時的建議：ME 下肢、2 個動作（ME 日的預設，CHANGE_18 §4）、不做跑步機
         #expect(snapshot.suggestedDayType == .meLower)
-        #expect(snapshot.suggestedCount == 3)
+        #expect(snapshot.suggestedCount == 2)
         #expect(!snapshot.suggestsTreadmill)
         #expect(!snapshot.isInProgress && snapshot.startedAt == nil)
     }
@@ -42,9 +42,9 @@ struct WidgetSnapshotTests {
         #expect(snapshot.lastSessionDate == date(23))
         #expect(snapshot.lastRegion == .upper && snapshot.lastDayType == .meUpper)
         #expect(snapshot.lastSummary(calendar: calendar) == "ME 上肢・10/23")
-        // 和建立菜單的預設答案一致：下一個日型、動作數同上次（不計有氧）、上次有跑步機就建議跑步機
+        // 和建立菜單的預設答案一致：下一個日型、動作數依日型（DE 日 3 個，CHANGE_18 §4）、上次有跑步機就建議跑步機
         #expect(snapshot.suggestedDayType == .deLower)
-        #expect(snapshot.suggestedCount == 2)
+        #expect(snapshot.suggestedCount == 3)
         #expect(snapshot.suggestsTreadmill)
         #expect(snapshot.daysSinceLast(at: date(25, 8), calendar: calendar) == 2)
         #expect(WidgetSnapshot.daysText(2) == "2 天前")

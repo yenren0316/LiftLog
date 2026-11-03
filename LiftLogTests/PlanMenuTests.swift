@@ -150,18 +150,38 @@ struct PlanMenuTests {
         let f = try makeFixture()
         var menu = PlanMenu(answers: PlanAnswers(dayType: .deUpper, count: 3, cardio: false), exercises: f.snapshot,
                             history: f.history, now: f.now)
-        // 上次借力推舉 → 這次的建議是爆發划船，「拉」變成「推」
+        // 上次借力推舉 → 這次的建議是爆發划船，「拉」變成「推」；DE 日的第三格是核心（CHANGE_18 §4）
         #expect(menu.states[0].selected?.name == "爆發划船")
-        #expect(menu.states.map(\.slot) == [.dynamicEffort, .push, .accessory])
-        let accessory = menu.states[2].candidates.items[1].id
-        menu.pick(accessory, for: .accessory)
+        #expect(menu.states.map(\.slot) == [.dynamicEffort, .push, .core])
+        let core = menu.states[2].candidates.items[1].id
+        menu.pick(core, for: .core)
         let push = menu.states[1].candidates.items[1].id
         menu.pick(push, for: .push)
-        // 主項換成臥推：「推」那一格不在了（換過的丟掉），換成「拉」重新計算；補強還在，保留
+        // 主項換成臥推：「推」那一格不在了（換過的丟掉），換成「拉」重新計算；核心還在，保留
         menu.pick(f.exercise("臥推").id, for: .dynamicEffort)
-        #expect(menu.states.map(\.slot) == [.dynamicEffort, .pull, .accessory])
-        #expect(menu.picks[.push] == nil && menu.states[2].selected?.id == accessory)
+        #expect(menu.states.map(\.slot) == [.dynamicEffort, .pull, .core])
+        #expect(menu.picks[.push] == nil && menu.states[2].selected?.id == core)
         #expect(menu.states[1].selected?.id == menu.states[1].candidates.items.first?.id)
+    }
+
+    /// CHANGE_18 §4：打開時的動作數是日型的預設（ME 2、DE 3）；換日型時跟著換，這個畫面裡手動改過就保留
+    @Test func countFollowsTheDayTypeUntilChangedByHand() throws {
+        let f = try makeFixture()
+        var menu = PlanMenu(exercises: f.snapshot, history: f.history, now: f.now)
+        #expect(menu.answers.dayType == .meLower && menu.answers.count == 2)
+        #expect(menu.states.map(\.slot) == [.maxEffort, .lowerAssist, .cardio])
+        menu.setDayType(.deUpper)
+        #expect(menu.answers.count == 3 && !menu.isCountManual)
+        #expect(menu.states.map(\.slot).prefix(3) == [.dynamicEffort, .push, .core])
+        menu.setDayType(.meUpper)
+        #expect(menu.answers.count == 2)
+        // 手動改成 3：之後換日型都保留 3
+        menu.setCount(3)
+        #expect(menu.states.map(\.slot) == [.maxEffort, .pull, .accessory, .cardio])
+        menu.setDayType(.deLower)
+        #expect(menu.answers.count == 3)
+        menu.setDayType(.meLower)
+        #expect(menu.answers.count == 3 && menu.isCountManual)
     }
 
     @Test func candidateNotes() {

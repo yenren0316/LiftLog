@@ -55,8 +55,8 @@ struct TodayCardsTests {
         #expect(advice.speedWeightKg == 57.5)
         #expect(main.text == "主項：臥推（速度）・建議 57.5 kg")
         #expect(main.detailIsSuggestion)
-        // 上次加了跑步機：「・跑步機 30 分鐘」（有氧的預設分鐘）
-        #expect(volume == "1 個動作・跑步機 30 分鐘")
+        // DE 日預設 3 個動作（CHANGE_18 §4）；上次加了跑步機：「・跑步機 30 分鐘」（有氧的預設分鐘）
+        #expect(volume == "3 個動作・跑步機 30 分鐘")
     }
 
     @Test func nextCardWithAnActiveWorkoutShowsThatWorkout() {

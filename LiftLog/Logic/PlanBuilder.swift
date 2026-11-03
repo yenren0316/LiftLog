@@ -24,9 +24,6 @@ nonisolated struct PlanHistory: Sendable {
         var region: Region = .unspecified
         var dayType: DayType?
         var items: [Item]
-
-        /// 只做有氧的訓練不算重訓
-        var isStrength: Bool { items.contains { $0.category != .cardio } }
     }
 
     /// 由新到舊
@@ -131,17 +128,16 @@ nonisolated struct PlanAnswers: Equatable, Sendable {
 }
 
 nonisolated enum PlanDefaults {
-    /// 沒有任何紀錄時的動作數
-    static let countWithoutHistory = 3
+    /// 動作數的預設依日型（CHANGE_18 §4）：ME 日 2 個、DE 日 3 個，不再沿用上一次；使用者每次都可以自己改
+    static func count(for dayType: DayType) -> Int {
+        dayType.isMaxEffort ? 2 : 3
+    }
 
     static func answers(_ history: PlanHistory) -> PlanAnswers {
-        var answers = PlanAnswers(dayType: dayType(history), count: countWithoutHistory, cardio: false)
-        // 動作數：上次重訓的動作數，不計有氧，限制在 1–3
-        if let last = history.sessions.first(where: \.isStrength) {
-            answers.count = min(max(last.items.filter { $0.category != .cardio }.count, 1), 3)
-        }
-        answers.cardio = history.sessions.first?.items.contains { $0.category == .cardio } ?? false
-        return answers
+        let dayType = dayType(history)
+        // 跑步機：和上一次訓練一樣
+        return PlanAnswers(dayType: dayType, count: count(for: dayType),
+                           cardio: history.sessions.first?.items.contains { $0.category == .cardio } ?? false)
     }
 
     /// 最近一次有日型的訓練的下一個日型；只做有氧的訓練和沒有日型的舊紀錄不算，都沒有時從 ME 下肢開始
@@ -189,11 +185,12 @@ nonisolated enum Slot: String, Hashable, Sendable, CaseIterable {
         }
     }
 
-    /// 下肢日：主項 → 下肢輔助 → 核心；上肢日：主項 → 拉 → 補強；加跑步機時最後再一格有氧。
+    /// 下肢日：主項 → 下肢輔助 → 核心；上肢日：主項 → 拉 → ME 日補強、DE 日核心（CHANGE_18 §4）；加跑步機時最後再一格有氧。
     /// 主項本身是拉的動作（DE 上肢的爆發划船）時，「拉」改成「推」
     static func slots(for answers: PlanAnswers, mainCategory: ExerciseCategory?) -> [Slot] {
         let mainIsPull = mainCategory == .horizontalPull || mainCategory == .verticalPull
-        let rest: [Slot] = answers.dayType.isLower ? [.lowerAssist, .core] : [mainIsPull ? .push : .pull, .accessory]
+        let third: Slot = answers.dayType == .meUpper ? .accessory : .core
+        let rest: [Slot] = answers.dayType.isLower ? [.lowerAssist, third] : [mainIsPull ? .push : .pull, third]
         return [main(for: answers.dayType)] + rest.prefix(max(answers.count - 1, 0)) + (answers.cardio ? [.cardio] : [])
     }
 }

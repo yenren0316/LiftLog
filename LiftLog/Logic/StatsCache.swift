@@ -60,7 +60,7 @@ nonisolated struct StatsSnapshot: Sendable {
     var categoryLastDates: [ExerciseCategory: Date] = [:]
     /// 「本週」卡最下面的提醒：很久沒練的分類（WeekCard.reminder）
     var weekReminder: WeekCard.Reminder?
-    var nextPlan = PlanAnswers(dayType: .meLower, count: PlanDefaults.countWithoutHistory, cardio: false)
+    var nextPlan = PlanAnswers(dayType: .meLower, count: PlanDefaults.count(for: .meLower), cardio: false)
     /// 主項格的第一個建議和它的歷次紀錄：「下一次」卡的主項和建議重量（和建立菜單同一個 SlotAdvice）
     var suggestedMain: PlanExercise?
     var suggestedMainLogs: [ExerciseLog] = []
