@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CHANGE_11 §9、CHANGE_13 R1、CHANGE_14 R1、CHANGE_15 R1：用備份 JSON 獨立驗算統計，和 App 的 -dumpStats 比對。
+"""CHANGE_11 §9、CHANGE_13 R1、CHANGE_14 R1、CHANGE_15 R1、CHANGE_18 R1：用備份 JSON 獨立驗算統計，和 App 的 -dumpStats 比對。
 
 只依 SPEC.md 的文字規則自己算一次，不呼叫、不複製 App 的程式碼。
 備份含個人資料：所有輸出只能放在 tools/fixtures/ 底下（已在 .gitignore），終端機只印「一致／不一致」。
@@ -209,17 +209,48 @@ def last_main(data, day_type):
     return None
 
 
-def next_main(data, day_type):
-    """從上次主項的下一個開始照順序，上次用的排最後；沒有紀錄或不在輪替表裡時從 1 開始"""
+# CHANGE_18 §2：48 小時規則
+RECOVERY = timedelta(hours=48)
+
+
+def last_completed(data):
+    """CHANGE_18 §2：每個動作最近一次完成組的時間（已結束的訓練、已完成的組的 completedAt；沒有時用那次訓練的開始時間），
+    不分角色、不分日型，自由選動作的訓練也算"""
+    last = {}
+    for s in data.sessions:
+        for it in s["items"]:
+            for st in it["sets"]:
+                t = parse_time(st["completedAt"]) if st.get("completedAt") else s["date"]
+                eid = it["exercise"]["id"]
+                if eid not in last or t > last[eid]:
+                    last[eid] = t
+    return last
+
+
+def is_recent(t, now):
+    """現在減去最近一次完成組的時間小於 48 小時（實際時間）"""
+    return t is not None and now - t < RECOVERY
+
+
+def next_main(data, day_type, now, done):
+    """從上次主項的下一個開始照順序，上次用的排最後；沒有紀錄或不在輪替表裡時從 1 開始。
+    CHANGE_18 §2：輪到的在 48 小時內有完成組就往下找；全部都在 48 小時內時，最近一次完成組離現在最久的那個"""
     pool = rotation_pool(data, day_type)
     if not pool:
         return None
     last = last_main(data, day_type)
     ids = [e["id"] for e in pool]
-    if last is None or last["id"] not in ids:
-        return pool[0]
-    i = ids.index(last["id"])
-    return pool[(i + 1) % len(pool)]
+    start = 0 if last is None or last["id"] not in ids else ids.index(last["id"]) + 1
+    order = [pool[(start + k) % len(pool)] for k in range(len(pool))]
+    for e in order:
+        if not is_recent(done.get(e["id"]), now):
+            return e
+    return min(enumerate(order), key=lambda x: (done[x[1]["id"]], x[0]))[1]
+
+
+def default_count(day_type):
+    """CHANGE_18 §4：動作數的預設依日型，ME 日 2 個、DE 日 3 個"""
+    return 2 if day_type.startswith("me") else 3
 
 
 def epley(weight, reps):
@@ -308,15 +339,19 @@ def compute(data, now, screen_width=402):
         return sum(1 for s in recent_sessions
                    if any(tag in it["exercise"]["tags"] and it["sets"] for it in s["items"]))
 
-    # 輪替狀態：上次（該日型、有完成組的已結束訓練）、幾天前、上次主項、下次主項
+    # 輪替狀態：上次（該日型、有完成組的已結束訓練）、幾天前、上次主項、下次主項（CHANGE_18：48 小時規則）
+    done = last_completed(data)
     rotation = {}
+    familiarization = {}
     for dt in DAY_TYPES:
         last = next((s for s in data.sessions if s["dayType"] == dt and any(it["sets"] for it in s["items"])), None)
         lm = None
         if last is not None:
             lm = next((it["exercise"]["name"] for it in last["items"]
                        if it["role"] in ("maxEffort", "dynamicEffort") and it["sets"]), None)
-        nm = next_main(data, dt)
+        nm = next_main(data, dt, now, done)
+        # CHANGE_18 §3：ME 的下次主項在任何訓練、任何角色都沒有完成組時是熟悉日；DE 不另外處理
+        familiarization[dt] = dt.startswith("me") and nm is not None and nm["id"] not in done
         rotation[dt] = {
             "lastDate": data.local_day(last["date"]).isoformat() if last else None,
             "daysAgo": days_between(data.local_day(last["date"]), today) if last else None,
@@ -371,6 +406,9 @@ def compute(data, now, screen_width=402):
                      "explosiveSessions": sessions_with("explosive")},
         "rotation": rotation,
         "nextDayType": next_day_type,
+        "familiarization": familiarization,
+        "defaultCount": {dt: default_count(dt) for dt in DAY_TYPES},
+        "nextCount": default_count(next_day_type),
         "mainLifts": main_lifts,
         "weekCard": {"days": week["days"], "sets": week["sets"], "calendarWeeks": weeks, "calendar": calendar,
                      "rotation": capsules, "reminder": reminder},
@@ -404,6 +442,8 @@ GROUPS = [
     ("recent30.sets.", "平衡卡 9 個分類的組數（近 30 天）"), ("recent30.push", "推拉比"), ("recent30.pull", "推拉比"),
     ("recent30.unilateralSessions", "單邊次數"), ("recent30.explosiveSessions", "爆發次數"),
     ("rotation.", "日型（上次日期、幾天前、上次主項、下次主項）"), ("nextDayType", "「下一次」的日型"),
+    ("familiarization.", "各日型的下次主項是不是熟悉日"), ("defaultCount.", "各日型的預設動作數"),
+    ("nextCount", "「下一次」卡的動作數"),
     ("mainLifts.", "主動作的估算 1RM 與 60% 建議重量"),
     ("weekCard.days", "本週卡的天數"), ("weekCard.sets", "本週卡的組數"),
     ("weekCard.calendarWeeks", "日曆的週數"), ("weekCard.calendar.", "日曆顯示的每一天的部位"),

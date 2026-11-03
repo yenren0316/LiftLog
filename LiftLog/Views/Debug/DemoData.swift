@@ -43,8 +43,15 @@ enum DemoData {
         Array(repeating: .lift(kg, reps), count: times)
     }
 
+    /// CHANGE_18：昨天早上 ME 上肢（臥推）、昨天晚上 DE 上肢（爆發划船）。「下一次」是 ME 下肢，主項前蹲舉沒有紀錄（熟悉日）；
+    /// 換成 DE 上肢時輪到臥推（速度），但臥推昨天早上做過（48 小時規則）→ 建議借力推舉
     private static let plans: [Plan] = [
-        Plan(daysAgo: 1, hour: 18, minute: 30, minutes: 75, dayType: .meUpper, note: "肩膀狀況不錯，最後一組三下很穩", items: [
+        Plan(daysAgo: 1, hour: 18, minute: 30, minutes: 60, dayType: .deUpper, items: [
+            Item(name: "爆發划船", role: .dynamicEffort, sets: lifts(40, 5, times: 6)),
+            Item(name: "啞鈴臥推", role: .push, sets: lifts(22, 10, times: 3)),
+            Item(name: "腹前推", role: .core, sets: lifts(10, 12, times: 3)),
+        ]),
+        Plan(daysAgo: 1, hour: 7, minute: 0, minutes: 75, dayType: .meUpper, note: "肩膀狀況不錯，最後一組三下很穩", items: [
             Item(name: "臥推", role: .maxEffort,
                  sets: [.lift(40, 5, .warmup), .lift(60, 3, .warmup), .lift(80, 3), .lift(85, 3), .lift(87.5, 2)]),
             Item(name: "滑輪下拉", role: .pull, sets: lifts(45, 10, times: 3)),

@@ -351,7 +351,8 @@ struct WorkoutEditor<Header: View, Footer: View>: View {
     }
 }
 
-/// 動作卡片的預設參數：「8 組 × 2 下・休息 45–60 秒」，DE 速度主項加上建議重量，ME 和 DE（爆）加上提示
+/// 動作卡片的預設參數：「8 組 × 2 下・休息 45–60 秒」，DE 速度主項加上建議重量，ME 和 DE（爆）加上提示；
+/// ME 主項是新動作時是熟悉日（CHANGE_18 §3，和建立菜單同一個 SlotAdvice）
 private struct AdviceLine: View {
     var advice: SlotAdvice
 

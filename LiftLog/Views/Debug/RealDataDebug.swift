@@ -70,6 +70,21 @@ enum RealDataDebug {
             ] as [String: Any]
         }
 
+        // CHANGE_18：各日型的下次主項是不是熟悉日、各日型的預設動作數。和「下一次」卡、建立菜單同一套函式
+        // （PlanHistory.withLastDates、PlanRanking.suggestedMain、SlotAdvice.make、PlanDefaults.count）
+        let history = PlanHistory(sessions: (try? context.fetch(FetchDescriptor<WorkoutSession>())) ?? [])
+        let planExercises = history.withLastDates(exercises.map { PlanExercise($0) })
+        var familiarization: [String: Any] = [:]
+        var defaultCount: [String: Any] = [:]
+        for dayType in DayType.allCases {
+            let main = PlanRanking.suggestedMain(for: dayType, exercises: planExercises, history: history, now: now)
+            familiarization[dayType.rawValue] = main.map {
+                SlotAdvice.make(role: Slot.main(for: dayType).role, exercise: $0, logs: history.logs(for: $0.id), unit: .kg, now: now)
+                    .prescription.isFamiliarization
+            } ?? false
+            defaultCount[dayType.rawValue] = PlanDefaults.count(for: dayType)
+        }
+
         // 「本週」卡（CHANGE_13 §2-2）：天數和組數、輪替膠囊、提醒；
         // 點點日曆（CHANGE_14 §1）顯示的每一天的部位（今天之後為 null），週數和這台模擬器上的卡片一樣
         var calendarDays: [String: Any] = [:]
@@ -105,6 +120,9 @@ enum RealDataDebug {
             ] as [String: Any],
             "rotation": rotation,
             "nextDayType": snapshot.nextPlan.dayType.rawValue,
+            "familiarization": familiarization,
+            "defaultCount": defaultCount,
+            "nextCount": snapshot.nextPlan.count,
             "mainLifts": mainLifts,
             "weekCard": ["days": status.thisWeek.days, "sets": status.thisWeek.sets, "calendarWeeks": weeks.count,
                          "calendar": calendarDays, "rotation": capsules, "reminder": reminder] as [String: Any],
